@@ -61,6 +61,23 @@ python pe_entropy.py <binary>
 - `*.json` — analysis output files (ignored)
 - `timeline.csv` — generated timelines (ignored)
 
+
+---
+
+## Azure Filewall Settings
+```
+Source: Any
+Source port ranges: *
+Destination: Any
+Destination port ranges: 8000
+Protocol: TCP
+Action: Allow
+Priority: 1000
+Name: allow-8000
+```
+
+
+
 ---
 
 ## License
