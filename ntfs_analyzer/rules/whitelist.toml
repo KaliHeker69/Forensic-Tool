@@ -1,0 +1,647 @@
+# =============================================================================
+# NTFS Forensic Analyzer - Enhanced Whitelist Configuration
+# =============================================================================
+# VERSION: 2.0.0
+# PURPOSE: Path-based exclusions (regex) for the correlation engine to suppress
+#          false positives from legitimate forensic/security tools and system paths
+#
+# BACKGROUND:
+# Forensic acquisition tools (KAPE, Autopsy, FTK, etc.) ship with modules, configs,
+# and plugins whose filenames overlap with known attack-tool signatures. Without
+# proper whitelisting, these generate hundreds/thousands of false positives that
+# obscure genuine IOCs (Indicators of Compromise).
+#
+# REGEX SYNTAX GUIDE:
+#   \\\\            - Literal backslash (double-escaped: once for TOML, once for regex)
+#   (?i)            - Case-insensitive flag (applied automatically to all patterns)
+#   .*              - Match any characters (greedy)
+#   .*?             - Match any characters (non-greedy)
+#   [/\\\\]         - Match either forward slash OR backslash (cross-platform)
+#   ^               - Anchor to start of string
+#   $               - Anchor to end of string
+#   (foo|bar)       - Match either "foo" OR "bar"
+#   [a-z]           - Character class (any lowercase letter)
+#   \\d             - Any digit
+#   \\.             - Literal period
+#
+# PERFORMANCE TIPS:
+#   - Anchor patterns when possible (^ or $) to avoid unnecessary backtracking
+#   - Use specific patterns over broad wildcards
+#   - Test complex patterns with regex101.com before deployment
+#   - Disable unused rules (enabled = false) rather than deleting them
+#
+# TESTING WORKFLOW:
+#   1. Add new pattern below
+#   2. Run: ./ntfs_analyzer analyze <image> --whitelist whitelist.toml --dry-run
+#   3. Review suppressed findings log
+#   4. Adjust pattern if too broad/narrow
+#   5. Re-run and validate
+#
+# MAINTENANCE:
+#   - Review quarterly for new forensic tool releases
+#   - Check vendor documentation for new module naming conventions
+#   - Monitor false positive rates in production scans
+# =============================================================================
+
+[metadata]
+version = "2.0.0"
+description = "Enhanced path-based whitelist rules with comprehensive coverage"
+last_updated = "2025-02-08"
+maintainer = "Forensics Team"
+
+# =============================================================================
+# SECTION 1: FORENSIC ACQUISITION & PROCESSING TOOLS
+# =============================================================================
+# These tools are used TO INVESTIGATE systems, not to compromise them.
+# Their modules reference attack tools by name but are benign configuration files.
+
+# -----------------------------------------------------------------------------
+# KAPE - Kroll Artifact Parser and Extractor
+# -----------------------------------------------------------------------------
+# KAPE is the industry standard for triaging Windows artifacts
+# Modules: .mkape (compound), .tkape (targets), .gkape (GUI configs)
+# Common false positive triggers: Modules named after tools (mimikatz.mkape, etc.)
+
+[[rules]]
+id   = "WL-001"
+name = "KAPE installation directory"
+description = "Exclude entire KAPE installation tree (binaries, modules, targets, documentation)"
+pattern = '(?i)[/\\]KAPE[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-002"
+name = "KAPE collection output"
+description = "Exclude KAPE triage output directory (collected artifacts)"
+pattern = '(?i)[/\\](OUTPUTS|!KAPE_Output)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-003"
+name = "KAPE batch mode configs"
+description = "Exclude batch configuration files (.kape extension)"
+pattern = '(?i)\\.kape$'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Eric Zimmerman Tools (EZTools) - Windows Forensic CLI Suite
+# -----------------------------------------------------------------------------
+# Each tool ships with Maps/Plugins that reference security products by name
+# Tools: MFTECmd, EvtxECmd, RECmd, PECmd, JLECmd, AmcacheParser, etc.
+
+[[rules]]
+id   = "WL-010"
+name = "MFTECmd - MFT parser"
+description = "Exclude MFT Command (parses Master File Table)"
+pattern = '(?i)[/\\]MFTECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-011"
+name = "EvtxECmd - Event log parser"
+description = "Exclude Event log Explorer Command (Maps folder contains event ID references)"
+pattern = '(?i)[/\\]EvtxECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-012"
+name = "RECmd - Registry parser"
+description = "Exclude Registry Explorer Command (Plugins reference security software)"
+pattern = '(?i)[/\\]RECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-013"
+name = "SQLECmd - SQLite parser"
+description = "Exclude SQLite Explorer Command (Maps for browsers, messaging apps)"
+pattern = '(?i)[/\\]SQLECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-014"
+name = "PECmd - Prefetch parser"
+description = "Exclude Prefetch Explorer Command"
+pattern = '(?i)[/\\]PECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-015"
+name = "LECmd - LNK file parser"
+description = "Exclude LNK Explorer Command (Windows shortcut analysis)"
+pattern = '(?i)[/\\]LECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-016"
+name = "JLECmd - Jump List parser"
+description = "Exclude Jump List Explorer Command"
+pattern = '(?i)[/\\]JLECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-017"
+name = "AmcacheParser"
+description = "Exclude Amcache.hve parser (application execution tracking)"
+pattern = '(?i)[/\\]AmcacheParser[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-018"
+name = "AppCompatCacheParser"
+description = "Exclude ShimCache/AppCompatCache parser"
+pattern = '(?i)[/\\](AppCompatCacheParser|ShimCacheParser)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-019"
+name = "SrumECmd - SRUM parser"
+description = "Exclude System Resource Usage Monitor parser"
+pattern = '(?i)[/\\]SrumECmd[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-020"
+name = "Timeline Explorer"
+description = "Exclude Timeline Explorer (CSV/Excel timeline viewer)"
+pattern = '(?i)[/\\]Timeline Explorer[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-021"
+name = "Registry Explorer"
+description = "Exclude Registry Explorer GUI and bookmarks"
+pattern = '(?i)[/\\]Registry Explorer[/\\]'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Sleuth Kit / Autopsy - Open source digital forensics platform
+# -----------------------------------------------------------------------------
+
+[[rules]]
+id   = "WL-030"
+name = "Autopsy installation"
+description = "Exclude Autopsy case directories and modules (TSK-based platform)"
+pattern = '(?i)[/\\]Autopsy[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-031"
+name = "Sleuth Kit binaries"
+description = "Exclude Sleuth Kit command-line tools (fls, icat, mmls, etc.)"
+pattern = '(?i)[/\\](sleuthkit|TSK)[/\\]'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Commercial Forensic Suites
+# -----------------------------------------------------------------------------
+
+[[rules]]
+id   = "WL-040"
+name = "FTK and FTK Imager"
+description = "Exclude AccessData/Exterro FTK suite directories"
+pattern = '(?i)[/\\]FTK( Imager)?[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-041"
+name = "EnCase Forensic"
+description = "Exclude OpenText EnCase directories and case files"
+pattern = '(?i)[/\\]EnCase[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-042"
+name = "X-Ways Forensics"
+description = "Exclude X-Ways WinHex and Forensics directories"
+pattern = '(?i)[/\\](X-Ways|WinHex)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-043"
+name = "Magnet AXIOM"
+description = "Exclude Magnet Forensics AXIOM suite"
+pattern = '(?i)[/\\](Axiom|Magnet AXIOM|IEF)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-044"
+name = "Cellebrite UFED/Physical Analyzer"
+description = "Exclude Cellebrite mobile forensics tools"
+pattern = '(?i)[/\\]Cellebrite[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-045"
+name = "Oxygen Forensics"
+description = "Exclude Oxygen Forensic Detective suite"
+pattern = '(?i)[/\\]Oxygen Forensic(s)?[/\\]'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Live Triage & EDR Collection Tools
+# -----------------------------------------------------------------------------
+
+[[rules]]
+id   = "WL-050"
+name = "Velociraptor"
+description = "Exclude Velociraptor DFIR collection framework and artifacts"
+pattern = '(?i)[/\\]Velociraptor[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-051"
+name = "CyLR - Live Response Collection"
+description = "Exclude CyLR (Live Response Collection by Alan Orlikoski)"
+pattern = '(?i)[/\\]CyLR[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-052"
+name = "DFIR-ORC"
+description = "Exclude DFIR-ORC (ANSSI's forensic collection tool)"
+pattern = '(?i)[/\\]DFIR-ORC[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-053"
+name = "UAC - Unix-like Artifacts Collector"
+description = "Exclude UAC collection output (Linux/Unix/macOS triage)"
+pattern = '(?i)[/\\]UAC[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-054"
+name = "GRR Rapid Response"
+description = "Exclude Google's GRR incident response framework"
+pattern = '(?i)[/\\]GRR[/\\]'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Memory Analysis Tools
+# -----------------------------------------------------------------------------
+
+[[rules]]
+id   = "WL-060"
+name = "Volatility Framework"
+description = "Exclude Volatility 2/3 memory forensics plugins and profiles"
+pattern = '(?i)[/\\]volatility[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-061"
+name = "Rekall Memory Forensics"
+description = "Exclude Rekall framework directories"
+pattern = '(?i)[/\\]rekall[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-062"
+name = "MemProcFS"
+description = "Exclude MemProcFS (PCILeech memory process file system)"
+pattern = '(?i)[/\\](MemProcFS|PCILeech)[/\\]'
+enabled = true
+severity = "info"
+
+# -----------------------------------------------------------------------------
+# Disk Imaging & Mounting Tools
+# -----------------------------------------------------------------------------
+
+[[rules]]
+id   = "WL-070"
+name = "Arsenal Image Mounter"
+description = "Exclude Arsenal Recon Image Mounter directories"
+pattern = '(?i)[/\\]Arsenal Image Mounter[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-071"
+name = "OSFMount"
+description = "Exclude PassMark OSFMount (image mounting utility)"
+pattern = '(?i)[/\\]OSFMount[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-072"
+name = "QEMU disk images"
+description = "Exclude QEMU virtual machine images used for analysis"
+pattern = '(?i)[/\\]qemu[/\\].*\\.(qcow2|vmdk|vdi|vhd)$'
+enabled = true
+severity = "info"
+
+# =============================================================================
+# SECTION 2: SECURITY MONITORING & EDR PRODUCTS
+# =============================================================================
+# Legitimate security tools that may trigger AV/EDR signatures or contain
+# tool names in their databases/signatures
+
+[[rules]]
+id   = "WL-100"
+name = "Windows Defender definitions"
+description = "Exclude Windows Defender signature updates and quarantine"
+pattern = '(?i)[/\\](Windows Defender|ProgramData\\\\Microsoft\\\\Windows Defender)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-101"
+name = "Antivirus quarantine folders"
+description = "Exclude common AV quarantine locations (Defender, Symantec, McAfee, etc.)"
+pattern = '(?i)[/\\](Quarantine|Infected|Vault)[/\\]'
+enabled = true
+severity = "warning"
+# Note: Quarantine folders deserve inspection but often trigger bulk false positives
+
+[[rules]]
+id   = "WL-102"
+name = "Sysmon configuration"
+description = "Exclude Sysmon installation and config (legitimate logging driver)"
+pattern = '(?i)[/\\]Sysmon[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-103"
+name = "YARA rules repositories"
+description = "Exclude YARA rule collections (signature files, not malware)"
+pattern = '(?i)[/\\](yara|yarGen|yaraRules)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-104"
+name = "Sigma rules repositories"
+description = "Exclude Sigma detection rules (SIEM signatures)"
+pattern = '(?i)[/\\]sigma[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-105"
+name = "CrowdStrike Falcon"
+description = "Exclude CrowdStrike EDR agent directories"
+pattern = '(?i)[/\\](CrowdStrike|CSFalcon)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-106"
+name = "SentinelOne EDR"
+description = "Exclude SentinelOne agent and quarantine"
+pattern = '(?i)[/\\]SentinelOne[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-107"
+name = "Carbon Black"
+description = "Exclude VMware Carbon Black EDR/App Control"
+pattern = '(?i)[/\\](Carbon ?Black|Cb(Defense|Response))[/\\]'
+enabled = true
+severity = "info"
+
+# =============================================================================
+# SECTION 3: DEVELOPER TOOLS & SOURCE CODE REPOSITORIES
+# =============================================================================
+# Development environments often contain security research code, PoCs, and
+# tool references that trigger false positives
+
+[[rules]]
+id   = "WL-200"
+name = "Git repositories - .git folders"
+description = "Exclude git metadata (often contains commit messages with tool names)"
+pattern = '(?i)[/\\]\\.git[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-201"
+name = "Python virtual environments"
+description = "Exclude Python venv/virtualenv (may contain security libraries)"
+pattern = '(?i)[/\\](venv|virtualenv|\\.venv|env)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-202"
+name = "Node.js modules"
+description = "Exclude node_modules (JavaScript dependencies, often thousands of files)"
+pattern = '(?i)[/\\]node_modules[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-203"
+name = "Ruby gems"
+description = "Exclude Ruby gem cache directories"
+pattern = '(?i)[/\\](gems|\\.bundle)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-204"
+name = "Golang packages"
+description = "Exclude Go pkg and module cache"
+pattern = '(?i)[/\\](pkg|go-mod)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-205"
+name = "Docker images and containers"
+description = "Exclude Docker storage (may contain security scanning tools)"
+pattern = '(?i)[/\\](docker|containers|overlay2)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-206"
+name = "IDE configuration and plugins"
+description = "Exclude IDE metadata (VS Code, IntelliJ, Eclipse, etc.)"
+pattern = '(?i)[/\\](\\.vscode|\\.idea|\\.eclipse)[/\\]'
+enabled = true
+severity = "info"
+
+# =============================================================================
+# SECTION 4: OPERATING SYSTEM & UPDATE CACHES
+# =============================================================================
+# System paths that commonly trigger false positives but are benign
+
+[[rules]]
+id   = "WL-300"
+name = "Windows Update cache"
+description = "Exclude Windows Update staging and cache directories"
+pattern = '(?i)[/\\](SoftwareDistribution|WinSxS|servicing)[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-301"
+name = "Windows Installer cache"
+description = "Exclude MSI installer cache"
+pattern = '(?i)[/\\]Windows\\\\Installer[/\\]'
+enabled = true
+severity = "info"
+
+[[rules]]
+id   = "WL-302"
+name = "Temp and cache directories"
+description = "Exclude temporary files (high false positive rate, low forensic value)"
+pattern = '(?i)[/\\](Temp|tmp|cache|AppData\\\\Local\\\\Temp)[/\\]'
+enabled = false
+severity = "warning"
+# Note: Disabled by default - malware often stages in Temp. Enable only if FP rate is extreme.
+
+[[rules]]
+id   = "WL-303"
+name = "Browser cache directories"
+description = "Exclude web browser cache (Chrome, Firefox, Edge)"
+pattern = '(?i)[/\\](Cache|CacheStorage|Code Cache|GPUCache)[/\\]'
+enabled = false
+severity = "warning"
+# Note: Disabled by default - cache can contain downloaded malware
+
+[[rules]]
+id   = "WL-304"
+name = "Thumbnail cache"
+description = "Exclude Windows thumbnail database (thumbs.db, Thumbcache)"
+pattern = '(?i)(thumbs\\.db$|Thumbcache)'
+enabled = true
+severity = "info"
+
+# =============================================================================
+# SECTION 5: RESEARCH & TRAINING ENVIRONMENTS
+# =============================================================================
+# Intentional security tool installations for research/training
+
+[[rules]]
+id   = "WL-400"
+name = "Penetration testing tools directory"
+description = "Exclude dedicated pen-test tool installation folder (custom)"
+pattern = '(?i)[/\\](PenTest|Security Tools|RedTeam)[/\\]'
+enabled = false
+severity = "critical"
+# Note: DISABLED by default. Enable ONLY on known analyst workstations.
+# DO NOT enable on production systems being investigated!
+
+[[rules]]
+id   = "WL-401"
+name = "Kali Linux default paths"
+description = "Exclude Kali Linux tool directories (research VMs only)"
+pattern = '(?i)[/\\]usr[/\\](share|lib)[/\\](metasploit|beef-xss|empire|covenant)[/\\]'
+enabled = false
+severity = "critical"
+# Note: DISABLED by default. Only enable when analyzing Kali/Parrot VM images.
+
+[[rules]]
+id   = "WL-402"
+name = "Malware analysis sandboxes"
+description = "Exclude known sandbox paths (Cuckoo, ANY.RUN, Joe Sandbox)"
+pattern = '(?i)[/\\](cuckoo|anyrun|joesandbox)[/\\]'
+enabled = false
+severity = "critical"
+# Note: DISABLED by default. Enable when analyzing malware analyst workstations.
+
+[[rules]]
+id   = "WL-403"
+name = "FLARE VM - Mandiant forensics distro"
+description = "Exclude FLARE VM tool installations (Windows malware analysis distro)"
+pattern = '(?i)[/\\](FLARE|flare-vm)[/\\]'
+enabled = false
+severity = "critical"
+# Note: DISABLED. ONLY enable when analyzing known FLARE VM installations.
+
+# =============================================================================
+# SECTION 6: CUSTOM CASE-SPECIFIC EXCLUSIONS
+# =============================================================================
+# Add your own patterns below for specific investigations or environments
+
+# Example 1: Exclude a specific investigation staging directory
+# [[rules]]
+# id   = "WL-500"
+# name = "Investigation staging folder"
+# description = "Custom exclusion for Case-2025-001 staging area"
+# pattern = '(?i)[/\\]CaseWork[/\\]2025-001[/\\]Staging[/\\]'
+# enabled = true
+# severity = "info"
+
+# Example 2: Exclude test VMs in a lab environment
+# [[rules]]
+# id   = "WL-501"
+# name = "Lab test VMs"
+# description = "Exclude test virtual machines in the lab subnet"
+# pattern = '(?i)[/\\]VMs[/\\]Lab[/\\]'
+# enabled = true
+# severity = "info"
+
+# Example 3: Exclude specific vendor software with noisy signatures
+# [[rules]]
+# id   = "WL-502"
+# name = "AcmeCorp internal tool"
+# description = "Exclude proprietary AcmeCorp monitoring agent"
+# pattern = '(?i)[/\\]AcmeCorp[/\\]SecurityAgent[/\\]'
+# enabled = true
+# severity = "info"
+
+# =============================================================================
+# VALIDATION & TESTING NOTES
+# =============================================================================
+#
+# BEFORE DEPLOYING TO PRODUCTION:
+# 1. Run against a known-clean forensic workstation image
+# 2. Verify expected findings ARE suppressed
+# 3. Run against a known-compromised test image
+# 4. Verify malicious findings are NOT suppressed
+#
+# MONITORING FALSE NEGATIVE RISK:
+# - Periodically review suppression logs for unusual patterns
+# - If a pattern is TOO broad, narrow it or add exclusions
+# - Example: '(?i)[/\\]Tools[/\\]' would suppress legitimate malware in C:\Tools\
+#
+# COMMON MISTAKES TO AVOID:
+# ❌ Pattern too broad: '[/\\].*mimikatz.*'  (would exclude ANY path with 'mimikatz')
+# ✅ Pattern specific:  '[/\\]KAPE[/\\].*mimikatz'  (only KAPE's mimikatz module)
+#
+# ❌ Forgetting anchors: 'temp'  (matches 'contemporary', 'template', etc.)
+# ✅ Using anchors:     '[/\\]temp[/\\]'  (only the temp directory)
+#
+# ❌ Overly generic:    '[/\\]tool'  (matches 'tools', 'toolbox', 'retool')
+# ✅ Word boundaries:   '[/\\]tool[/\\]'  (directory named 'tool' only)
+#
+# RECOMMENDED REVIEW SCHEDULE:
+# - Monthly:   Check for new forensic tool releases
+# - Quarterly: Audit false positive/negative rates
+# - Annually:  Full regex pattern optimization review
+#
+# =============================================================================

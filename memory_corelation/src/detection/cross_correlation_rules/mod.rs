@@ -1,0 +1,15 @@
+//! Cross Correlation Rules detection rules
+
+pub mod xcor001_thread_in_malfind_region;
+pub mod xcor002_privilege_injection_correlation;
+pub mod xcor003_network_privilege_correlation;
+pub mod xcor004_hidden_process_cross_check;
+pub mod xcor005_hidden_hive_cross_check;
+pub mod xcor006_dll_injection_handle_correlation;
+
+pub use xcor001_thread_in_malfind_region::ThreadInMalfindRegionRule;
+pub use xcor002_privilege_injection_correlation::PrivilegeInjectionCorrelationRule;
+pub use xcor003_network_privilege_correlation::NetworkPrivilegeCorrelationRule;
+pub use xcor004_hidden_process_cross_check::HiddenProcessCrossCheckRule;
+pub use xcor005_hidden_hive_cross_check::HiddenHiveCrossCheckRule;
+pub use xcor006_dll_injection_handle_correlation::DllInjectionHandleCorrelationRule;

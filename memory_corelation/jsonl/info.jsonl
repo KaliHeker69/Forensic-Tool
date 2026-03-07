@@ -1,0 +1,21 @@
+
+{"Value": "0xf80251200000", "Variable": "Kernel Base", "__children": []}
+{"Value": "0x1aa000", "Variable": "DTB", "__children": []}
+{"Value": "file:///home/kali_arch/volatility3/symbols/windows/ntkrnlmp.pdb/2B2A15FA1FE2122BB1A39ED3572741D2-1.json.xz", "Variable": "Symbols", "__children": []}
+{"Value": "True", "Variable": "Is64Bit", "__children": []}
+{"Value": "False", "Variable": "IsPAE", "__children": []}
+{"Value": "0 WindowsIntel32e", "Variable": "layer_name", "__children": []}
+{"Value": "1 FileLayer", "Variable": "memory_layer", "__children": []}
+{"Value": "0xf80251e0f388", "Variable": "KdVersionBlock", "__children": []}
+{"Value": "15.19041", "Variable": "Major/Minor", "__children": []}
+{"Value": "34404", "Variable": "MachineType", "__children": []}
+{"Value": "3", "Variable": "KeNumberProcessors", "__children": []}
+{"Value": "2023-01-23 18:31:03+00:00", "Variable": "SystemTime", "__children": []}
+{"Value": "C:\\Windows", "Variable": "NtSystemRoot", "__children": []}
+{"Value": "NtProductWinNt", "Variable": "NtProductType", "__children": []}
+{"Value": "10", "Variable": "NtMajorVersion", "__children": []}
+{"Value": "0", "Variable": "NtMinorVersion", "__children": []}
+{"Value": "10", "Variable": "PE MajorOperatingSystemVersion", "__children": []}
+{"Value": "0", "Variable": "PE MinorOperatingSystemVersion", "__children": []}
+{"Value": "34404", "Variable": "PE Machine", "__children": []}
+{"Value": "Mon Jun 13 13:38:13 1977", "Variable": "PE TimeDateStamp", "__children": []}

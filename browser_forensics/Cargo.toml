@@ -1,0 +1,21 @@
+[package]
+name = "browser_forensics"
+version = "1.0.0"
+edition = "2021"
+description = "Browser forensics analysis tool — parses artifacts and outputs JSON & HTML reports"
+authors = ["kaliHeker"]
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+uuid = { version = "1", features = ["v4"] }
+anyhow = "1"
+rusqlite = { version = "0.31", features = ["bundled"] }
+walkdir = "2"
+base64 = "0.22"
+lz4_flex = "0.11"
+byteorder = "1"
+regex = "1"

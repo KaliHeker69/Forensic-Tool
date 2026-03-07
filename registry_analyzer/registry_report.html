@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaliHeker - Registry Analysis Report</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #1f2428;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #238636;
+            --accent-light: #2ea043;
+            --alert-bg: #da3633;
+            --alert-text: #ffebe9;
+            --warning-bg: #9e6a03;
+            --warning-text: #fff8c5;
+            --notice-bg: #238636;
+            --notice-text: #f0f6fc;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px;
+        }
+        .header-content { max-width: 1400px; margin: 0 auto; }
+        .logo { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .logo-text { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .logo-text span { color: var(--accent-light); }
+        .version { font-size: 14px; color: var(--text-secondary); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .scan-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+        .info-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px; }
+        .info-card h3 { font-size: 12px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.5px; }
+        .info-card p { font-size: 14px; color: var(--text-primary); word-break: break-all; }
+        .score { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .nav-content { max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+        .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 20px;
+            background: var(--bg-tertiary); color: var(--text-primary); cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--accent); }
+        .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .filter-btn .count { margin-left: 6px; opacity: 0.8; font-size: 0.9em; }
+        .search-box { display: flex; align-items: center; gap: 8px; }
+        .search-box input {
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; width: 280px;
+        }
+        .search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(46, 160, 67, 0.4); }
+        main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .stats-bar {
+            display: flex; gap: 24px; margin-bottom: 20px; padding: 16px;
+            background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .stat { display: flex; align-items: center; gap: 8px; }
+        .stat-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .stat-dot.alert { background: var(--alert-bg); }
+        .stat-dot.warning { background: var(--warning-bg); }
+        .stat-dot.notice { background: var(--notice-bg); }
+        .stat-dot.info-dot { background: #1f6feb; }
+        .stat-label { font-size: 14px; color: var(--text-secondary); }
+        .stat-value { font-size: 18px; font-weight: 600; }
+        .finding-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;
+            margin-bottom: 16px; transition: transform 0.2s; border-left: 4px solid var(--border-color);
+        }
+        .finding-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .finding-card.critical { border-left-color: var(--alert-bg); }
+        .finding-card.high { border-left-color: #fd8c00; }
+        .finding-card.medium { border-left-color: var(--warning-bg); }
+        .finding-card.low { border-left-color: var(--notice-bg); }
+        .finding-card.info { border-left-color: #1f6feb; }
+        .finding-header {
+            display: flex; align-items: center; gap: 12px; padding: 16px;
+            background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color); flex-wrap: wrap;
+        }
+        .severity-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .severity-badge.critical { background: var(--alert-bg); color: var(--alert-text); }
+        .severity-badge.high { background: #fd8c00; color: #fff; }
+        .severity-badge.medium { background: var(--warning-bg); color: var(--warning-text); }
+        .severity-badge.low { background: var(--notice-bg); color: var(--notice-text); }
+        .severity-badge.info { background: #1f6feb; color: #fff; }
+        .finding-title {
+            flex: 1; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; font-weight: 600;
+            color: var(--accent-light); word-break: break-all;
+        }
+        .finding-body { padding: 16px; }
+        .finding-description { margin-bottom: 16px; color: var(--text-primary); font-size: 14px; }
+        .evidence-box {
+            background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;
+            margin-bottom: 12px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; overflow-x: auto;
+        }
+        .evidence-line { margin-bottom: 4px; }
+        .evidence-label { color: var(--text-secondary); margin-right: 8px; }
+        .metadata-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .meta-tag {
+            background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 2px 10px; font-size: 11px; color: var(--text-secondary);
+        }
+        .meta-tag strong { color: var(--text-primary); }
+        .mitre-link { color: var(--accent-light); text-decoration: none; }
+        .mitre-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--bg-tertiary); color: var(--accent-light); font-size: 12px; text-transform: uppercase; }
+        tr:hover { background: rgba(255,255,255,0.03); }
+        code {
+            background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px;
+        }
+        footer {
+            text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 13px;
+            border-top: 1px solid var(--border-color); margin-top: 40px;
+        }
+        .category-header {
+            display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; margin-bottom: 16px; border-left: 4px solid var(--accent);
+            cursor: pointer;
+        }
+        .category-header h3 { flex: 1; font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0; }
+        .category-count { color: var(--text-secondary); font-size: 13px; background: var(--bg-tertiary); padding: 4px 10px; border-radius: 12px; }
+        .icon {
+            width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), var(--accent-light));
+            box-shadow: 0 0 8px rgba(46, 160, 67, 0.4);
+        }
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; margin-bottom: 24px;
+        }
+        .summary-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 16px; text-align: center;
+        }
+        .summary-card .number { font-size: 32px; font-weight: 700; }
+        .summary-card .label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .number.crit { color: var(--alert-bg); }
+        .number.high-c { color: #fd8c00; }
+        .number.med { color: var(--warning-bg); }
+        .number.low-c { color: var(--notice-bg); }
+        .number.info-c { color: #1f6feb; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-text">KALI<span>HEKER</span></div>
+                <div class="version">Registry Analyzer v1.0</div>
+            </div>
+            <div class="scan-info">
+                <div class="info-card"><h3>System Name</h3><p>WORKSTATION-PC</p></div>
+                <div class="info-card"><h3>Export Date</h3><p>2026-02-10T08:30:00Z</p></div>
+                <div class="info-card"><h3>Report Generated</h3><p>2026-02-10 10:24:50 UTC</p></div>
+                <div class="info-card"><h3>Registry Stats</h3><p>5 Hives &middot; 38 Keys &middot; 110 Values</p></div>
+                <div class="info-card"><h3>Total Findings</h3><p>Critical: 11 | High: 12 | Medium: 10 | Low: 6 | Info: 21</p></div>
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-content">
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterAll(this)">All <span class="count">(60)</span></button>
+                <button class="filter-btn" onclick="filterBy(this,'critical')">Critical <span class="count">(11)</span></button>
+                <button class="filter-btn" onclick="filterBy(this,'high')">High <span class="count">(12)</span></button>
+                <button class="filter-btn" onclick="filterBy(this,'medium')">Medium <span class="count">(10)</span></button>
+                <button class="filter-btn" onclick="filterBy(this,'low')">Low <span class="count">(6)</span></button>
+                <button class="filter-btn" onclick="filterBy(this,'info')">Info <span class="count">(21)</span></button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search findings..." oninput="searchFindings(this.value)">
+            </div>
+        </div>
+    </nav>
+    <main>
+
+        <div class="stats-bar">
+            <div class="stat"><div class="stat-dot alert"></div> <span class="stat-label">Critical:</span> <span class="stat-value">11</span></div>
+            <div class="stat"><div class="stat-dot" style="background:#fd8c00"></div> <span class="stat-label">High:</span> <span class="stat-value">12</span></div>
+            <div class="stat"><div class="stat-dot warning"></div> <span class="stat-label">Medium:</span> <span class="stat-value">10</span></div>
+            <div class="stat"><div class="stat-dot notice"></div> <span class="stat-label">Low:</span> <span class="stat-value">6</span></div>
+            <div class="stat"><div class="stat-dot info-dot"></div> <span class="stat-label">Info:</span> <span class="stat-value">21</span></div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card"><div class="number crit">11</div><div class="label">Critical</div></div>
+            <div class="summary-card"><div class="number high-c">12</div><div class="label">High</div></div>
+            <div class="summary-card"><div class="number med">10</div><div class="label">Medium</div></div>
+            <div class="summary-card"><div class="number low-c">6</div><div class="label">Low</div></div>
+            <div class="summary-card"><div class="number info-c">21</div><div class="label">Info</div></div>
+        </div>
+
+        <div class="category-header" style="border-left-color: var(--alert-bg);">
+            <span class="icon"></span>
+            <h3>&#x1F6A8; Critical &amp; High Severity Findings</h3>
+            <span class="category-count">23 findings</span>
+        </div>
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Suspicious Service: SuspiciousSvc</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Service 'SuspiciousSvc' runs from a suspicious location with auto-start enabled. This is a strong indicator of malware persistence.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Service]</span> SuspiciousSvc</div>
+                    <div class="evidence-line"><span class="evidence-label">[ImagePath]</span> C:\Windows\Temp\svchost32.exe -k netsvcs</div>
+                    <div class="evidence-line"><span class="evidence-label">[DisplayName]</span> Windows Network Helper</div>
+                    <div class="evidence-line"><span class="evidence-label">[StartType]</span> Automatic</div>
+                    <div class="evidence-line"><span class="evidence-label">[RunAs]</span> LocalSystem</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-20T03:14:22Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Persistence</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1543/003" target="_blank"><strong>T1543.003</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Suspicious Service: MalwarePersist</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Service 'MalwarePersist' runs from a suspicious location with auto-start enabled. This is a strong indicator of malware persistence.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Service]</span> MalwarePersist</div>
+                    <div class="evidence-line"><span class="evidence-label">[ImagePath]</span> C:\Users\admin\AppData\Local\Temp\beacon.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[DisplayName]</span> System Health Monitor</div>
+                    <div class="evidence-line"><span class="evidence-label">[StartType]</span> Automatic</div>
+                    <div class="evidence-line"><span class="evidence-label">[RunAs]</span> LocalSystem</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-02-03T01:22:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Persistence</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1543/003" target="_blank"><strong>T1543.003</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Malicious Tool Executed: mimikatz.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">BAM/DAM records execution of 'mimikatz.exe', which matches a known offensive tool.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\Users\admin\Downloads\mimikatz.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-04T23:15:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Malware Execution</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Malicious Tool Executed: powershell.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">BAM/DAM records execution of 'powershell.exe', which matches a known offensive tool.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\Windows\System32\powershell.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-05T07:28:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Malware Execution</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Malicious Tool Executed: beacon.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">BAM/DAM records execution of 'beacon.exe', which matches a known offensive tool.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\temp\beacon.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-04T22:45:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Malware Execution</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Encoded PowerShell Autostart: Cleanup</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Autostart entry contains a PowerShell encoded command. This is a strong indicator of malicious persistence.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> Cleanup</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> powershell.exe -enc SQBuAHYAbwBrAGUALQBXAGUAYgBSAGUAcQB1AGUAcwB0AA==</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows\CurrentVersion\RunOnce</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-02-01T02:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Encoded Command</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">Modified Winlogon Shell</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Winlogon Shell has been modified from default 'explorer.exe' to 'explorer.exe, C:\Windows\Temp\shell.exe'. This is a persistence technique.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Shell]</span> explorer.exe, C:\Windows\Temp\shell.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Expected]</span> explorer.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows NT\CurrentVersion\Winlogon</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Persistence</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/004" target="_blank"><strong>T1547.004</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">IFEO Hijack: sethc.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Image File Execution Options debugger set for 'sethc.exe'. Executes 'C:\Windows\System32\cmd.exe' instead. This targets an accessibility tool — classic sticky-keys backdoor.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Target]</span> sethc.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Debugger]</span> C:\Windows\System32\cmd.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>IFEO</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/012" target="_blank"><strong>T1546.012</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">IFEO Hijack: utilman.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Image File Execution Options debugger set for 'utilman.exe'. Executes 'C:\Windows\System32\cmd.exe' instead. This targets an accessibility tool — classic sticky-keys backdoor.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Target]</span> utilman.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Debugger]</span> C:\Windows\System32\cmd.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows NT\CurrentVersion\Image File Execution Options\utilman.exe</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>IFEO</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/012" target="_blank"><strong>T1546.012</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">AppInit_DLLs Injection</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">AppInit_DLLs contains 'C:\Windows\Temp\hook.dll'. Loading is ENABLED. These DLLs are loaded into every user-mode process.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[AppInit_DLLs]</span> C:\Windows\Temp\hook.dll</div>
+                    <div class="evidence-line"><span class="evidence-label">[LoadEnabled]</span> true</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows NT\CurrentVersion\Windows</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>DLL Injection</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/010" target="_blank"><strong>T1546.010</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card critical">
+            <div class="finding-header">
+                <span class="severity-badge critical">CRITICAL</span>
+                <span class="finding-title">User Account: backdoor</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Account 'backdoor' has a suspicious name indicating a potential backdoor account.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Username]</span> backdoor</div>
+                    <div class="evidence-line"><span class="evidence-label">[RID]</span> 1001</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastLogin]</span> 2026-02-04T23:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[Flags]</span> 512</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Account</strong></div><div class="meta-tag">Hive: <strong>SAM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1136/001" target="_blank"><strong>T1136.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Suspicious Autostart: WindowsUpdate</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Autostart entry 'WindowsUpdate' runs from a suspicious or user-writable directory.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> WindowsUpdate</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> C:\Users\admin\AppData\Local\Temp\updater.exe -silent</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows\CurrentVersion\Run</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-25T04:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Suspicious Path</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">RunMRU Command: powershell -ep bypass</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User typed 'powershell -ep bypass' in the Run dialog (Win+R).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MRU Entry]</span> b</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> powershell -ep bypass</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">RunMRU Command: \\192.168.1.100\c$</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User typed '\\192.168.1.100\c$' in the Run dialog (Win+R).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MRU Entry]</span> d</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> \\192.168.1.100\c$</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">RunMRU Command: net user backdoor P@ssw0rd! /add</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User typed 'net user backdoor P@ssw0rd! /add' in the Run dialog (Win+R).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MRU Entry]</span> e</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> net user backdoor P@ssw0rd! /add</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Typed Path: \\192.168.1.100\c$</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User navigated to '\\192.168.1.100\c$' via the Explorer address bar. Admin share access detected.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Path]</span> \\192.168.1.100\c$</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1021/002" target="_blank"><strong>T1021.002</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Sensitive Files Accessed</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Recently accessed files include potentially sensitive documents.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> passwords.xlsx</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> confidential_report.docx</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Data Access</strong></div><div class="meta-tag">FileCount: <strong>2</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1005" target="_blank"><strong>T1005</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">UserAssist: mimikatz.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Program 'mimikatz.exe' was executed via Explorer. Matches known offensive tool.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Encoded]</span> zvzvxngm.rkr</div>
+                    <div class="evidence-line"><span class="evidence-label">[Decoded]</span> mimikatz.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Data]</span> run_count:2,last_execution:2026-02-04T23:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Execution</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank"><strong>T1059</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Sensitive Search Queries</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User searched for terms related to passwords, credentials, or sensitive data.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> password list</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> vpn credentials</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> admin share</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> ssh private key</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Reconnaissance</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1083" target="_blank"><strong>T1083</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Typed URL: https://pastebin.com/raw/abc123</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Suspicious URL typed in browser: https://pastebin.com/raw/abc123</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[URL]</span> https://pastebin.com/raw/abc123</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Browser</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1071/001" target="_blank"><strong>T1071.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Typed URL: http://192.168.1.100:8080/payload</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Suspicious URL typed in browser: http://192.168.1.100:8080/payload</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[URL]</span> http://192.168.1.100:8080/payload</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Browser</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1071/001" target="_blank"><strong>T1071.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Mapped Drive: \\192.168.1.100\c$</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Network drive mapped to '\\192.168.1.100\c$'. Admin share access detected — potential lateral movement.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[UNC Path]</span> \\192.168.1.100\c$</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Network Share</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1021/002" target="_blank"><strong>T1021.002</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">Disabled Audit Policies</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Audit policies with disabled categories detected. Attackers may disable auditing to cover tracks.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Policy]</span> audit_logon:success_failure,audit_privilege_use:none,audit_process_tracking:none,audit_object_access:success</div>
+                    <div class="evidence-line"><span class="evidence-label">[Disabled]</span> audit_privilege_use:none, audit_process_tracking:none</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Defense Evasion</strong></div><div class="meta-tag">Hive: <strong>SECURITY</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1562/002" target="_blank"><strong>T1562.002</strong></a></div></div>
+            </div>
+        </div>
+
+
+        <div class="category-header" style="border-left-color: var(--warning-bg);">
+            <span class="icon"></span>
+            <h3>&#x26A0;&#xFE0F; Medium Severity Findings</h3>
+            <span class="category-count">10 findings</span>
+        </div>
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">LOLBin Executed: certutil.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Certificate utility — can download and decode files</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\Windows\System32\certutil.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-04T22:50:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>LOLBin</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1140" target="_blank"><strong>T1140</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">LOLBin Executed: schtasks.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Task scheduler utility — used for persistence</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\Windows\System32\schtasks.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-04T23:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>LOLBin</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank"><strong>T1053.005</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">Network Profile: Free_Public_WiFi</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Public network 'Free_Public_WiFi' was connected — exposes system to untrusted networks.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[ProfileName]</span> Free_Public_WiFi</div>
+                    <div class="evidence-line"><span class="evidence-label">[Category]</span> Public</div>
+                    <div class="evidence-line"><span class="evidence-label">[NetworkType]</span> Wireless</div>
+                    <div class="evidence-line"><span class="evidence-label">[FirstConnected]</span> 2026-01-30T11:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastConnected]</span> 2026-01-30T12:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Network</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">Installed: Wireshark 4.2.0</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">'Wireshark 4.2.0' is a dual-use / security tool that could indicate reconnaissance or attack activity.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Software]</span> Wireshark 4.2.0</div>
+                    <div class="evidence-line"><span class="evidence-label">[Publisher]</span> The Wireshark developer community</div>
+                    <div class="evidence-line"><span class="evidence-label">[InstallDate]</span> 2025-11-15</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Software Inventory</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1588/002" target="_blank"><strong>T1588.002</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">Installed: Nmap 7.95</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">'Nmap 7.95' is a dual-use / security tool that could indicate reconnaissance or attack activity.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Software]</span> Nmap 7.95</div>
+                    <div class="evidence-line"><span class="evidence-label">[Publisher]</span> Nmap Project</div>
+                    <div class="evidence-line"><span class="evidence-label">[InstallDate]</span> 2025-12-10</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Software Inventory</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1588/002" target="_blank"><strong>T1588.002</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">Scheduled Task: SystemCheck</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Cached scheduled task 'SystemCheck' found in registry.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[TaskName]</span> SystemCheck</div>
+                    <div class="evidence-line"><span class="evidence-label">[TaskID]</span> {12345678-ABCD-EF01-2345-678901234567}</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-20T03:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Scheduled Task</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank"><strong>T1053.005</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">Browser Helper Object: Unknown BHO</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Browser Helper Object 'Unknown BHO' (CLSID: {DEADBEEF-1234-5678-9ABC-DEF012345678}) is registered. BHOs can intercept browser activity.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[CLSID]</span> {DEADBEEF-1234-5678-9ABC-DEF012345678}</div>
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> Unknown BHO</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows\CurrentVersion\Explorer\Browser Helper Objects\{DEADBEEF-1234-5678-9ABC-DEF012345678}</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>BHO</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1176" target="_blank"><strong>T1176</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">RunMRU Command: cmd</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User typed 'cmd' in the Run dialog (Win+R).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MRU Entry]</span> a</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> cmd</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">User Account: Administrator</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Built-in Administrator account (RID 500). Verify if this account should be active.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Username]</span> Administrator</div>
+                    <div class="evidence-line"><span class="evidence-label">[RID]</span> 500</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastLogin]</span> 2026-02-05T07:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[Flags]</span> 512</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Account</strong></div><div class="meta-tag">Hive: <strong>SAM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card medium">
+            <div class="finding-header">
+                <span class="severity-badge medium">MEDIUM</span>
+                <span class="finding-title">LSA Secrets Present</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">LSA Secrets store found. May contain service account passwords, cached credentials, and auto-logon data.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Policy\Secrets</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Credentials</strong></div><div class="meta-tag">Hive: <strong>SECURITY</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1003/004" target="_blank"><strong>T1003.004</strong></a></div></div>
+            </div>
+        </div>
+
+
+        <div class="category-header" style="border-left-color: var(--notice-bg);">
+            <span class="icon"></span>
+            <h3>&#x2139;&#xFE0F; Low Severity Findings</h3>
+            <span class="category-count">6 findings</span>
+        </div>
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">USB Device: SanDisk Ultra USB 3.0</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">USB storage device was connected to this system.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[DeviceID]</span> 4C530001211017</div>
+                    <div class="evidence-line"><span class="evidence-label">[FriendlyName]</span> SanDisk Ultra USB 3.0</div>
+                    <div class="evidence-line"><span class="evidence-label">[Description]</span> Disk Drive</div>
+                    <div class="evidence-line"><span class="evidence-label">[FirstConnected]</span> 2026-01-18T14:22:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Device History</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">USB Device: Kingston DataTraveler 3.0</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">USB storage device was connected to this system.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[DeviceID]</span> 0019E02B1486</div>
+                    <div class="evidence-line"><span class="evidence-label">[FriendlyName]</span> Kingston DataTraveler 3.0</div>
+                    <div class="evidence-line"><span class="evidence-label">[Description]</span> Disk Drive</div>
+                    <div class="evidence-line"><span class="evidence-label">[FirstConnected]</span> 2026-02-01T09:15:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Device History</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">RunMRU Command: notepad</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User typed 'notepad' in the Run dialog (Win+R).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MRU Entry]</span> c</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> notepad</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">Typed Path: C:\Users\admin\Documents</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User navigated to 'C:\Users\admin\Documents' via the Explorer address bar.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Path]</span> C:\Users\admin\Documents</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">Typed Path: C:\Windows\Temp</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">User navigated to 'C:\Windows\Temp' via the Explorer address bar.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Path]</span> C:\Windows\Temp</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Activity</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card low">
+            <div class="finding-header">
+                <span class="severity-badge low">LOW</span>
+                <span class="finding-title">Mapped Drive: \\fileserver\shared</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Network drive mapped to '\\fileserver\shared'.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[UNC Path]</span> \\fileserver\shared</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Network Share</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+
+        <div class="category-header" style="border-left-color: #1f6feb;">
+            <span class="icon"></span>
+            <h3>&#x1F4CB; Informational Findings</h3>
+            <span class="category-count">21 findings</span>
+        </div>
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Computer Name</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">System hostname: WORKSTATION-PC</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[ComputerName]</span> WORKSTATION-PC</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">System Timezone</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Timezone: Eastern Standard Time (UTC bias: 300 min)</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[TimeZone]</span> Eastern Standard Time</div>
+                    <div class="evidence-line"><span class="evidence-label">[Bias]</span> 300</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Program Executed: cmd.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">BAM/DAM recorded execution of 'cmd.exe'.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Executable]</span> \Device\HarddiskVolume3\Windows\System32\cmd.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastExecution]</span> 2026-02-05T07:30:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[KeyLastWrite]</span> 2026-02-05T07:30:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Execution</strong></div><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Last Shutdown Time</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Last recorded shutdown: 2026-02-05T06:00:00Z</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[ShutdownTime]</span> 2026-02-05T06:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Hive: <strong>SYSTEM</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Mounted Devices</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">3 mounted device entries found</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[\DosDevices\C:]</span> volume-guid-123</div>
+                    <div class="evidence-line"><span class="evidence-label">[\DosDevices\D:]</span> volume-guid-456</div>
+                    <div class="evidence-line"><span class="evidence-label">[\DosDevices\E:]</span> usb-device-789</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Hive: <strong>SYSTEM</strong></div><div class="meta-tag">Count: <strong>3</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Operating System Information</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Windows 10 Enterprise (Build 19045)</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Product]</span> Windows 10 Enterprise</div>
+                    <div class="evidence-line"><span class="evidence-label">[Build]</span> 19045</div>
+                    <div class="evidence-line"><span class="evidence-label">[RegisteredOwner]</span> Admin</div>
+                    <div class="evidence-line"><span class="evidence-label">[InstallDate]</span> 1700000000</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Autostart Entry: SecurityHealth</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registered autostart program: SecurityHealth</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> SecurityHealth</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> C:\Windows\System32\SecurityHealthSystray.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows\CurrentVersion\Run</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-25T04:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Autostart</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Autostart Entry: VMwareTray</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registered autostart program: VMwareTray</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> VMwareTray</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> &quot;C:\Program Files\VMware\VMware Tools\vmtoolsd.exe&quot; -n vmusr</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Microsoft\Windows\CurrentVersion\Run</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-25T04:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Autostart</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Network Profile: CorpWiFi</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Network profile 'CorpWiFi' (Private, Wireless).</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[ProfileName]</span> CorpWiFi</div>
+                    <div class="evidence-line"><span class="evidence-label">[Category]</span> Private</div>
+                    <div class="evidence-line"><span class="evidence-label">[NetworkType]</span> Wireless</div>
+                    <div class="evidence-line"><span class="evidence-label">[FirstConnected]</span> 2025-06-15T09:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastConnected]</span> 2026-02-03T18:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Network</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Installed: WinRAR 6.24</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Software 'WinRAR 6.24' is installed on this system.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Software]</span> WinRAR 6.24</div>
+                    <div class="evidence-line"><span class="evidence-label">[Publisher]</span> win.rar GmbH</div>
+                    <div class="evidence-line"><span class="evidence-label">[InstallDate]</span> 2025-12-01</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Software Inventory</strong></div><div class="meta-tag">Hive: <strong>SOFTWARE</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Autostart Entry: OneDrive</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registered autostart program: OneDrive</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> OneDrive</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> &quot;C:\Program Files\Microsoft OneDrive\OneDrive.exe&quot; /background</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Software\Microsoft\Windows\CurrentVersion\Run</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-28T15:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Autostart</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Autostart Entry: Updater</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registered autostart program: Updater</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Name]</span> Updater</div>
+                    <div class="evidence-line"><span class="evidence-label">[Command]</span> C:\Users\admin\AppData\Roaming\updater.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Key]</span> Software\Microsoft\Windows\CurrentVersion\Run</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-28T15:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Autostart</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank"><strong>T1547.001</strong></a></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Recent Documents (6 files)</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">6 recently accessed files.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> passwords.xlsx</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> employee_records.csv</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> network_diagram.pdf</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> confidential_report.docx</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> Q4_financials.xlsx</div>
+                    <div class="evidence-line"><span class="evidence-label">[File]</span> meeting_notes.txt</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Count: <strong>6</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">UserAssist: cme.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Program 'cme.exe' was executed via Explorer. </div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Encoded]</span> pzr.rkr</div>
+                    <div class="evidence-line"><span class="evidence-label">[Decoded]</span> cme.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Data]</span> run_count:15,last_execution:2026-02-05T07:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Execution</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">UserAssist: pow.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Program 'pow.exe' was executed via Explorer. </div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Encoded]</span> cbj.rkr</div>
+                    <div class="evidence-line"><span class="evidence-label">[Decoded]</span> pow.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Data]</span> run_count:3,last_execution:2026-02-04T22:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Execution</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">UserAssist: wireshark.exe</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Program 'wireshark.exe' was executed via Explorer. </div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Encoded]</span> jverfunex.rkr</div>
+                    <div class="evidence-line"><span class="evidence-label">[Decoded]</span> wireshark.exe</div>
+                    <div class="evidence-line"><span class="evidence-label">[Data]</span> run_count:1,last_execution:2026-02-04T21:00:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>User Execution</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">MountPoint: {11111111-2222-3333-4444-555555555555}</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Device was mounted while this user was logged in.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[MountPoint]</span> {11111111-2222-3333-4444-555555555555}</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastWrite]</span> 2026-01-18T14:25:00Z</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Device Access</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Search Queries (5 total)</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">5 search queries found in WordWheelQuery.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> password list</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> vpn credentials</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> admin share</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> budget report</div>
+                    <div class="evidence-line"><span class="evidence-label">[Query]</span> ssh private key</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Count: <strong>5</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Typed URL: https://www.google.com</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">URL typed in browser address bar: https://www.google.com</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[URL]</span> https://www.google.com</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Browser</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">Typed URL: https://github.com</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">URL typed in browser address bar: https://github.com</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[URL]</span> https://github.com</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Browser</strong></div><div class="meta-tag">Hive: <strong>NTUSER.DAT</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card info">
+            <div class="finding-header">
+                <span class="severity-badge info">INFO</span>
+                <span class="finding-title">User Account: jsmith</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Local user account 'jsmith'.</div>
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[Username]</span> jsmith</div>
+                    <div class="evidence-line"><span class="evidence-label">[RID]</span> 1002</div>
+                    <div class="evidence-line"><span class="evidence-label">[LastLogin]</span> 2026-02-03T09:00:00Z</div>
+                    <div class="evidence-line"><span class="evidence-label">[Flags]</span> 512</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Account</strong></div><div class="meta-tag">Hive: <strong>SAM</strong></div></div>
+            </div>
+        </div>
+
+
+        <div class="category-header">
+            <span class="icon"></span>
+            <h3>&#x1F4CB; All Findings</h3>
+            <span class="category-count">60 total</span>
+        </div>
+        
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Title</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>MITRE ATT&amp;CK</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Suspicious Service: SuspiciousSvc</code></td>
+                        <td>Persistence — Service</td>
+                        <td>Service 'SuspiciousSvc' runs from a suspicious location with auto-start enabled. This is a strong in...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1543/003" target="_blank">T1543.003</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Suspicious Service: MalwarePersist</code></td>
+                        <td>Persistence — Service</td>
+                        <td>Service 'MalwarePersist' runs from a suspicious location with auto-start enabled. This is a strong i...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1543/003" target="_blank">T1543.003</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Malicious Tool Executed: mimikatz.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>BAM/DAM records execution of 'mimikatz.exe', which matches a known offensive tool.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Malicious Tool Executed: powershell.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>BAM/DAM records execution of 'powershell.exe', which matches a known offensive tool.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Malicious Tool Executed: beacon.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>BAM/DAM records execution of 'beacon.exe', which matches a known offensive tool.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Encoded PowerShell Autostart: Cleanup</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Autostart entry contains a PowerShell encoded command. This is a strong indicator of malicious persi...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>Modified Winlogon Shell</code></td>
+                        <td>Persistence — Winlogon</td>
+                        <td>Winlogon Shell has been modified from default 'explorer.exe' to 'explorer.exe, C:\Windows\Temp\shell...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/004" target="_blank">T1547.004</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>IFEO Hijack: sethc.exe</code></td>
+                        <td>Persistence — IFEO</td>
+                        <td>Image File Execution Options debugger set for 'sethc.exe'. Executes 'C:\Windows\System32\cmd.exe' in...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/012" target="_blank">T1546.012</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>IFEO Hijack: utilman.exe</code></td>
+                        <td>Persistence — IFEO</td>
+                        <td>Image File Execution Options debugger set for 'utilman.exe'. Executes 'C:\Windows\System32\cmd.exe' ...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/012" target="_blank">T1546.012</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>AppInit_DLLs Injection</code></td>
+                        <td>Persistence — DLL Injection</td>
+                        <td>AppInit_DLLs contains 'C:\Windows\Temp\hook.dll'. Loading is ENABLED. These DLLs are loaded into eve...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1546/010" target="_blank">T1546.010</a></td>
+                    </tr>
+                    <tr class="finding-row critical">
+                        <td><span class="severity-badge critical">CRITICAL</span></td>
+                        <td><code>User Account: backdoor</code></td>
+                        <td>Security — Suspicious Account</td>
+                        <td>Account 'backdoor' has a suspicious name indicating a potential backdoor account.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1136/001" target="_blank">T1136.001</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Suspicious Autostart: WindowsUpdate</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Autostart entry 'WindowsUpdate' runs from a suspicious or user-writable directory.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>RunMRU Command: powershell -ep bypass</code></td>
+                        <td>User Activity — Run Dialog</td>
+                        <td>User typed 'powershell -ep bypass' in the Run dialog (Win+R).</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>RunMRU Command: \\192.168.1.100\c$</code></td>
+                        <td>User Activity — Run Dialog</td>
+                        <td>User typed '\\192.168.1.100\c$' in the Run dialog (Win+R).</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>RunMRU Command: net user backdoor P@ssw0rd! /add</code></td>
+                        <td>User Activity — Run Dialog</td>
+                        <td>User typed 'net user backdoor P@ssw0rd! /add' in the Run dialog (Win+R).</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Typed Path: \\192.168.1.100\c$</code></td>
+                        <td>User Activity — Explorer</td>
+                        <td>User navigated to '\\192.168.1.100\c$' via the Explorer address bar. Admin share access detected.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1021/002" target="_blank">T1021.002</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Sensitive Files Accessed</code></td>
+                        <td>User Activity — Recent Documents</td>
+                        <td>Recently accessed files include potentially sensitive documents.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1005" target="_blank">T1005</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>UserAssist: mimikatz.exe</code></td>
+                        <td>User Activity — UserAssist</td>
+                        <td>Program 'mimikatz.exe' was executed via Explorer. Matches known offensive tool.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1059" target="_blank">T1059</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Sensitive Search Queries</code></td>
+                        <td>User Activity — Search</td>
+                        <td>User searched for terms related to passwords, credentials, or sensitive data.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1083" target="_blank">T1083</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Typed URL: https://pastebin.com/raw/abc123</code></td>
+                        <td>Browser Activity — Typed URLs</td>
+                        <td>Suspicious URL typed in browser: https://pastebin.com/raw/abc123</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1071/001" target="_blank">T1071.001</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Typed URL: http://192.168.1.100:8080/payload</code></td>
+                        <td>Browser Activity — Typed URLs</td>
+                        <td>Suspicious URL typed in browser: http://192.168.1.100:8080/payload</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1071/001" target="_blank">T1071.001</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Mapped Drive: \\192.168.1.100\c$</code></td>
+                        <td>Network — Mapped Drives</td>
+                        <td>Network drive mapped to '\\192.168.1.100\c$'. Admin share access detected — potential lateral move...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1021/002" target="_blank">T1021.002</a></td>
+                    </tr>
+                    <tr class="finding-row high">
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>Disabled Audit Policies</code></td>
+                        <td>Security — Audit Policy</td>
+                        <td>Audit policies with disabled categories detected. Attackers may disable auditing to cover tracks.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1562/002" target="_blank">T1562.002</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>LOLBin Executed: certutil.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>Certificate utility — can download and decode files</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1140" target="_blank">T1140</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>LOLBin Executed: schtasks.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>Task scheduler utility — used for persistence</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank">T1053.005</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Network Profile: Free_Public_WiFi</code></td>
+                        <td>Network Artifact</td>
+                        <td>Public network 'Free_Public_WiFi' was connected — exposes system to untrusted networks.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Installed: Wireshark 4.2.0</code></td>
+                        <td>Suspicious Software</td>
+                        <td>'Wireshark 4.2.0' is a dual-use / security tool that could indicate reconnaissance or attack activit...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1588/002" target="_blank">T1588.002</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Installed: Nmap 7.95</code></td>
+                        <td>Suspicious Software</td>
+                        <td>'Nmap 7.95' is a dual-use / security tool that could indicate reconnaissance or attack activity.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1588/002" target="_blank">T1588.002</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Scheduled Task: SystemCheck</code></td>
+                        <td>Persistence — Scheduled Task</td>
+                        <td>Cached scheduled task 'SystemCheck' found in registry.</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank">T1053.005</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Browser Helper Object: Unknown BHO</code></td>
+                        <td>Persistence — BHO</td>
+                        <td>Browser Helper Object 'Unknown BHO' (CLSID: {DEADBEEF-1234-5678-9ABC-DEF012345678}) is registered. B...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1176" target="_blank">T1176</a></td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>RunMRU Command: cmd</code></td>
+                        <td>User Activity — Run Dialog</td>
+                        <td>User typed 'cmd' in the Run dialog (Win+R).</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>User Account: Administrator</code></td>
+                        <td>Security — User Account</td>
+                        <td>Built-in Administrator account (RID 500). Verify if this account should be active.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row medium">
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>LSA Secrets Present</code></td>
+                        <td>Security — Credentials</td>
+                        <td>LSA Secrets store found. May contain service account passwords, cached credentials, and auto-logon d...</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1003/004" target="_blank">T1003.004</a></td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>USB Device: SanDisk Ultra USB 3.0</code></td>
+                        <td>USB / External Device</td>
+                        <td>USB storage device was connected to this system.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>USB Device: Kingston DataTraveler 3.0</code></td>
+                        <td>USB / External Device</td>
+                        <td>USB storage device was connected to this system.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>RunMRU Command: notepad</code></td>
+                        <td>User Activity — Run Dialog</td>
+                        <td>User typed 'notepad' in the Run dialog (Win+R).</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>Typed Path: C:\Users\admin\Documents</code></td>
+                        <td>User Activity — Explorer</td>
+                        <td>User navigated to 'C:\Users\admin\Documents' via the Explorer address bar.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>Typed Path: C:\Windows\Temp</code></td>
+                        <td>User Activity — Explorer</td>
+                        <td>User navigated to 'C:\Windows\Temp' via the Explorer address bar.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row low">
+                        <td><span class="severity-badge low">LOW</span></td>
+                        <td><code>Mapped Drive: \\fileserver\shared</code></td>
+                        <td>Network — Mapped Drives</td>
+                        <td>Network drive mapped to '\\fileserver\shared'.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Computer Name</code></td>
+                        <td>System Information</td>
+                        <td>System hostname: WORKSTATION-PC</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>System Timezone</code></td>
+                        <td>System Information</td>
+                        <td>Timezone: Eastern Standard Time (UTC bias: 300 min)</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Program Executed: cmd.exe</code></td>
+                        <td>Program Execution — BAM/DAM</td>
+                        <td>BAM/DAM recorded execution of 'cmd.exe'.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Last Shutdown Time</code></td>
+                        <td>System Information</td>
+                        <td>Last recorded shutdown: 2026-02-05T06:00:00Z</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Mounted Devices</code></td>
+                        <td>Device History</td>
+                        <td>3 mounted device entries found</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Operating System Information</code></td>
+                        <td>System Information</td>
+                        <td>Windows 10 Enterprise (Build 19045)</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Autostart Entry: SecurityHealth</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Registered autostart program: SecurityHealth</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Autostart Entry: VMwareTray</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Registered autostart program: VMwareTray</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Network Profile: CorpWiFi</code></td>
+                        <td>Network Artifact</td>
+                        <td>Network profile 'CorpWiFi' (Private, Wireless).</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Installed: WinRAR 6.24</code></td>
+                        <td>Installed Software</td>
+                        <td>Software 'WinRAR 6.24' is installed on this system.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Autostart Entry: OneDrive</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Registered autostart program: OneDrive</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Autostart Entry: Updater</code></td>
+                        <td>Persistence — Run Key</td>
+                        <td>Registered autostart program: Updater</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1547/001" target="_blank">T1547.001</a></td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Recent Documents (6 files)</code></td>
+                        <td>User Activity — Recent Documents</td>
+                        <td>6 recently accessed files.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>UserAssist: cme.exe</code></td>
+                        <td>User Activity — UserAssist</td>
+                        <td>Program 'cme.exe' was executed via Explorer. </td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>UserAssist: pow.exe</code></td>
+                        <td>User Activity — UserAssist</td>
+                        <td>Program 'pow.exe' was executed via Explorer. </td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>UserAssist: wireshark.exe</code></td>
+                        <td>User Activity — UserAssist</td>
+                        <td>Program 'wireshark.exe' was executed via Explorer. </td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>MountPoint: {11111111-2222-3333-4444-555555555555}</code></td>
+                        <td>User Activity — Mounted Devices</td>
+                        <td>Device was mounted while this user was logged in.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Search Queries (5 total)</code></td>
+                        <td>User Activity — Search</td>
+                        <td>5 search queries found in WordWheelQuery.</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Typed URL: https://www.google.com</code></td>
+                        <td>Browser Activity — Typed URLs</td>
+                        <td>URL typed in browser address bar: https://www.google.com</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>Typed URL: https://github.com</code></td>
+                        <td>Browser Activity — Typed URLs</td>
+                        <td>URL typed in browser address bar: https://github.com</td>
+                        <td>-</td>
+                    </tr>
+                    <tr class="finding-row info">
+                        <td><span class="severity-badge info">INFO</span></td>
+                        <td><code>User Account: jsmith</code></td>
+                        <td>Security — User Account</td>
+                        <td>Local user account 'jsmith'.</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <p>Generated by <strong>KaliHeker Registry Analyzer</strong></p>
+        <p>Windows Registry forensic analysis tool</p>
+    </footer>
+
+    <script>
+        let currentFilter = 'all';
+
+        function filterAll(btn) {
+            currentFilter = 'all';
+            setActiveBtn(btn);
+            applyFilters();
+        }
+
+        function filterBy(btn, level) {
+            currentFilter = level;
+            setActiveBtn(btn);
+            applyFilters();
+        }
+
+        function setActiveBtn(btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function applyFilters() {
+            document.querySelectorAll('.finding-card').forEach(card => {
+                const level = ['critical','high','medium','low','info'].find(c => card.classList.contains(c)) || 'info';
+                card.style.display = (currentFilter === 'all' || level === currentFilter) ? '' : 'none';
+            });
+            document.querySelectorAll('.finding-row').forEach(row => {
+                const badge = row.querySelector('.severity-badge');
+                if (!badge) return;
+                const level = ['critical','high','medium','low','info'].find(c => badge.classList.contains(c)) || 'info';
+                row.style.display = (currentFilter === 'all' || level === currentFilter) ? '' : 'none';
+            });
+        }
+
+        function searchFindings(query) {
+            const q = query.toLowerCase();
+            document.querySelectorAll('.finding-card').forEach(card => {
+                card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+            document.querySelectorAll('.finding-row').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        }
+
+        // Collapsible category headers
+        document.querySelectorAll('.category-header').forEach(header => {
+            header.addEventListener('click', function() {
+                let sibling = this.nextElementSibling;
+                while (sibling && !sibling.classList.contains('category-header')) {
+                    if (sibling.style.display === 'none') {
+                        sibling.style.display = '';
+                    } else {
+                        sibling.style.display = 'none';
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

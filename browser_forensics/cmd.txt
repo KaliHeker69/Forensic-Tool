@@ -1,0 +1,1 @@
+browser_forensics.exe -e <Evidence_Directory> -o report.html --summary

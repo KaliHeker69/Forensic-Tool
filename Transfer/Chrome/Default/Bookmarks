@@ -1,0 +1,47 @@
+{
+   "checksum": "febc6277f7b542b57833c6896dc4f7e2",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13416237944181945",
+            "date_last_used": "0",
+            "guid": "aef827c9-6322-422b-8b0f-b189a8307c5b",
+            "id": "5",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "Black Ops 6 hack computer puzzle guide / walkthrough, how to hack the computer - YouTube",
+            "type": "url",
+            "url": "https://www.youtube.com/watch?v=Zs9SvuaKLwI"
+         } ],
+         "date_added": "13416237675014364",
+         "date_last_used": "0",
+         "date_modified": "13416237946765079",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "Bookmarks bar",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13416237675014364",
+         "date_last_used": "0",
+         "date_modified": "13416237944181945",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13416237675014364",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}

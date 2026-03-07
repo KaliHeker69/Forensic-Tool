@@ -1,0 +1,1308 @@
+# =============================================================================
+# Windows Prefetch Analyzer - Detection Rules
+# =============================================================================
+# This file contains all detection rules for the prefetch analyzer.
+# You can update this file to add new rules without recompiling the tool.
+#
+# Severity Levels: critical, high, medium, low, info
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MALICIOUS TOOLS - Known attack tools and malware
+# -----------------------------------------------------------------------------
+malicious_tools:
+  # Credential Theft
+  - name: "Mimikatz"
+    patterns: ["MIMIKATZ", "MIMI.EXE", "MIMI32.EXE", "MIMI64.EXE"]
+    severity: critical
+    category: "Credential Theft"
+    mitre_id: "T1003"
+    mitre_name: "OS Credential Dumping"
+    description: "Credential theft tool detected"
+
+  - name: "ProcDump"
+    patterns: ["PROCDUMP", "PROCDUMP64"]
+    severity: high
+    category: "Memory Dumping"
+    mitre_id: "T1003.001"
+    mitre_name: "LSASS Memory"
+    description: "Memory dumping tool that can extract credentials"
+
+  - name: "LaZagne"
+    patterns: ["LAZAGNE"]
+    severity: critical
+    category: "Credential Theft"
+    mitre_id: "T1555"
+    mitre_name: "Credentials from Password Stores"
+    description: "Password recovery tool"
+
+  - name: "Secretsdump"
+    patterns: ["SECRETSDUMP"]
+    severity: critical
+    category: "Credential Theft"
+    mitre_id: "T1003.002"
+    mitre_name: "Security Account Manager"
+    description: "Impacket credential dumping tool"
+
+  - name: "NTDSUtil"
+    patterns: ["NTDSUTIL"]
+    severity: critical
+    category: "Credential Theft"
+    mitre_id: "T1003.003"
+    mitre_name: "NTDS"
+    description: "AD database utility - can dump credentials"
+
+  # Lateral Movement
+  - name: "PsExec"
+    patterns: ["PSEXEC", "PSEXEC64", "PSEXESVC"]
+    severity: high
+    category: "Lateral Movement"
+    mitre_id: "T1570"
+    mitre_name: "Lateral Tool Transfer"
+    description: "Remote execution tool"
+
+  - name: "WMI"
+    patterns: ["WMIC.EXE"]
+    severity: medium
+    category: "Remote Execution"
+    mitre_id: "T1047"
+    mitre_name: "Windows Management Instrumentation"
+    description: "WMI command-line utility"
+
+  - name: "PowerShell Remoting"
+    patterns: ["WSMPROVHOST"]
+    severity: medium
+    category: "Lateral Movement"
+    mitre_id: "T1021.006"
+    mitre_name: "Windows Remote Management"
+    description: "PowerShell remoting host"
+
+  - name: "PAExec"
+    patterns: ["PAEXEC"]
+    severity: high
+    category: "Lateral Movement"
+    mitre_id: "T1570"
+    mitre_name: "Lateral Tool Transfer"
+    description: "PsExec alternative"
+
+  - name: "RemCom"
+    patterns: ["REMCOM", "REMCOMSVC"]
+    severity: high
+    category: "Lateral Movement"
+    mitre_id: "T1570"
+    mitre_name: "Lateral Tool Transfer"
+    description: "Remote command execution"
+
+  # Data Exfiltration
+  - name: "Rclone"
+    patterns: ["RCLONE"]
+    severity: high
+    category: "Data Exfiltration"
+    mitre_id: "T1567"
+    mitre_name: "Exfiltration Over Web Service"
+    description: "Cloud sync tool commonly used for exfiltration"
+
+  - name: "MegaSync"
+    patterns: ["MEGASYNC", "MEGACMD"]
+    severity: high
+    category: "Data Exfiltration"
+    mitre_id: "T1567.002"
+    mitre_name: "Exfiltration to Cloud Storage"
+    description: "MEGA cloud sync utility"
+
+  - name: "FileZilla"
+    patterns: ["FILEZILLA"]
+    severity: medium
+    category: "Data Exfiltration"
+    mitre_id: "T1048"
+    mitre_name: "Exfiltration Over Alternative Protocol"
+    description: "FTP client - may be used for exfiltration"
+
+  - name: "WinSCP"
+    patterns: ["WINSCP"]
+    severity: medium
+    category: "Data Exfiltration"
+    mitre_id: "T1048"
+    mitre_name: "Exfiltration Over Alternative Protocol"
+    description: "SFTP client - may be used for exfiltration"
+
+  # Archive Tools
+  - name: "7-Zip"
+    patterns: ["7Z.EXE", "7ZA.EXE", "7ZG.EXE"]
+    severity: medium
+    category: "Archive Creation"
+    mitre_id: "T1560.001"
+    mitre_name: "Archive via Utility"
+    description: "Archive tool - check for pre-exfiltration staging"
+
+  - name: "WinRAR"
+    patterns: ["RAR.EXE", "WINRAR.EXE", "UNRAR.EXE"]
+    severity: medium
+    category: "Archive Creation"
+    mitre_id: "T1560.001"
+    mitre_name: "Archive via Utility"
+    description: "Archive tool - check for pre-exfiltration staging"
+
+  # Anti-Forensics
+  - name: "CCleaner"
+    patterns: ["CCLEANER", "CCLEANER64"]
+    severity: high
+    category: "Anti-Forensics"
+    mitre_id: "T1070"
+    mitre_name: "Indicator Removal"
+    description: "System cleaning tool that removes forensic artifacts"
+
+  - name: "SDelete"
+    patterns: ["SDELETE", "SDELETE64"]
+    severity: critical
+    category: "Anti-Forensics"
+    mitre_id: "T1070.004"
+    mitre_name: "File Deletion"
+    description: "Secure file deletion tool"
+
+  - name: "Eraser"
+    patterns: ["ERASER.EXE", "ERASERD.EXE"]
+    severity: high
+    category: "Anti-Forensics"
+    mitre_id: "T1070.004"
+    mitre_name: "File Deletion"
+    description: "Secure erasure tool"
+
+  - name: "BleachBit"
+    patterns: ["BLEACHBIT"]
+    severity: high
+    category: "Anti-Forensics"
+    mitre_id: "T1070"
+    mitre_name: "Indicator Removal"
+    description: "System cleaning tool"
+
+  - name: "PrivaZer"
+    patterns: ["PRIVAZER"]
+    severity: high
+    category: "Anti-Forensics"
+    mitre_id: "T1070"
+    mitre_name: "Indicator Removal"
+    description: "Privacy cleaner"
+
+  # Network Scanning
+  - name: "Nmap"
+    patterns: ["NMAP.EXE", "NCAT.EXE", "NPING.EXE"]
+    severity: high
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "Network scanner"
+
+  - name: "Masscan"
+    patterns: ["MASSCAN"]
+    severity: high
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "High-speed network scanner"
+
+  - name: "Advanced IP Scanner"
+    patterns: ["ADVANCED_IP_SCANNER", "ADVANCEDIPSCANNER"]
+    severity: medium
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "Network discovery tool"
+
+  - name: "Angry IP Scanner"
+    patterns: ["IPSCAN", "ANGRYIP"]
+    severity: medium
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "IP scanner tool"
+
+  - name: "SoftPerfect Network Scanner"
+    patterns: ["NETSCAN", "SOFTPERFECT"]
+    severity: medium
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "Network scanning utility"
+
+  - name: "NetScan"
+    patterns: ["NETSCAN64", "NETSCAN32"]
+    severity: medium
+    category: "Network Scanning"
+    mitre_id: "T1046"
+    mitre_name: "Network Service Scanning"
+    description: "Network scanner"
+
+  # Remote Access Tools
+  - name: "AnyDesk"
+    patterns: ["ANYDESK"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote desktop tool - verify if authorized"
+
+  - name: "TeamViewer"
+    patterns: ["TEAMVIEWER"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote desktop tool - verify if authorized"
+
+  - name: "ScreenConnect"
+    patterns: ["SCREENCONNECT", "CONNECTWISECONTROL"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote access tool - frequently abused by attackers"
+
+  - name: "Splashtop"
+    patterns: ["SPLASHTOP", "STRWINCLT"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote desktop tool"
+
+  - name: "RustDesk"
+    patterns: ["RUSTDESK"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Open-source remote desktop"
+
+  - name: "Ammyy Admin"
+    patterns: ["AA_V3", "AMMYY"]
+    severity: high
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote access tool - frequently used by attackers"
+
+  - name: "LogMeIn"
+    patterns: ["LOGMEIN"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "Remote access tool"
+
+  - name: "UltraVNC"
+    patterns: ["ULTRAVNC", "UVNC"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "VNC remote access"
+
+  - name: "TightVNC"
+    patterns: ["TIGHTVNC", "TVNC"]
+    severity: medium
+    category: "Remote Access"
+    mitre_id: "T1219"
+    mitre_name: "Remote Access Software"
+    description: "VNC remote access"
+
+  # C2 Frameworks
+  - name: "Cobalt Strike"
+    patterns: ["COBALTSTRIKE", "BEACON", "ARTIFACT"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Cobalt Strike beacon or component"
+
+  - name: "Sliver"
+    patterns: ["SLIVER"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Sliver C2 framework"
+
+  - name: "Brute Ratel"
+    patterns: ["BRUTERATEL", "BRC4"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Brute Ratel C4 framework"
+
+  - name: "Metasploit"
+    patterns: ["MSFCONSOLE", "METERPRETER", "MSFVENOM"]
+    severity: critical
+    category: "Exploitation"
+    mitre_id: "T1059"
+    mitre_name: "Command and Scripting Interpreter"
+    description: "Metasploit framework component"
+
+  - name: "Empire"
+    patterns: ["EMPIRE.EXE", "STARKILLER"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "PowerShell Empire or Starkiller"
+
+  - name: "Havoc"
+    patterns: ["HAVOC"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Havoc C2 framework"
+
+  - name: "Mythic"
+    patterns: ["MYTHIC", "APOLLO"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Mythic C2 framework"
+
+  - name: "Covenant"
+    patterns: ["COVENANT", "GRUNT"]
+    severity: critical
+    category: "C2 Framework"
+    mitre_id: "T1071"
+    mitre_name: "Application Layer Protocol"
+    description: "Covenant C2 framework"
+
+  # Hacking Tools
+  - name: "BloodHound"
+    patterns: ["BLOODHOUND", "SHARPHOUND", "AZUREHOUND"]
+    severity: critical
+    category: "AD Reconnaissance"
+    mitre_id: "T1087.002"
+    mitre_name: "Domain Account"
+    description: "Active Directory attack path tool"
+
+  - name: "Rubeus"
+    patterns: ["RUBEUS"]
+    severity: critical
+    category: "Credential Theft"
+    mitre_id: "T1558"
+    mitre_name: "Steal or Forge Kerberos Tickets"
+    description: "Kerberos attack tool"
+
+  - name: "Impacket"
+    patterns: ["IMPACKET", "WMIEXEC", "SMBEXEC", "ATEXEC", "DCOMEXEC"]
+    severity: critical
+    category: "Lateral Movement"
+    mitre_id: "T1021"
+    mitre_name: "Remote Services"
+    description: "Impacket toolkit"
+
+  - name: "CrackMapExec"
+    patterns: ["CRACKMAPEXEC", "CME", "NETEXEC"]
+    severity: critical
+    category: "Lateral Movement"
+    mitre_id: "T1021"
+    mitre_name: "Remote Services"
+    description: "Network pentesting tool"
+
+  - name: "Ncrack"
+    patterns: ["NCRACK"]
+    severity: high
+    category: "Credential Brute Force"
+    mitre_id: "T1110"
+    mitre_name: "Brute Force"
+    description: "Network authentication cracker"
+
+  - name: "Hydra"
+    patterns: ["HYDRA", "THC-HYDRA"]
+    severity: high
+    category: "Credential Brute Force"
+    mitre_id: "T1110"
+    mitre_name: "Brute Force"
+    description: "Password cracking tool"
+
+  - name: "Hashcat"
+    patterns: ["HASHCAT"]
+    severity: high
+    category: "Password Cracking"
+    mitre_id: "T1110.002"
+    mitre_name: "Password Cracking"
+    description: "Password recovery tool"
+
+  - name: "John the Ripper"
+    patterns: ["JOHN.EXE", "JOHN-THE-RIPPER"]
+    severity: high
+    category: "Password Cracking"
+    mitre_id: "T1110.002"
+    mitre_name: "Password Cracking"
+    description: "Password cracker"
+
+  - name: "ADFind"
+    patterns: ["ADFIND"]
+    severity: high
+    category: "AD Reconnaissance"
+    mitre_id: "T1087.002"
+    mitre_name: "Domain Account"
+    description: "AD enumeration tool"
+
+# -----------------------------------------------------------------------------
+# LOLBINS - Living Off The Land Binaries
+# -----------------------------------------------------------------------------
+lolbins:
+  # Script Engines
+  - name: "PowerShell"
+    patterns: ["POWERSHELL.EXE", "PWSH.EXE"]
+    severity: medium
+    category: "Script Engine"
+    mitre_id: "T1059.001"
+    mitre_name: "PowerShell"
+    description: "PowerShell execution - check command line/context"
+
+  - name: "CScript"
+    patterns: ["CSCRIPT.EXE"]
+    severity: medium
+    category: "Script Engine"
+    mitre_id: "T1059.005"
+    mitre_name: "Visual Basic"
+    description: "Windows Script Host - console version"
+
+  - name: "WScript"
+    patterns: ["WSCRIPT.EXE"]
+    severity: medium
+    category: "Script Engine"
+    mitre_id: "T1059.005"
+    mitre_name: "Visual Basic"
+    description: "Windows Script Host - GUI version"
+
+  - name: "MSHTA"
+    patterns: ["MSHTA.EXE"]
+    severity: high
+    category: "Script Proxy"
+    mitre_id: "T1218.005"
+    mitre_name: "Mshta"
+    description: "HTML Application Host - can execute remote scripts"
+
+  # Download and Execute
+  - name: "Certutil"
+    patterns: ["CERTUTIL.EXE"]
+    severity: high
+    category: "Download Utility"
+    mitre_id: "T1140"
+    mitre_name: "Deobfuscate/Decode Files or Information"
+    description: "Certificate utility - can download and decode files"
+
+  - name: "BITS Admin"
+    patterns: ["BITSADMIN.EXE"]
+    severity: high
+    category: "Download Utility"
+    mitre_id: "T1197"
+    mitre_name: "BITS Jobs"
+    description: "Background transfer utility - can download files"
+
+  - name: "Curl"
+    patterns: ["CURL.EXE"]
+    severity: medium
+    category: "Download Utility"
+    mitre_id: "T1105"
+    mitre_name: "Ingress Tool Transfer"
+    description: "URL transfer tool"
+
+  - name: "Expand"
+    patterns: ["EXPAND.EXE"]
+    severity: medium
+    category: "Archive Utility"
+    mitre_id: "T1140"
+    mitre_name: "Deobfuscate/Decode Files or Information"
+    description: "Cabinet file extractor"
+
+  - name: "Extrac32"
+    patterns: ["EXTRAC32.EXE"]
+    severity: high
+    category: "Archive Utility"
+    mitre_id: "T1105"
+    mitre_name: "Ingress Tool Transfer"
+    description: "CAB extraction - can copy files"
+
+  # Code Execution Proxies
+  - name: "Regsvr32"
+    patterns: ["REGSVR32.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.010"
+    mitre_name: "Regsvr32"
+    description: "Registry server - can execute remote scripts"
+
+  - name: "Rundll32"
+    patterns: ["RUNDLL32.EXE"]
+    severity: medium
+    category: "Execution Proxy"
+    mitre_id: "T1218.011"
+    mitre_name: "Rundll32"
+    description: "DLL launcher - commonly abused"
+
+  - name: "MSIExec"
+    patterns: ["MSIEXEC.EXE"]
+    severity: medium
+    category: "Installer"
+    mitre_id: "T1218.007"
+    mitre_name: "Msiexec"
+    description: "MSI installer - can execute remote packages"
+
+  - name: "InstallUtil"
+    patterns: ["INSTALLUTIL.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.004"
+    mitre_name: "InstallUtil"
+    description: ".NET installer utility - bypass AppLocker"
+
+  - name: "RegAsm"
+    patterns: ["REGASM.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.009"
+    mitre_name: "Regsvcs/Regasm"
+    description: ".NET assembly registration - code execution"
+
+  - name: "RegSvcs"
+    patterns: ["REGSVCS.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.009"
+    mitre_name: "Regsvcs/Regasm"
+    description: ".NET COM+ registration"
+
+  - name: "MSBuild"
+    patterns: ["MSBUILD.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1127.001"
+    mitre_name: "MSBuild"
+    description: "Build tool - can execute inline tasks"
+
+  - name: "CMSTP"
+    patterns: ["CMSTP.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.003"
+    mitre_name: "CMSTP"
+    description: "Connection Manager - UAC/AppLocker bypass"
+
+  - name: "Control Panel"
+    patterns: ["CONTROL.EXE"]
+    severity: medium
+    category: "Execution Proxy"
+    mitre_id: "T1218.002"
+    mitre_name: "Control Panel"
+    description: "Control Panel - can load malicious CPL files"
+
+  - name: "Odbcconf"
+    patterns: ["ODBCCONF.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218.008"
+    mitre_name: "Odbcconf"
+    description: "ODBC configuration - can execute DLLs"
+
+  - name: "Pcalua"
+    patterns: ["PCALUA.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1202"
+    mitre_name: "Indirect Command Execution"
+    description: "Program Compatibility Assistant"
+
+  - name: "Forfiles"
+    patterns: ["FORFILES.EXE"]
+    severity: medium
+    category: "Execution Proxy"
+    mitre_id: "T1202"
+    mitre_name: "Indirect Command Execution"
+    description: "Batch processing - indirect command execution"
+
+  - name: "SyncAppvPublishing"
+    patterns: ["SYNCAPPVPUBLISHINGSERVER.EXE"]
+    severity: high
+    category: "Execution Proxy"
+    mitre_id: "T1218"
+    mitre_name: "Signed Binary Proxy Execution"
+    description: "App-V publishing - can execute PowerShell"
+
+  # Persistence/Scheduled Tasks
+  - name: "Schtasks"
+    patterns: ["SCHTASKS.EXE"]
+    severity: high
+    category: "Persistence"
+    mitre_id: "T1053.005"
+    mitre_name: "Scheduled Task"
+    description: "Task scheduler utility"
+
+  - name: "At"
+    patterns: ["AT.EXE"]
+    severity: high
+    category: "Persistence"
+    mitre_id: "T1053.002"
+    mitre_name: "At"
+    description: "Legacy task scheduler"
+
+  - name: "Reg"
+    patterns: ["REG.EXE"]
+    severity: medium
+    category: "Registry"
+    mitre_id: "T1112"
+    mitre_name: "Modify Registry"
+    description: "Registry modification utility"
+
+  - name: "SC"
+    patterns: ["SC.EXE"]
+    severity: high
+    category: "Persistence"
+    mitre_id: "T1543.003"
+    mitre_name: "Windows Service"
+    description: "Service control manager"
+
+  # Network Tools
+  - name: "Net"
+    patterns: ["NET.EXE", "NET1.EXE"]
+    severity: medium
+    category: "Discovery"
+    mitre_id: "T1087"
+    mitre_name: "Account Discovery"
+    description: "Network utility for user/group enumeration"
+
+  - name: "Netsh"
+    patterns: ["NETSH.EXE"]
+    severity: medium
+    category: "Network Config"
+    mitre_id: "T1562.004"
+    mitre_name: "Disable or Modify System Firewall"
+    description: "Network shell - firewall/config changes"
+
+  - name: "Nltest"
+    patterns: ["NLTEST.EXE"]
+    severity: high
+    category: "Discovery"
+    mitre_id: "T1482"
+    mitre_name: "Domain Trust Discovery"
+    description: "Domain trust enumeration"
+
+  - name: "Dsquery"
+    patterns: ["DSQUERY.EXE"]
+    severity: medium
+    category: "Discovery"
+    mitre_id: "T1087.002"
+    mitre_name: "Domain Account"
+    description: "AD query tool"
+
+  - name: "Arp"
+    patterns: ["ARP.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1016"
+    mitre_name: "System Network Configuration Discovery"
+    description: "ARP cache viewer"
+
+  - name: "Route"
+    patterns: ["ROUTE.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1016"
+    mitre_name: "System Network Configuration Discovery"
+    description: "Routing table viewer"
+
+  - name: "Netstat"
+    patterns: ["NETSTAT.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1049"
+    mitre_name: "System Network Connections Discovery"
+    description: "Network connections viewer"
+
+  - name: "Ipconfig"
+    patterns: ["IPCONFIG.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1016"
+    mitre_name: "System Network Configuration Discovery"
+    description: "IP configuration"
+
+  - name: "Nslookup"
+    patterns: ["NSLOOKUP.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1016"
+    mitre_name: "System Network Configuration Discovery"
+    description: "DNS lookup utility"
+
+  # System Info
+  - name: "Systeminfo"
+    patterns: ["SYSTEMINFO.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1082"
+    mitre_name: "System Information Discovery"
+    description: "System information gathering"
+
+  - name: "Whoami"
+    patterns: ["WHOAMI.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1033"
+    mitre_name: "System Owner/User Discovery"
+    description: "User identity check"
+
+  - name: "Hostname"
+    patterns: ["HOSTNAME.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1082"
+    mitre_name: "System Information Discovery"
+    description: "Hostname retrieval"
+
+  - name: "Tasklist"
+    patterns: ["TASKLIST.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1057"
+    mitre_name: "Process Discovery"
+    description: "Process enumeration"
+
+  - name: "Qprocess"
+    patterns: ["QPROCESS.EXE", "QUERY.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1057"
+    mitre_name: "Process Discovery"
+    description: "Process query utility"
+
+  - name: "Quser"
+    patterns: ["QUSER.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1033"
+    mitre_name: "System Owner/User Discovery"
+    description: "User session query"
+
+  - name: "Qwinsta"
+    patterns: ["QWINSTA.EXE"]
+    severity: low
+    category: "Discovery"
+    mitre_id: "T1033"
+    mitre_name: "System Owner/User Discovery"
+    description: "Remote Desktop session query"
+
+# -----------------------------------------------------------------------------
+# RANSOMWARE INDICATORS
+# -----------------------------------------------------------------------------
+ransomware_tools:
+  - name: "VSSAdmin"
+    patterns: ["VSSADMIN.EXE"]
+    severity: critical
+    category: "Ransomware"
+    mitre_id: "T1490"
+    mitre_name: "Inhibit System Recovery"
+    description: "Shadow copy manipulation - common ransomware tactic"
+
+  - name: "WBAdmin"
+    patterns: ["WBADMIN.EXE"]
+    severity: critical
+    category: "Ransomware"
+    mitre_id: "T1490"
+    mitre_name: "Inhibit System Recovery"
+    description: "Backup manipulation utility"
+
+  - name: "BCDEdit"
+    patterns: ["BCDEDIT.EXE"]
+    severity: critical
+    category: "Ransomware"
+    mitre_id: "T1490"
+    mitre_name: "Inhibit System Recovery"
+    description: "Boot configuration editor - disables recovery"
+
+  - name: "DiskShadow"
+    patterns: ["DISKSHADOW.EXE"]
+    severity: critical
+    category: "Ransomware"
+    mitre_id: "T1490"
+    mitre_name: "Inhibit System Recovery"
+    description: "Volume shadow copy manipulation"
+
+  - name: "WMI Shadow Copy"
+    patterns: ["WMIC.EXE"]
+    severity: high
+    category: "Ransomware"
+    mitre_id: "T1490"
+    mitre_name: "Inhibit System Recovery"
+    description: "WMI used for shadow copy deletion"
+
+  - name: "icacls"
+    patterns: ["ICACLS.EXE"]
+    severity: medium
+    category: "Permission Modification"
+    mitre_id: "T1222"
+    mitre_name: "File and Directory Permissions Modification"
+    description: "ACL modification - may indicate ransomware prep"
+
+  - name: "Cipher"
+    patterns: ["CIPHER.EXE"]
+    severity: high
+    category: "Encryption"
+    mitre_id: "T1070.004"
+    mitre_name: "File Deletion"
+    description: "Windows encryption utility - can wipe free space"
+
+  - name: "Takeown"
+    patterns: ["TAKEOWN.EXE"]
+    severity: medium
+    category: "Permission Modification"
+    mitre_id: "T1222"
+    mitre_name: "File and Directory Permissions Modification"
+    description: "Takes ownership of files"
+
+  - name: "Attrib"
+    patterns: ["ATTRIB.EXE"]
+    severity: low
+    category: "File Manipulation"
+    mitre_id: "T1564.001"
+    mitre_name: "Hidden Files and Directories"
+    description: "File attribute modification"
+
+# -----------------------------------------------------------------------------
+# SUSPICIOUS PATHS
+# -----------------------------------------------------------------------------
+suspicious_paths:
+  - pattern: "\\USERS\\*\\DOWNLOADS\\"
+    severity: medium
+    description: "Execution from Downloads folder"
+
+  - pattern: "\\USERS\\*\\APPDATA\\LOCAL\\TEMP\\"
+    severity: high
+    description: "Execution from user Temp directory"
+
+  - pattern: "\\WINDOWS\\TEMP\\"
+    severity: high
+    description: "Execution from Windows Temp directory"
+
+  - pattern: "\\USERS\\PUBLIC\\"
+    severity: high
+    description: "Execution from Public folder"
+
+  - pattern: "\\$RECYCLE.BIN\\"
+    severity: critical
+    description: "Execution from Recycle Bin - highly suspicious"
+
+  - pattern: "\\PROGRAMDATA\\"
+    severity: medium
+    description: "Execution from ProgramData (non-installer context)"
+
+  - pattern: "\\APPDATA\\ROAMING\\MICROSOFT\\WINDOWS\\START MENU\\PROGRAMS\\STARTUP\\"
+    severity: high
+    description: "Startup folder persistence"
+
+  - pattern: "\\USERS\\*\\APPDATA\\ROAMING\\"
+    severity: medium
+    description: "Execution from AppData Roaming"
+
+  - pattern: "\\PERFLOGS\\"
+    severity: high
+    description: "Execution from PerfLogs - uncommon location"
+
+  - pattern: "\\INTEL\\"
+    severity: medium
+    description: "Execution from Intel folder - sometimes abused"
+
+  - pattern: "\\MUSIC\\"
+    severity: medium
+    description: "Execution from Music folder"
+
+  - pattern: "\\VIDEOS\\"
+    severity: medium
+    description: "Execution from Videos folder"
+
+  - pattern: "\\PICTURES\\"
+    severity: medium
+    description: "Execution from Pictures folder"
+
+  - pattern: "\\FONTS\\"
+    severity: high
+    description: "Execution from Fonts folder - suspicious"
+
+  - pattern: "\\DEBUG\\"
+    severity: high
+    description: "Execution from Debug folder"
+
+  - pattern: "\\TASKS\\"
+    severity: medium
+    description: "Execution from Tasks folder"
+
+# -----------------------------------------------------------------------------
+# SUSPICIOUS DLLs - Only flag truly suspicious patterns
+# -----------------------------------------------------------------------------
+suspicious_dlls:
+  # Only flag known malicious DLLs by name - NOT generic temp DLLs
+  - pattern: "MIMILIB.DLL"
+    severity: critical
+    description: "Mimikatz library detected"
+
+  - pattern: "POWERSPLOIT"
+    severity: critical
+    description: "PowerSploit component detected"
+
+  - pattern: "INVOKE-MIMIKATZ"
+    severity: critical
+    description: "PowerShell Mimikatz detected"
+
+  - pattern: "BEACON.DLL"
+    severity: critical
+    description: "Cobalt Strike beacon DLL"
+
+  - pattern: "PAYLOAD.DLL"
+    severity: high
+    description: "Generic payload DLL - investigate"
+
+  - pattern: "INJECT.DLL"
+    severity: high
+    description: "Injection DLL detected"
+
+  - pattern: "HOOK.DLL"
+    severity: medium
+    description: "Hooking DLL detected"
+
+  - pattern: "\\PERFLOGS\\*.DLL"
+    severity: critical
+    description: "DLL loaded from PerfLogs - highly suspicious"
+
+  - pattern: "\\$RECYCLE.BIN\\*.DLL"
+    severity: critical
+    description: "DLL loaded from Recycle Bin"
+
+# -----------------------------------------------------------------------------
+# WHITELIST - Paths, executables, and patterns to ignore
+# -----------------------------------------------------------------------------
+whitelist:
+  # Trusted system paths
+  paths:
+    - "\\WINDOWS\\SYSTEM32\\"
+    - "\\WINDOWS\\SYSWOW64\\"
+    - "\\PROGRAM FILES\\"
+    - "\\PROGRAM FILES (X86)\\"
+    - "\\WINDOWS\\WINSXS\\"
+    - "\\WINDOWS\\MICROSOFT.NET\\"
+    - "\\WINDOWS\\INSTALLER\\"
+    - "\\WINDOWS\\SERVICING\\"
+    - "\\WINDOWS\\SOFTWAREAISTRIBUTION\\"
+    - "\\WINDOWS\\TEMP\\TRUSTEDINSTALLER\\"
+    - "\\PROGRAMDATA\\MICROSOFT\\"
+    - "\\PROGRAMDATA\\PACKAGE CACHE\\"
+  
+  # System executables to ignore
+  executables:
+    - "EXPLORER.EXE"
+    - "SVCHOST.EXE"
+    - "SERVICES.EXE"
+    - "LSASS.EXE"
+    - "CSRSS.EXE"
+    - "WINLOGON.EXE"
+    - "WININIT.EXE"
+    - "DWM.EXE"
+    - "TASKHOSTW.EXE"
+    - "RUNTIMEBROKER.EXE"
+    - "SIHOST.EXE"
+    - "CTFMON.EXE"
+    - "SEARCHHOST.EXE"
+    - "STARTMENUEXPERIENCEHOST.EXE"
+    - "SHELLEXPERIENCEHOST.EXE"
+    - "TEXTINPUTHOST.EXE"
+    - "APPLICATIONFRAMEHOST.EXE"
+    - "SYSTEMSETTINGS.EXE"
+    - "SMARTSCREEN.EXE"
+    - "SECURITYHEALTHSERVICE.EXE"
+    - "SPOOLSV.EXE"
+    - "SEARCHINDEXER.EXE"
+    - "MSIEXEC.EXE"
+    - "TIWORKER.EXE"
+    - "TRUSTEDINSTALLER.EXE"
+    - "WUAUCLT.EXE"
+    - "CONSENT.EXE"
+    - "DLLHOST.EXE"
+    - "WMIPRVSE.EXE"
+    - "SEARCHPROTOCOLHOST.EXE"
+    - "SEARCHFILTERHOST.EXE"
+    # Windows Update and servicing
+    - "USOCOREWORKER.EXE"
+    - "MUSNOTIFICATION.EXE"
+    - "MUSNOTIFYICON.EXE"
+    - "WAASMEDIC.EXE"
+    - "SEDLAUNCHER.EXE"
+    - "WUAPIHOST.EXE"
+    # Antivirus and security
+    - "MSMPENG.EXE"
+    - "MPCMDRUN.EXE"
+    - "NISSRV.EXE"
+    - "SECURITYHEALTHHOST.EXE"
+    - "SECURITYHEALTHSYSTRAY.EXE"
+    - "SECURITYHEALTHSERVICE.EXE"
+    # Visual Studio and development
+    - "DEVENV.EXE"
+    - "MSBUILD.EXE"
+    - "VSHUB.EXE"
+    - "VSHOST.EXE"
+    - "SERVICEHUB.EXE"
+    - "PERFWATSON2.EXE"
+    # Microsoft Office
+    - "OFFICECLICKTORUN.EXE"
+    - "APPVSHNOTIFY.EXE"
+    - "OFFICEBACKGROUNDTASKHANDLER.EXE"
+    - "SDXHELPER.EXE"
+    - "MSOIA.EXE"
+    # Edge/Chrome/Browser
+    - "MSEDGE.EXE"
+    - "CHROME.EXE"
+    - "FIREFOX.EXE"
+    - "OPERA.EXE"
+    - "BRAVE.EXE"
+    # VirtualBox guest additions
+    - "VBOXSERVICE.EXE"
+    - "VBOXTRAY.EXE"
+    # VMware Tools
+    - "VMTOOLSD.EXE"
+    - "VMWARETRAY.EXE"
+    # Hyper-V
+    - "VMCONNECT.EXE"
+    - "VMCOMPUTE.EXE"
+    # System telemetry
+    - "COMPATTELRUNNER.EXE"
+    - "DEVICECENSUS.EXE"
+    # .NET Framework
+    - "NGEN.EXE"
+    - "NGENTASK.EXE"
+    - "DOTNET.EXE"
+    # Windows Store and AppX
+    - "WSAPPX.EXE"
+    - "WUAPIHOST.EXE"
+    - "LICENSINGUI.EXE"
+    # Print/Fax
+    - "PRINTFILTERPIPELINESVC.EXE"
+    - "FXSSVC.EXE"
+    # Remote Desktop
+    - "RDPCLIP.EXE"
+    - "RDPINPUT.EXE"
+    # Windows Error Reporting
+    - "WERFAULT.EXE"
+    - "WERMGR.EXE"
+    # Scheduler and tasks
+    - "SCHTASKS.EXE"
+    - "TASKENG.EXE"
+    # Misc system
+    - "CONHOST.EXE"
+    - "BACKGROUNDTASKHOST.EXE"
+    - "FONTDRVHOST.EXE"
+    - "AUDIODG.EXE"
+    - "RDPSA.EXE"
+    - "GAMEBARPRESENCEWRITER.EXE"
+    - "WINDOWSTERMINAL.EXE"
+    # Sysmon and monitoring tools (legitimate)
+    - "SYSMON64.EXE"
+    - "SYSMON.EXE"
+    - "PROCMON64.EXE"
+    - "PROCMON.EXE"
+    - "PROCEXP64.EXE"
+    - "PROCEXP.EXE"
+
+# -----------------------------------------------------------------------------
+# INSTALLER WHITELIST - Executables that legitimately load temp DLLs
+# -----------------------------------------------------------------------------
+installer_executables:
+  # Microsoft installers and tools
+  - "VCREDIST"
+  - "VC_REDIST"
+  - "SETUP.EXE"
+  - "MSIEXEC.EXE"
+  - "MICROSOFTEDGEUPDATE"
+  - "MICROSOFTEDGEWEBVIEW"
+  - "MSEDGEUPDATE"
+  - "UPDATE.EXE"
+  - "UPDATER.EXE"
+  - "GOOGLEUPDATE"
+  - "CHROMESETUP"
+  - "INSTALLUTIL.EXE"
+  # Windows Update
+  - "WUSA.EXE"
+  - "WUAUCLT.EXE"
+  - "TRUSTEDINSTALLER.EXE"
+  - "TIWORKER.EXE"
+  - "CBS.EXE"
+  # .NET Framework
+  - "DOTNETFX"
+  - "NDPSETUP"
+  - "ASPNETSETUP"
+  - "NGEN.EXE"
+  - "NGENTASK.EXE"
+  - "NETFX"
+  # Common software installers  
+  - "FIREFOX"
+  - "CHROME"
+  - "OPERA"
+  - "BRAVE"
+  - "EDGE"
+  # Adobe
+  - "ADOBEARM"
+  - "ADOBEUPDATER"
+  - "CCXPROCESS"
+  - "ACROBAT"
+  - "READER"
+  # Java
+  - "JAVAW.EXE"
+  - "JAVA.EXE"
+  - "JAVAWS.EXE"
+  - "JQS.EXE"
+  # Microsoft Office
+  - "OFFICECLICKTORUN"
+  - "OFFICESETUP"
+  - "ONENOTEADD"
+  - "OSF"
+  - "MSOIA"
+  # Visual Studio
+  - "VS_INSTALLER"
+  - "VS_SETUP"
+  - "VSIXINSTALLER"
+  - "DEVENV"
+  - "SERVICEHUB"
+  # SQL Server
+  - "SQLSERV"
+  - "SQLAGENT"
+  - "SQLWRITER"
+  - "SQLBROWSER"
+  # Antivirus updates
+  - "MPAM"
+  - "MPAS"
+  - "MPSIGSTUB"
+  - "NIS"
+  # VirtualBox/VMware
+  - "VBOXGUESTADDITIONS"
+  - "VBOX"
+  - "VMWARE"
+  # Package managers
+  - "WINGET"
+  - "CHOCOLATEY"
+  - "SQUIRREL"
+  - "INNO"
+  - "NULLSOFT"
+
+# -----------------------------------------------------------------------------
+# INSTALLER DLL PATTERNS - DLLs commonly loaded by installers (to whitelist)
+# -----------------------------------------------------------------------------
+installer_dll_patterns:
+  # Microsoft VC++ Runtime DLLs
+  - "MSVCP"
+  - "VCRUNTIME"
+  - "MSVCR"
+  - "UCRTBASE"
+  - "UCRT"
+  - "API-MS-WIN"
+  - "CONCRT"
+  - "VCCORLIB"
+  - "VCOMP"
+  - "ATL"
+  # WiX Installer components
+  - "WIXSTDBA"
+  - "WIXCA"
+  - "WIXEXT"
+  - "MBAHOST"
+  - "BOOTSTRAPPER"
+  # Common installer frameworks
+  - "NSIS"
+  - "LZMA"
+  - "CABINET"
+  - "SETUP"
+  - "INSTALL"
+  - "UNINSTALL"
+  - "INNO"
+  - "SQUIRREL"
+  # Microsoft Edge/Chrome update
+  - "MSEDGEUPDATE"
+  - "PSMACHINE"
+  - "PSUSER"
+  - "GOOGLEUPDATE"
+  # Mozilla components
+  - "MOZ"
+  - "NSS"
+  - "FREEBL"
+  - "SOFTOKN"
+  - "NSSCKBI"
+  - "SMIME"
+  - "SSL"
+  - "PLC"
+  - "NSPR"
+  # DirectX/Graphics
+  - "D3D"
+  - "DXGI"
+  - "D2D"
+  - "DWRITE"
+  - "DXCORE"
+  - "D3DCOMPILER"
+  - "XINPUT"
+  - "XAUDIO"
+  # .NET runtime
+  - "CLRJIT"
+  - "CORECLR"
+  - "HOSTFXR"
+  - "HOSTPOLICY"
+  - "MSCOR"
+  - "CLR"
+  - "NETHOST"
+  - "IJWHOST"
+  # Windows Crypto
+  - "BCRYPT"
+  - "NCRYPT"
+  - "CRYPT32"
+  - "WinTrust"
+  # Common application DLLs
+  - "QT5"
+  - "QT6"
+  - "LIBCURL"
+  - "ZLIB"
+  - "OPENSSL"
+  - "LIBSSL"
+  - "LIBEAY"
+  - "SSLEAY"
+  - "SQLITE"
+  - "LIBPNG"
+  - "LIBJPEG"
+  - "FREETYPE"
+  - "HARFBUZZ"
+  - "ICU"
+  - "ICUUC"
+  - "ICUIN"
+  - "ICUDT"
+  # CEF (Chromium Embedded Framework)
+  - "LIBCEF"
+  - "CEF"
+  - "CHROME_ELF"
+  - "V8"
+  # Electron apps
+  - "ELECTRON"
+  - "NODE"
+  # Java
+  - "JVM"
+  - "JAVA"
+  - "VERIFY"
+  - "J9"
+  # Python
+  - "PYTHON"
+  - "LIBFFI"
+  - "TCLTK"
+  # GPU/Graphics drivers
+  - "NVOGLV"
+  - "AMDXC"
+  - "IGC"
+  - "VULKAN"
+  # Media codecs
+  - "AVCODEC"
+  - "AVFORMAT"
+  - "AVUTIL"
+  - "SWSCALE"
+  - "FFMPEG"
+  - "LIBVPX"
+  - "OPUS"
+  - "VORBIS"
+

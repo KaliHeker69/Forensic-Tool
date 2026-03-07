@@ -1,0 +1,16 @@
+[package]
+name = "registry_analyzer"
+version = "1.0.0"
+edition = "2021"
+description = "KaliHeker Registry Analyzer — Forensic analysis of parsed Windows registry JSON with HTML report generation"
+authors = ["KaliHeker"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+
+[profile.release]
+opt-level = 3
+lto = true

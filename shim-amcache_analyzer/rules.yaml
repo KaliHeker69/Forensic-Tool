@@ -1,0 +1,1074 @@
+# ShimCache & AmCache Analyzer Detection Rules
+# Modify these rules to customize detection behavior
+# Based on DFIR research and MITRE ATT&CK framework
+
+# Suspicious path patterns - files matching these are flagged
+suspicious_paths:
+  - pattern: "\\\\users\\\\public\\\\"
+    description: "Public user folder"
+  - pattern: "\\\\recycle\\.bin\\\\"
+    description: "Recycle Bin"
+  - pattern: "^[a-z]:\\\\[^\\\\]+\\.exe$"
+    description: "Executable at drive root"
+  - pattern: "\\\\programdata\\\\[^\\\\]+\\.exe$"
+    description: "Direct executable in ProgramData"
+  - pattern: "\\\\perflogs\\\\"
+    description: "PerfLogs folder (often abused)"
+  - pattern: "\\\\intel\\\\"
+    description: "Intel folder (often abused by malware)"
+  - pattern: "\\\\debug\\\\"
+    description: "Debug folder"
+  # Application Shimming paths (MITRE T1546.011)
+  - pattern: "\\\\windows\\\\apppatch\\\\custom\\\\"
+    description: "Custom AppPatch folder (Application Shimming)"
+  - pattern: "\\\\windows\\\\apppatch\\\\apppatch64\\\\custom\\\\"
+    description: "Custom AppPatch64 folder (Application Shimming)"
+  # WinSxS abuse
+  - pattern: "\\\\winsxs\\\\temp\\\\"
+    description: "WinSxS temp folder abuse"
+  # Tasks folder direct execution
+  - pattern: "\\\\windows\\\\tasks\\\\"
+    description: "Windows Tasks folder"
+  # System profile abuse
+  - pattern: "\\\\systemprofile\\\\appdata\\\\"
+    description: "System profile AppData"
+  # Fonts folder abuse
+  - pattern: "\\\\windows\\\\fonts\\\\.*\\.(exe|dll|ps1|bat|cmd)$"
+    description: "Executable in Fonts folder"
+  # Unusual Windows subdirectories
+  - pattern: "\\\\windows\\\\help\\\\"
+    description: "Windows Help folder abuse"
+  - pattern: "\\\\windows\\\\addins\\\\"
+    description: "Windows AddIns folder"
+  - pattern: "\\\\windows\\\\cursors\\\\.*\\.(exe|dll)$"
+    description: "Executable in Cursors folder"
+  # User temp directories with deep nesting (evasion)
+  - pattern: "\\\\appdata\\\\local\\\\temp\\\\[^\\\\]+\\\\[^\\\\]+\\\\[^\\\\]+\\\\"
+    description: "Deeply nested temp folder"
+  # NEW: Additional suspicious paths
+  - pattern: "\\\\windows\\\\tracing\\\\"
+    description: "Windows Tracing folder abuse"
+  - pattern: "\\\\windows\\\\registration\\\\"
+    description: "Windows Registration folder abuse"
+  - pattern: "\\\\windows\\\\security\\\\audit\\\\"
+    description: "Security Audit folder abuse"
+  - pattern: "\\\\windows\\\\branding\\\\"
+    description: "Windows Branding folder abuse"
+  - pattern: "\\\\windows\\\\globalization\\\\"
+    description: "Windows Globalization folder abuse"
+  - pattern: "\\\\appdata\\\\local\\\\microsoft\\\\windows\\\\inetcache\\\\"
+    description: "INetCache folder execution"
+  - pattern: "\\\\appdata\\\\local\\\\packages\\\\.*\\\\localcache\\\\local\\\\"
+    description: "UWP app local cache abuse"
+  - pattern: "\\\\appdata\\\\local\\\\packages\\\\.*\\\\roamingstate\\\\"
+    description: "UWP app roaming state abuse"
+  - pattern: "\\\\windows\\\\policydefinitions\\\\"
+    description: "Policy definitions folder abuse"
+  - pattern: "\\\\windows\\\\diagnostics\\\\system\\\\"
+    description: "Diagnostics system folder abuse"
+  - pattern: "\\\\windows\\\\schemas\\\\"
+    description: "Windows Schemas folder abuse"
+  - pattern: "\\\\programdata\\\\package cache\\\\"
+    description: "Package Cache folder abuse"
+  - pattern: "\\\\users\\\\default\\\\"
+    description: "Default user profile abuse"
+  - pattern: "\\\\windows\\\\assembly\\\\nativeimages\\\\"
+    description: ".NET native images abuse"
+  - pattern: "\\\\windows\\\\ime\\\\"
+    description: "IME folder abuse"
+  - pattern: "\\\\$recycle\\.bin\\\\"
+    description: "Recycle bin with $ prefix"
+  - pattern: "\\\\windows\\\\panther\\\\"
+    description: "Windows Panther folder (setup logs)"
+  - pattern: "\\\\windows\\\\resources\\\\themes\\\\"
+    description: "Themes folder abuse"
+
+# Suspicious filename patterns - files matching these are flagged HIGH
+suspicious_filenames:
+  # Hash-like names (malware often uses these)
+  - pattern: "^[a-f0-9]{32}\\.exe$"
+    description: "MD5-like filename"
+  - pattern: "^[a-f0-9]{40}\\.exe$"
+    description: "SHA1-like filename"
+  - pattern: "^[a-f0-9]{64}\\.exe$"
+    description: "SHA256-like filename"
+  # Double extensions
+  - pattern: "\\.(doc|pdf|jpg|png|txt|rtf|xls|xlsx|docx|pptx|zip|rar)\\.(exe|scr|pif|bat|cmd|ps1|vbs|js|hta|msi)$"
+    description: "Double extension"
+  # Hidden file with executable extension
+  - pattern: "^\\.[^.]+\\.(exe|dll|scr|bat|cmd|ps1|vbs|js)$"
+    description: "Hidden executable file"
+  # Typosquatting common system executables
+  - pattern: "^(svch0st|scvhost|svchosts|svchostr|svhost)\\.exe$"
+    description: "svchost.exe typosquatting"
+  - pattern: "^(expl0rer|explor3r|explorerr|explore)\\.exe$"
+    description: "explorer.exe typosquatting"
+  - pattern: "^(lssas|1sass|lsasss|lsas)\\.exe$"
+    description: "lsass.exe typosquatting"
+  - pattern: "^(csrs|crsss|csrsss|crss)\\.exe$"
+    description: "csrss.exe typosquatting"
+  - pattern: "^(servlces|serv1ces|servicess)\\.exe$"
+    description: "services.exe typosquatting"
+  - pattern: "^(taskh0st|taskh0stw|taskhst)\\.exe$"
+    description: "taskhostw.exe typosquatting"
+  - pattern: "^(win1nit|wlninit)\\.exe$"
+    description: "wininit.exe typosquatting"
+  - pattern: "^(win1ogon|winlog0n)\\.exe$"
+    description: "winlogon.exe typosquatting"
+  # Common malware naming patterns
+  - pattern: "^(update|install|setup|patch|helper|loader|service)[0-9]+\\.exe$"
+    description: "Generic installer with numbers"
+  - pattern: "^(update|install|setup|patch)_[a-z0-9]+\\.exe$"
+    description: "Generic installer with suffix"
+  # Random character filenames
+  - pattern: "^[a-z]{1,2}[0-9]{4,6}\\.exe$"
+    description: "Random alphanumeric filename"
+  - pattern: "^tmp[a-f0-9]{4,8}\\.exe$"
+    description: "Temp-like executable name"
+  - pattern: "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\\.exe$"
+    description: "GUID-like filename"
+  # Encoded/obfuscated scripts
+  - pattern: "^[a-z]{10,}\\.ps1$"
+    description: "Long random PowerShell script name"
+  - pattern: "^[0-9]+\\.ps1$"
+    description: "Numeric PowerShell script name"
+  # Common hacking tools
+  - pattern: "^(mimikatz|mimi|lazagne|procdump|gsecdump|wce|pwdump|fgdump|cachedump)\\.exe$"
+    description: "Known credential dumping tool"
+  - pattern: "^(psexec|psexesvc|remcom|winexe)\\.exe$"
+    description: "Remote execution tool"
+  - pattern: "^(nc|ncat|netcat|socat)\\.exe$"
+    description: "Network utility (potential backdoor)"
+  - pattern: "^(rar|7z|7za)\\.exe$"
+    description: "Archive tool in unusual location"
+  # Cobalt Strike / Meterpreter indicators
+  - pattern: "^beacon\\.exe$"
+    description: "Cobalt Strike beacon"
+  - pattern: "^artifact\\.exe$"
+    description: "Cobalt Strike artifact"
+  - pattern: "^metsvc\\.exe$"
+    description: "Meterpreter service"
+  # NEW: Additional suspicious filename patterns
+  # Note: Removed overly aggressive patterns (sys*, win*, ms*, runtime*, host*) that flagged legitimate Windows executables
+  # Only keep patterns for obvious malware-like names
+  - pattern: "^agent[a-z0-9]+\\.exe$"
+    description: "Generic agent executable"
+  - pattern: "^(client|server)[0-9]+\\.exe$"
+    description: "Generic client/server executable"
+  - pattern: "^(sysmon|sysmon64)\\.(exe|sys)$"
+    description: "Fake Sysmon (check signature)"
+  - pattern: "^conhost[0-9]\\.exe$"
+    description: "Fake conhost with number suffix"
+  # NOTE: Removed ^runtimebroker\\.exe$ pattern - RuntimeBroker.exe is a LEGITIMATE Windows process
+  - pattern: "^dllhost32\\.exe$"
+    description: "Fake dllhost with 32 suffix"
+  - pattern: "^spoolsv32\\.exe$"
+    description: "Fake spoolsv with 32 suffix"
+  - pattern: "^\\.exe\\.exe$"
+    description: "Double .exe extension"
+  - pattern: "^.*\\x20+\\.(exe|scr|pif)$"
+    description: "Filename with trailing spaces before extension"
+  - pattern: "^autoit.*\\.exe$"
+    description: "AutoIt compiled script (common in malware)"
+  - pattern: "^ahk.*\\.exe$"
+    description: "AutoHotkey compiled script"
+  - pattern: "^py2exe.*\\.exe$"
+    description: "Python compiled executable"
+  - pattern: "^(backup|data|info|log|cache|config)_[a-f0-9]{8}\\.exe$"
+    description: "Fake data file with hex suffix"
+
+# Trusted paths - files in these locations are considered safe
+trusted_paths:
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\system32\\\\"
+    description: "Windows System32"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\syswow64\\\\"
+    description: "Windows SysWOW64"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\winsxs\\\\"
+    description: "Windows WinSxS"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\program files\\\\"
+    description: "Program Files"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\program files \\(x86\\)\\\\"
+    description: "Program Files (x86)"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\microsoft\\.net\\\\"
+    description: "Microsoft .NET"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\immersivecontrolpanel\\\\"
+    description: "Immersive Control Panel"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\softwaredistribution\\\\"
+    description: "Software Distribution"
+  - pattern: "^(\\\\\\\\?\\\\?\\\\)?[a-z]:\\\\programdata\\\\microsoft\\\\"
+    description: "ProgramData Microsoft"
+  - pattern: "\\\\windowsapps\\\\"
+    description: "Windows Apps"
+  - pattern: "\\\\microsoft\\\\onedrive\\\\"
+    description: "Microsoft OneDrive"
+  - pattern: "^(\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\systemapps\\\\"
+    description: "Windows SystemApps (UWP apps)"
+  - pattern: "^(\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\speech\\\\"
+    description: "Windows Speech"
+  - pattern: "^(\\\\\\?\\\\?\\\\)?[a-z]:\\\\windows\\\\servicing\\\\"
+    description: "Windows Servicing (TrustedInstaller)"
+
+# Trusted publishers/products - entries with these are treated as safe
+trusted_publishers:
+  - "microsoft"
+  - "onedrive"
+  - "vmware"
+  - "windows"
+  - "adobe"
+  - "google"
+  - "mozilla"
+  - "oracle"
+  - "intel"
+  - "nvidia"
+  - "amd"
+  - "dell"
+  - "hp"
+  - "lenovo"
+  - "asus"
+  - "logitech"
+  - "realtek"
+  - "citrix"
+  - "cisco"
+  - "symantec"
+  - "mcafee"
+  - "crowdstrike"
+  - "sentinelone"
+  - "sophos"
+  - "trend micro"
+  - "kaspersky"
+  - "eset"
+  - "malwarebytes"
+  # NEW: Additional trusted publishers
+  - "amazon"
+  - "slack"
+  - "zoom"
+  - "dropbox"
+  - "box"
+  - "microsoft corporation"
+  - "apple"
+  - "jetbrains"
+  - "nodejs"
+  - "python software foundation"
+  - "docker"
+  - "red hat"
+  - "canonical"
+  - "github"
+  - "atlassian"
+  - "elastic"
+  - "splunk"
+  - "palo alto networks"
+  - "fortinet"
+  - "check point"
+  - "f-secure"
+  - "bitdefender"
+  - "avast"
+  - "avg"
+  - "teamviewer"
+
+# System executables and their valid paths (for detecting mimicry)
+# If these executables are found outside their valid paths, it's CRITICAL
+system_executables:
+  svchost.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\syswow64\\\\"
+  csrss.exe:
+    - "\\\\windows\\\\system32\\\\"
+  lsass.exe:
+    - "\\\\windows\\\\system32\\\\"
+  services.exe:
+    - "\\\\windows\\\\system32\\\\"
+  winlogon.exe:
+    - "\\\\windows\\\\system32\\\\"
+  explorer.exe:
+    - "\\\\windows\\\\"
+  smss.exe:
+    - "\\\\windows\\\\system32\\\\"
+  wininit.exe:
+    - "\\\\windows\\\\system32\\\\"
+  dwm.exe:
+    - "\\\\windows\\\\system32\\\\"
+  taskhostw.exe:
+    - "\\\\windows\\\\system32\\\\"
+  rundll32.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\syswow64\\\\"
+  dllhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\syswow64\\\\"
+  spoolsv.exe:
+    - "\\\\windows\\\\system32\\\\"
+  taskhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  conhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  runtimebroker.exe:
+    - "\\\\windows\\\\system32\\\\"
+  searchindexer.exe:
+    - "\\\\windows\\\\system32\\\\"
+  searchprotocolhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  # NEW: Additional system executables
+  sihost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  ctfmon.exe:
+    - "\\\\windows\\\\system32\\\\"
+  fontdrvhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  backgroundtaskhost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  dashost.exe:
+    - "\\\\windows\\\\system32\\\\"
+  securityhealthservice.exe:
+    - "\\\\windows\\\\system32\\\\"
+  securityhealthsystray.exe:
+    - "\\\\windows\\\\system32\\\\"
+  smartscreen.exe:
+    - "\\\\windows\\\\system32\\\\"
+  wuauclt.exe:
+    - "\\\\windows\\\\system32\\\\"
+  audiodg.exe:
+    - "\\\\windows\\\\system32\\\\"
+  mmc.exe:
+    - "\\\\windows\\\\system32\\\\"
+  mstsc.exe:
+    - "\\\\windows\\\\system32\\\\"
+  notepad.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\"
+  calc.exe:
+    - "\\\\windows\\\\system32\\\\"
+  cmd.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\syswow64\\\\"
+  powershell.exe:
+    - "\\\\windows\\\\system32\\\\windowspowershell\\\\v1.0\\\\"
+    - "\\\\windows\\\\syswow64\\\\windowspowershell\\\\v1.0\\\\"
+  pwsh.exe:
+    - "\\\\program files\\\\powershell\\\\"
+  reg.exe:
+    - "\\\\windows\\\\system32\\\\"
+    - "\\\\windows\\\\syswow64\\\\"
+  regedit.exe:
+    - "\\\\windows\\\\"
+  at.exe:
+    - "\\\\windows\\\\system32\\\\"
+  schtasks.exe:
+    - "\\\\windows\\\\system32\\\\"
+  sc.exe:
+    - "\\\\windows\\\\system32\\\\"
+  net.exe:
+    - "\\\\windows\\\\system32\\\\"
+  net1.exe:
+    - "\\\\windows\\\\system32\\\\"
+  whoami.exe:
+    - "\\\\windows\\\\system32\\\\"
+  ipconfig.exe:
+    - "\\\\windows\\\\system32\\\\"
+  systeminfo.exe:
+    - "\\\\windows\\\\system32\\\\"
+  tasklist.exe:
+    - "\\\\windows\\\\system32\\\\"
+  taskkill.exe:
+    - "\\\\windows\\\\system32\\\\"
+
+# Legitimate temp executables - Windows system components that commonly run from Temp folders
+# These are whitelisted to reduce false positives
+legitimate_temp_executables:
+  - pattern: "dismhost\\.exe$"
+    description: "DISM (Deployment Image Servicing and Management)"
+  - pattern: "mprecovery\\.exe$"
+    description: "Windows Defender Recovery Tool"
+  - pattern: "mpsigstub\\.exe$"
+    description: "Windows Defender Signature Stub"
+  - pattern: "(vc_redist|vcredist).*\\.exe$"
+    description: "Visual C++ Redistributable Installer"
+  - pattern: "am_delta.*\\.exe$"
+    description: "Windows Update Antimalware Delta"
+  - pattern: "trustedinstaller\\.exe$"
+    description: "Windows Module Installer (TrustedInstaller)"
+
+# Legitimate tools in Downloads - suppress low-risk noise for known forensic/admin binaries
+legitimate_download_executables:
+  - pattern: "\\\\downloads\\\\kape\\\\.*\\\\kape\\.exe$"
+    description: "KAPE forensic collector"
+  - pattern: "\\\\downloads\\\\kape\\\\.*\\\\gkape\\.exe$"
+    description: "gkape forensic collector"
+  - pattern: "\\\\downloads\\\\.*\\\\ftk imager\\.exe$"
+    description: "FTK Imager forensic utility"
+  - pattern: "\\\\downloads\\\\.*\\\\procmon(?:64)?\\.exe$"
+    description: "Sysinternals Process Monitor"
+
+# RMM Tools (Remote Monitoring & Management) - Often abused by attackers
+rmm_tools:
+  - pattern: "teamviewer.*\\.exe$"
+    description: "TeamViewer RMM"
+    risk: "medium"
+  - pattern: "anydesk.*\\.exe$"
+    description: "AnyDesk RMM"
+    risk: "medium"
+  - pattern: "screenconnect.*\\.exe$"
+    description: "ScreenConnect (ConnectWise Control)"
+    risk: "medium"
+  - pattern: "supremo.*\\.exe$"
+    description: "Supremo Remote Desktop"
+    risk: "medium"
+  - pattern: "ammyy.*\\.exe$"
+    description: "Ammyy Admin"
+    risk: "high"
+  - pattern: "atera.*\\.exe$"
+    description: "Atera RMM"
+    risk: "medium"
+  - pattern: "splashtop.*\\.exe$"
+    description: "Splashtop RMM"
+    risk: "medium"
+  - pattern: "logmein.*\\.exe$"
+    description: "LogMeIn RMM"
+    risk: "medium"
+  - pattern: "(vnc|realvnc|tightvnc|ultravnc).*\\.exe$"
+    description: "VNC Remote Access"
+    risk: "medium"
+  - pattern: "rustdesk.*\\.exe$"
+    description: "RustDesk RMM"
+    risk: "medium"
+  - pattern: "meshagent.*\\.exe$"
+    description: "MeshCentral Agent"
+    risk: "high"
+  - pattern: "quickassist.*\\.exe$"
+    description: "Quick Assist (potential abuse)"
+    risk: "low"
+  # NEW: Additional RMM tools
+  - pattern: "radmin.*\\.exe$"
+    description: "RAdmin Remote Administrator"
+    risk: "medium"
+  - pattern: "dameware.*\\.exe$"
+    description: "DameWare Remote Support"
+    risk: "medium"
+  - pattern: "remotepc.*\\.exe$"
+    description: "RemotePC"
+    risk: "medium"
+  - pattern: "gotomypc.*\\.exe$"
+    description: "GoToMyPC"
+    risk: "medium"
+  - pattern: "dwagent.*\\.exe$"
+    description: "DWAgent Remote Access"
+    risk: "medium"
+  - pattern: "zoho.*assist.*\\.exe$"
+    description: "Zoho Assist"
+    risk: "medium"
+  - pattern: "n-able.*\\.exe$"
+    description: "N-able RMM"
+    risk: "medium"
+  - pattern: "kaseya.*\\.exe$"
+    description: "Kaseya VSA"
+    risk: "high"
+
+# Living Off The Land Binaries (LOLBins) - Legitimate tools abused for attacks
+# These require context - flag when found in unusual locations or with suspicious parents
+lolbins:
+  - pattern: "certutil\\.exe$"
+    description: "CertUtil - Can download files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "bitsadmin\\.exe$"
+    description: "BitsAdmin - Can download files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "mshta\\.exe$"
+    description: "MSHTA - Can execute HTA files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "wscript\\.exe$"
+    description: "WScript - Script host"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "cscript\\.exe$"
+    description: "CScript - Script host"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "regsvr32\\.exe$"
+    description: "RegSvr32 - Can execute DLLs"
+    valid_paths: ["\\\\windows\\\\system32\\\\", "\\\\windows\\\\syswow64\\\\"]
+  - pattern: "msiexec\\.exe$"
+    description: "MSIExec - Can install remote packages"
+    valid_paths: ["\\\\windows\\\\system32\\\\", "\\\\windows\\\\syswow64\\\\"]
+  - pattern: "installutil\\.exe$"
+    description: "InstallUtil - Can execute code"
+    valid_paths: ["\\\\windows\\\\microsoft.net\\\\"]
+  - pattern: "regasm\\.exe$"
+    description: "RegAsm - Can execute code"
+    valid_paths: ["\\\\windows\\\\microsoft.net\\\\"]
+  - pattern: "regsvcs\\.exe$"
+    description: "RegSvcs - Can execute code"
+    valid_paths: ["\\\\windows\\\\microsoft.net\\\\"]
+  - pattern: "msbuild\\.exe$"
+    description: "MSBuild - Can execute code"
+    valid_paths: ["\\\\windows\\\\microsoft.net\\\\", "\\\\program files\\\\"]
+  - pattern: "odbcconf\\.exe$"
+    description: "ODBCConf - Can execute DLLs"
+    valid_paths: ["\\\\windows\\\\system32\\\\", "\\\\windows\\\\syswow64\\\\"]
+  - pattern: "ieexec\\.exe$"
+    description: "IEExec - Can download and execute"
+    valid_paths: ["\\\\windows\\\\microsoft.net\\\\"]
+  - pattern: "msconfig\\.exe$"
+    description: "MSConfig - Can be abused for persistence"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "pcalua\\.exe$"
+    description: "PCALUA - Program Compatibility Assistant"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "forfiles\\.exe$"
+    description: "ForFiles - Can execute commands"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "presentationhost\\.exe$"
+    description: "PresentationHost - Can execute XAML"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "syncappvpublishingserver\\.exe$"
+    description: "SyncAppvPublishingServer - Can execute PowerShell"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "control\\.exe$"
+    description: "Control Panel - Can load DLLs"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "cmstp\\.exe$"
+    description: "CMSTP - Can bypass UAC"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "eudcedit\\.exe$"
+    description: "EUDCEDIT - Can bypass UAC"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "eventvwr\\.exe$"
+    description: "Event Viewer - UAC bypass (fodhelper)"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "fodhelper\\.exe$"
+    description: "FodHelper - Known UAC bypass"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  # NEW: Additional LOLBins
+  - pattern: "makecab\\.exe$"
+    description: "MakeCab - Can be used for data staging"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "expand\\.exe$"
+    description: "Expand - Can extract files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "extrac32\\.exe$"
+    description: "Extrac32 - Can extract CAB files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "print\\.exe$"
+    description: "Print - Can write to files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "finger\\.exe$"
+    description: "Finger - Can download files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "replace\\.exe$"
+    description: "Replace - File manipulation"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "desktopimgdownldr\\.exe$"
+    description: "Desktop Image Downloader - Can download files"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "esentutl\\.exe$"
+    description: "ESE DB Utility - Can copy files, dump credentials"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "extexport\\.exe$"
+    description: "Export Microsoft IME - UAC bypass"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "gpscript\\.exe$"
+    description: "Group Policy Scripts - Code execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "hh\\.exe$"
+    description: "HTML Help - Code execution via CHM"
+    valid_paths: ["\\\\windows\\\\"]
+  - pattern: "ie4uinit\\.exe$"
+    description: "IE4 User Install - UAC bypass"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "infdefaultinstall\\.exe$"
+    description: "INF Default Install - Code execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "msdt\\.exe$"
+    description: "Microsoft Diagnostics Tool - Code execution (Follina)"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "mshta\\.exe$"
+    description: "Microsoft HTML Application - Script execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "msra\\.exe$"
+    description: "Microsoft Remote Assistance - Potential abuse"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "psr\\.exe$"
+    description: "Problem Steps Recorder - Screen capture"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "verclsid\\.exe$"
+    description: "Verify CLSID - Code execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "wmic\\.exe$"
+    description: "WMI Command-line - Code execution, lateral movement"
+    valid_paths: ["\\\\windows\\\\system32\\\\wbem\\\\"]
+  - pattern: "xwizard\\.exe$"
+    description: "Extensible Wizard Host - DLL sideloading"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "cmdkey\\.exe$"
+    description: "Credential Manager - Credential enumeration"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "netsh\\.exe$"
+    description: "Network Shell - Port forwarding, persistence"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "rasautou\\.exe$"
+    description: "Remote Access Dialer - DLL execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "schtasks\\.exe$"
+    description: "Schedule Tasks - Persistence, privilege escalation"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "scriptrunner\\.exe$"
+    description: "Script Runner - Code execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "stordiag\\.exe$"
+    description: "Storage Diagnostic Tool - Data collection"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "tttracer\\.exe$"
+    description: "Time Travel Tracer - Arbitrary file write"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "wuauclt\\.exe$"
+    description: "Windows Update - Proxy execution"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+
+# Lateral Movement Indicators
+lateral_movement_tools:
+  - pattern: "^psexec(64)?\\.exe$"
+    description: "PsExec - Remote execution"
+  - pattern: "^paexec\\.exe$"
+    description: "PAExec - PsExec alternative"
+  - pattern: "^csexec\\.exe$"
+    description: "CSExec - CobaltStrike exec"
+  - pattern: "^smbexec\\.exe$"
+    description: "SMBExec"
+  - pattern: "^wmiexec\\.exe$"
+    description: "WMIExec"
+  - pattern: "^atexec\\.exe$"
+    description: "AtExec"
+  - pattern: "^dcomexec\\.exe$"
+    description: "DCOMExec"
+  - pattern: "^winrs\\.exe$"
+    description: "WinRS - Windows Remote Shell"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  # NEW: Additional lateral movement tools
+  - pattern: "^remoteexec\\.exe$"
+    description: "RemoteExec"
+  - pattern: "^winrm\\.cmd$"
+    description: "Windows Remote Management"
+  - pattern: "^evil-winrm\\.exe$"
+    description: "Evil-WinRM"
+  - pattern: "^crackmapexec\\.exe$"
+    description: "CrackMapExec"
+  - pattern: "^cme\\.exe$"
+    description: "CrackMapExec (short)"
+  - pattern: "^nxc\\.exe$"
+    description: "NetExec (CrackMapExec fork)"
+
+# Data Exfiltration / Archiving Tools (suspicious in certain contexts)
+exfil_tools:
+  - pattern: "^rclone\\.exe$"
+    description: "RClone - Cloud sync (data exfil)"
+  - pattern: "^megasync\\.exe$"
+    description: "MEGASync - Cloud sync"
+  - pattern: "^winscp\\.exe$"
+    description: "WinSCP - File transfer"
+  - pattern: "^filezilla\\.exe$"
+    description: "FileZilla - FTP client"
+  - pattern: "^putty\\.exe$"
+    description: "PuTTY - SSH client"
+  - pattern: "^plink\\.exe$"
+    description: "Plink - PuTTY command line"
+  - pattern: "^pscp\\.exe$"
+    description: "PSCP - PuTTY SCP"
+  # NEW: Additional exfiltration tools
+  - pattern: "^curl\\.exe$"
+    description: "cURL - HTTP client (data transfer)"
+  - pattern: "^wget\\.exe$"
+    description: "Wget - Download utility"
+  - pattern: "^tftp\\.exe$"
+    description: "TFTP client"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "^ftp\\.exe$"
+    description: "FTP client"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "^dropbox\\.exe$"
+    description: "Dropbox - Cloud sync"
+  - pattern: "^azcopy\\.exe$"
+    description: "AzCopy - Azure storage tool"
+  - pattern: "^aws\\.exe$"
+    description: "AWS CLI"
+  - pattern: "^gsutil\\.exe$"
+    description: "Google Cloud Storage utility"
+  - pattern: "^s3browser\\.exe$"
+    description: "S3 Browser"
+  - pattern: "^cyberduck\\.exe$"
+    description: "Cyberduck - Cloud storage client"
+  - pattern: "^transmit\\.exe$"
+    description: "Transmit - File transfer"
+
+# Known Attack Frameworks & Tools (CRITICAL if found)
+attack_tools:
+  - pattern: "^(mimikatz|mimi32|mimi64|mimilib)\\.exe$"
+    description: "Mimikatz credential dumper"
+  - pattern: "^(lazagne|browser-pw-decrypt)\\.exe$"
+    description: "LaZagne credential dumper"
+  - pattern: "^(rubeus|kekeo)\\.exe$"
+    description: "Kerberos attack tool"
+  - pattern: "^(sharphound|bloodhound|azurehound)\\.exe$"
+    description: "BloodHound AD enumeration"
+  - pattern: "^(covenant|grunt)\\.exe$"
+    description: "Covenant C2"
+  - pattern: "^sliver.*\\.exe$"
+    description: "Sliver C2"
+  - pattern: "^(havoc|demon)\\.exe$"
+    description: "Havoc C2"
+  - pattern: "^(bruteratel|badger)\\.exe$"
+    description: "Brute Ratel C2"
+  - pattern: "^seatbelt\\.exe$"
+    description: "Seatbelt enumeration tool"
+  - pattern: "^(sharpup|winpeas|linpeas)\\.exe$"
+    description: "Privilege escalation enumeration"
+  - pattern: "^(chisel|ligolo|gost)\\.exe$"
+    description: "Tunneling/proxy tool"
+  - pattern: "^(ngrok|frp|cloudflared)\\.exe$"
+    description: "Tunnel/port forward tool"
+  - pattern: "^pypykatz\\.exe$"
+    description: "Python Mimikatz"
+  - pattern: "^impacket.*\\.exe$"
+    description: "Impacket tools"
+  - pattern: "^(procdump|sqldumper)\\.exe$"
+    description: "Process dump tool"
+  - pattern: "^(safetydump|handlekatz|nanodump)\\.exe$"
+    description: "LSASS dump tool"
+  - pattern: "^secretsdump\\.exe$"
+    description: "SecretsDump"
+  - pattern: "^hashcat\\.exe$"
+    description: "Password cracking tool"
+  - pattern: "^john\\.exe$"
+    description: "John the Ripper"
+  # NEW: Additional attack tools
+  - pattern: "^responder\\.exe$"
+    description: "Responder - LLMNR/NBT-NS poisoning"
+  - pattern: "^powersploit\\.ps1$"
+    description: "PowerSploit framework"
+  - pattern: "^empire\\.exe$"
+    description: "Empire C2 framework"
+  - pattern: "^metasploit\\.exe$"
+    description: "Metasploit framework"
+  - pattern: "^msf.*\\.exe$"
+    description: "Metasploit module"
+  - pattern: "^nmap\\.exe$"
+    description: "Nmap port scanner"
+  - pattern: "^masscan\\.exe$"
+    description: "Masscan port scanner"
+  - pattern: "^burpsuite.*\\.exe$"
+    description: "Burp Suite - Web proxy"
+  - pattern: "^sqlmap\\.exe$"
+    description: "SQLMap - SQL injection"
+  - pattern: "^hydra\\.exe$"
+    description: "Hydra - Password cracker"
+  - pattern: "^medusa\\.exe$"
+    description: "Medusa - Password cracker"
+  - pattern: "^kerbrute\\.exe$"
+    description: "Kerbrute - Kerberos bruteforce"
+  - pattern: "^sprayhound\\.exe$"
+    description: "SprayHound - Password spray"
+  - pattern: "^adidnsdump\\.exe$"
+    description: "ADIDNSDump - DNS dumping"
+  - pattern: "^sharpchrome\\.exe$"
+    description: "SharpChrome - Chrome credential dumper"
+  - pattern: "^sharpdpapi\\.exe$"
+    description: "SharpDPAPI - DPAPI credential dumper"
+  - pattern: "^sharpview\\.exe$"
+    description: "SharpView - AD enumeration"
+  - pattern: "^powerup\\.ps1$"
+    description: "PowerUp - Privilege escalation"
+  - pattern: "^privesc\\.exe$"
+    description: "Generic privilege escalation tool"
+  - pattern: "^pspy\\.exe$"
+    description: "Pspy - Process monitoring"
+  - pattern: "^ghostpack.*\\.exe$"
+    description: "GhostPack tool suite"
+  - pattern: "^mythic\\.exe$"
+    description: "Mythic C2"
+  - pattern: "^nighthawk\\.exe$"
+    description: "Nighthawk C2"
+  - pattern: "^^poshc2\\.exe$"
+    description: "PoshC2 framework"
+  - pattern: "^koadic\\.exe$"
+    description: "Koadic C2"
+  - pattern: "^pupy\\.exe$"
+    description: "Pupy RAT"
+  - pattern: "^quasar\\.exe$"
+    description: "Quasar RAT"
+  - pattern: "^asyncrat\\.exe$"
+    description: "AsyncRAT"
+  - pattern: "^darkcomet\\.exe$"
+    description: "DarkComet RAT"
+  - pattern: "^njrat\\.exe$"
+    description: "njRAT"
+  - pattern: "^nanocore\\.exe$"
+    description: "NanoCore RAT"
+
+# Ransomware Indicators
+ransomware_indicators:
+  - pattern: "\\.(locked|encrypted|crypt|enc|crypted)$"
+    description: "Ransomware encrypted file extension"
+  - pattern: "^(decrypt|readme|how_to_decrypt|ransom|unlock).*\\.(txt|html|hta)$"
+    description: "Ransomware note"
+  - pattern: "vssadmin\\.exe$"
+    description: "VSS Admin (shadow copy deletion)"
+    context: "Check for delete shadows command"
+  - pattern: "wbadmin\\.exe$"
+    description: "WBAdmin (backup deletion)"
+    context: "Check for delete catalog command"
+  - pattern: "bcdedit\\.exe$"
+    description: "BCDEdit (recovery options)"
+    context: "Check for recoveryenabled no"
+  # NEW: Additional ransomware indicators
+  - pattern: "\\.(cryptolocker|crypz|crinf|r5a|r4a|locky|cerber|zepto|odin)$"
+    description: "Known ransomware extension"
+  - pattern: "\\.(micro|xtbl|crypt|exx|ezz|ecc|xyz|aaa|abc|ccc|vvv|zzz|xyz|fff)$"
+    description: "Common ransomware extension"
+  - pattern: "\\.(darkness|nochance|wecanhelp|help_your_files|encrypted|kodg)$"
+    description: "Ransomware variant extension"
+  - pattern: "^(ransom|restore|decrypt|warning|attention|readme|read_me_first).*\\.(txt|html|hta|png|jpg)$"
+    description: "Ransomware ransom note variations"
+  - pattern: "wmic\\.exe$"
+    description: "WMIC (ransomware uses for recon)"
+    context: "Check for shadowcopy delete"
+  - pattern: "cipher\\.exe$"
+    description: "Cipher - Can wipe free space"
+    valid_paths: ["\\\\windows\\\\system32\\\\"]
+  - pattern: "^(locker|crypt|cipher|ransom).*\\.exe$"
+    description: "Ransomware-like executable name"
+
+# Web Shells (if found in web directories)
+webshell_indicators:
+  - pattern: "\\\\inetpub\\\\wwwroot\\\\.*\\.(aspx|asp|php|jsp|jspx)$"
+    description: "Potential web shell in IIS"
+  - pattern: "\\\\program files\\\\microsoft\\\\exchange.*\\\\.*\\.(aspx|asp)$"
+    description: "Potential Exchange web shell"
+  - pattern: "^(cmd|shell|c99|r57|b374k|chopper)\\.aspx?$"
+    description: "Known web shell filename"
+  # NEW: Additional webshell indicators
+  - pattern: "\\\\inetpub\\\\wwwroot\\\\.*\\.(asmx|ashx|cshtml|vbhtml)$"
+    description: ".NET web handlers (potential webshell)"
+  - pattern: "^(china|wso|webshell|shell|aspxspy|cmdshell|phpshell)\\..*$"
+    description: "Common webshell names"
+  - pattern: "\\\\wwwroot\\\\aspnet_client\\\\.*\\.(aspx|asp)$"
+    description: "Webshell in aspnet_client folder"
+  - pattern: "\\\\inetpub\\\\wwwroot\\\\.*uploads?\\\\.*\\.(aspx|asp|php|jsp)$"
+    description: "Webshell in upload directory"
+  - pattern: "^(antak|nishang|regeorg)\\..*$"
+    description: "Post-exploitation webshell tools"
+
+# Persistence Mechanism Files
+persistence_indicators:
+  - pattern: "\\\\startup\\\\.*\\.(exe|bat|cmd|vbs|ps1|lnk)$"
+    description: "Startup folder persistence"
+  - pattern: "\\\\windows\\\\system32\\\\spool\\\\drivers\\\\color\\\\.*\\.exe$"
+    description: "Print spooler persistence"
+  - pattern: "\\\\windows\\\\system32\\\\tasks\\\\.*"
+    description: "Scheduled task XML"
+  # NEW: Additional persistence indicators
+  - pattern: "\\\\appdata\\\\roaming\\\\microsoft\\\\windows\\\\start menu\\\\programs\\\\startup\\\\"
+    description: "User startup folder"
+  - pattern: "\\\\programdata\\\\microsoft\\\\windows\\\\start menu\\\\programs\\\\startup\\\\"
+    description: "All users startup folder"
+  - pattern: "\\\\windows\\\\system32\\\\drivers\\\\.*\\.sys$"
+    description: "Kernel driver (potential rootkit)"
+  - pattern: "\\\\windows\\\\system32\\\\.*\\.dll$"
+    description: "System32 DLL (check for known-good)"
+  - pattern: "\\\\system32\\\\wbem\\\\.*\\.mof$"
+    description: "WMI persistence via MOF files"
+
+# Scripting Files (Context-dependent risk)
+suspicious_scripts:
+  - pattern: "\\.ps1$"
+    description: "PowerShell script"
+    context: "Check path, content, and parent process"
+  - pattern: "\\.bat$"
+    description: "Batch script"
+    context: "Check path and content"
+  - pattern: "\\.cmd$"
+    description: "Command script"
+    context: "Check path and content"
+  - pattern: "\\.vbs$"
+    description: "VBScript"
+    context: "Common in legacy malware"
+  - pattern: "\\.js$"
+    description: "JavaScript file"
+    context: "Can be executed with wscript/cscript"
+  - pattern: "\\.hta$"
+    description: "HTML Application"
+    context: "Can execute arbitrary code"
+  - pattern: "\\.wsf$"
+    description: "Windows Script File"
+    context: "Can execute multiple scripts"
+  - pattern: "\\.jse$"
+    description: "Encoded JScript"
+    context: "Often used by malware"
+  - pattern: "\\.vbe$"
+    description: "Encoded VBScript"
+    context: "Often used by malware"
+  - pattern: "\\.chm$"
+    description: "Compiled HTML Help"
+    context: "Can execute code"
+
+# Binary Executables in User Space (Medium risk)
+user_executable_patterns:
+  - pattern: "\\\\appdata\\\\local\\\\.*\\.exe$"
+    description: "Executable in Local AppData"
+    context: "Verify publisher and path"
+  - pattern: "\\\\appdata\\\\roaming\\\\.*\\.exe$"
+    description: "Executable in Roaming AppData"
+    context: "Verify publisher and path"
+  - pattern: "\\\\downloads\\\\.*\\.exe$"
+    description: "Executable in Downloads"
+    context: "Check if recently executed"
+  - pattern: "\\\\desktop\\\\.*\\.exe$"
+    description: "Executable on Desktop"
+    context: "Unusual for legitimate software"
+  - pattern: "\\\\documents\\\\.*\\.exe$"
+    description: "Executable in Documents"
+    context: "Unusual for legitimate software"
+
+# Microsoft Office Macro Indicators
+office_macro_indicators:
+  - pattern: "\\\\(vbaproject\\.bin|word\\/vbaproject\\.bin|xl\\/vbaproject\\.bin|ppt\\/vbaProject\\.bin)$"
+    description: "Office file with macros"
+  - pattern: "\\.xlsm$"
+    description: "Excel macro-enabled workbook"
+  - pattern: "\\.docm$"
+    description: "Word macro-enabled document"
+  - pattern: "\\.pptm$"
+    description: "PowerPoint macro-enabled presentation"
+  - pattern: "\\.xlam$"
+    description: "Excel macro-enabled add-in"
+  - pattern: "\\.dotm$"
+    description: "Word macro-enabled template"
+
+# DLL Hijacking Suspicious Locations
+dll_hijack_locations:
+  - pattern: "^[a-z]:\\\\users\\\\.*\\\\(version|wtsapi32|sspicli|winhttp|dwmapi|propsys)\\.dll$"
+    description: "Commonly hijacked DLL in user folder"
+  - pattern: "\\\\appdata\\\\.*\\\\(version|wtsapi32|sspicli)\\.dll$"
+    description: "DLL hijack in AppData"
+  - pattern: "^c:\\\\.*\\\\(ntdll|kernel32|kernelbase)\\.dll$"
+    description: "Critical system DLL outside System32"
+
+# Network Tools (Context-dependent)
+network_tools:
+  - pattern: "^(wireshark|tshark|tcpdump|windump)\\.exe$"
+    description: "Packet capture tool"
+  - pattern: "^(angry\\.?ip|ipscan|advanced\\.?port\\.?scanner)\\.exe$"
+    description: "IP/port scanning tool"
+  - pattern: "^(zenmap|nikto|zap|owasp)\\.exe$"
+    description: "Web application scanner"
+  - pattern: "^(proxychains|proxifier|sockscap)\\.exe$"
+    description: "Proxy tool"
+
+# Cloud Storage & Sync (Can be used for exfil)
+cloud_sync_tools:
+  - pattern: "^(gdrive|google.*drive)\\.exe$"
+    description: "Google Drive"
+  - pattern: "^(onedrive|skydrive)\\.exe$"
+    description: "Microsoft OneDrive"
+  - pattern: "^(box.*sync|box.*drive)\\.exe$"
+    description: "Box Sync"
+  - pattern: "^(sync.*com|sync\\.com)\\.exe$"
+    description: "Sync.com"
+  - pattern: "^(tresorit|spider.*oak|sync.*thing)\\.exe$"
+    description: "Encrypted cloud storage"
+
+# Browser Extension/Add-on Executables
+browser_related:
+  - pattern: "\\\\appdata\\\\.*\\\\(chrome|firefox|edge|brave|opera)\\\\.*\\.exe$"
+    description: "Browser profile executable"
+    context: "Verify legitimacy - extensions shouldn't be EXE"
+  - pattern: "\\\\appdata\\\\.*\\\\extensions\\\\.*\\.exe$"
+    description: "Executable in browser extensions folder"
+
+# Anti-Forensics Tools
+anti_forensics:
+  - pattern: "^(ccleaner|bleachbit|eraser|sdelete|wipe)\\.exe$"
+    description: "File/trace deletion tool"
+  - pattern: "^timestomp\\.exe$"
+    description: "Timestamp manipulation"
+  - pattern: "^antispy.*\\.exe$"
+    description: "Anti-forensics tool"
+
+# Unusual System Binary Locations
+misplaced_system_binaries:
+  - pattern: "\\\\appdata\\\\.*\\\\(cmd|powershell|wmic|net|sc|reg|schtasks)\\.exe$"
+    description: "System binary copied to user space"
+  - pattern: "\\\\users\\\\.*\\\\(certutil|bitsadmin|rundll32)\\.exe$"
+    description: "LOLBin copied to user folder"
+
+# Cryptocurrency Miners
+crypto_miners:
+  - pattern: "^(xmrig|cpuminer|ccminer|cgminer|bfgminer|ethminer|phoenixminer)\\.exe$"
+    description: "Cryptocurrency miner"
+  - pattern: "^miner.*\\.exe$"
+    description: "Generic miner executable"
+  - pattern: "^(cryptonight|randomx|ethash).*\\.exe$"
+    description: "Mining algorithm named executable"
+
+# Port Forwarding & Proxying
+port_forward_tools:
+  - pattern: "^(3proxy|dante|microsocks|tinyproxy)\\.exe$"
+    description: "Proxy server"
+  - pattern: "^(rinetd|socat|netcat|ncat)\\.exe$"
+    description: "Port forwarding tool"
+  - pattern: "^(stunnel|cryptcat)\\.exe$"
+    description: "Encrypted tunnel"
+
+# Fake Windows Updates
+fake_update_indicators:
+  - pattern: "\\\\windows\\\\temp\\\\.*update.*\\.exe$"
+    description: "Update executable in temp (suspicious)"
+  - pattern: "\\\\users\\\\.*\\\\.*update.*\\.exe$"
+    description: "Update executable in user folder"
+  - pattern: "^windows.*update.*\\.exe$"
+    description: "Windows update named executable (verify signature)"
+
+# USB/Removable Media Indicators
+removable_media_artifacts:
+  - pattern: "^[e-z]:\\\\[^\\\\]*\\.exe$"
+    description: "Executable at root of removable drive"
+  - pattern: "^[e-z]:\\\\recycler\\\\.*\\.exe$"
+    description: "Executable in removable drive recycler"
+  - pattern: "^[e-z]:\\\\system volume information\\\\.*\\.exe$"
+    description: "Executable in System Volume Information"
+
+# Execution via Alternative Data Streams
+ads_indicators:
+  - pattern: ".*:.*\\.(exe|dll|bat|cmd|ps1|vbs|js)$"
+    description: "Alternate Data Stream executable"
+    context: "NTFS ADS - hidden execution"
+
+# Obfuscated File Extensions
+obfuscated_extensions:
+  - pattern: "\\.(ex_|dl_|sys_|ps_|ba_|cm_)$"
+    description: "Compressed/obfuscated extension"
+  - pattern: "\\.exe[^.]*$"
+    description: "Extension variations (exe with suffix)"
+  - pattern: "\\.(pif|scr|com)$"
+    description: "Legacy executable extensions"
+
+# Debuggers and Analysis Tools (Can indicate attacker analysis)
+debugger_tools:
+  - pattern: "^(x32dbg|x64dbg|ollydbg|windbg|immunity|ida)\\.exe$"
+    description: "Debugger/reverse engineering tool"
+  - pattern: "^(procmon|procexp|autoruns|tcpview|pstools)\\.exe$"
+    description: "Sysinternals tool (verify legitimacy)"
+  - pattern: "^(cheatengine|gameconqueror)\\.exe$"
+    description: "Memory editor"
+
+# Screenshot/Keylogging Indicators
+surveillance_tools:
+  - pattern: "^(keylogger|keylog|keygrabber)\\.exe$"
+    description: "Keylogger"
+  - pattern: "^(screenshot|screencap|capture).*\\.exe$"
+    description: "Screenshot tool"
+  - pattern: "^(refog|spyrix|actual.*keylogger)\\.exe$"
+    description: "Commercial spyware"
+
+# Custom Threat Intelligence Patterns (Add your own here)
+custom_iocs:
+  # Example custom entries - modify based on your threat intelligence
+  - pattern: "\\\\temp\\\\~tmp[0-9a-f]{8}\\.tmp$"
+    description: "Custom IOC - Observed temp file pattern"
+  - pattern: "^sysupdate[0-9]{2}\\.exe$"
+    description: "Custom IOC - Fake system update pattern"
+  # Add more custom patterns based on incident response findings

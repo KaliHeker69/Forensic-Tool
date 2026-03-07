@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KaliHeker - Prefetch Analysis Report</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #1f2428;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent: #238636;
+            --accent-light: #2ea043;
+            --alert-bg: #da3633;
+            --alert-text: #ffebe9;
+            --warning-bg: #9e6a03;
+            --warning-text: #fff8c5;
+            --notice-bg: #238636;
+            --notice-text: #f0f6fc;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+        header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px;
+        }
+        .header-content { max-width: 1400px; margin: 0 auto; }
+        .logo { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .logo-text { font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .logo-text span { color: var(--accent-light); }
+        .version { font-size: 14px; color: var(--text-secondary); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border-color); }
+        .scan-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+        .info-card { background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px 16px; }
+        .info-card h3 { font-size: 12px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; letter-spacing: 0.5px; }
+        .info-card p { font-size: 14px; color: var(--text-primary); word-break: break-all; }
+        .score { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .nav-content { max-width: 1400px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+        .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 6px 14px; border: 1px solid var(--border-color); border-radius: 20px;
+            background: var(--bg-tertiary); color: var(--text-primary); cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: var(--accent); }
+        .filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .filter-btn .count { margin-left: 6px; opacity: 0.8; font-size: 0.9em; }
+        .search-box { display: flex; align-items: center; gap: 8px; }
+        .search-box input {
+            padding: 8px 14px; border: 1px solid var(--border-color); border-radius: 6px;
+            background: var(--bg-tertiary); color: var(--text-primary); font-size: 14px; width: 280px;
+        }
+        .search-box input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(46, 160, 67, 0.4); }
+        main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .stats-bar {
+            display: flex; gap: 24px; margin-bottom: 20px; padding: 16px;
+            background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-color);
+        }
+        .stat { display: flex; align-items: center; gap: 8px; }
+        .stat-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .stat-dot.alert { background: var(--alert-bg); }
+        .stat-dot.warning { background: var(--warning-bg); }
+        .stat-dot.notice { background: var(--notice-bg); }
+        .stat-label { font-size: 14px; color: var(--text-secondary); }
+        .stat-value { font-size: 18px; font-weight: 600; }
+        .finding-card {
+            background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;
+            margin-bottom: 16px; transition: transform 0.2s; border-left: 4px solid var(--border-color);
+        }
+        .finding-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+        .finding-card.critical { border-left-color: var(--alert-bg); }
+        .finding-card.high { border-left-color: #fd8c00; }
+        .finding-card.medium { border-left-color: var(--warning-bg); }
+        .finding-card.low { border-left-color: var(--notice-bg); }
+        .finding-card.info { border-left-color: #1f6feb; }
+        .finding-header {
+            display: flex; align-items: center; gap: 12px; padding: 16px;
+            background: var(--bg-tertiary); border-bottom: 1px solid var(--border-color); flex-wrap: wrap;
+        }
+        .severity-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .severity-badge.critical { background: var(--alert-bg); color: var(--alert-text); }
+        .severity-badge.high { background: #fd8c00; color: #fff; }
+        .severity-badge.medium { background: var(--warning-bg); color: var(--warning-text); }
+        .severity-badge.low { background: var(--notice-bg); color: var(--notice-text); }
+        .severity-badge.info { background: #1f6feb; color: #fff; }
+        .finding-title {
+            flex: 1; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; font-weight: 600;
+            color: var(--accent-light); word-break: break-all;
+        }
+        .finding-body { padding: 16px; }
+        .finding-description { margin-bottom: 16px; color: var(--text-primary); font-size: 14px; }
+        .evidence-box {
+            background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;
+            margin-bottom: 12px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; overflow-x: auto;
+        }
+        .evidence-line { margin-bottom: 4px; }
+        .evidence-label { color: var(--text-secondary); margin-right: 8px; }
+        .metadata-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .meta-tag {
+            background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 2px 10px; font-size: 11px; color: var(--text-secondary);
+        }
+        .meta-tag strong { color: var(--text-primary); }
+        .mitre-link { color: var(--accent-light); text-decoration: none; }
+        .mitre-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { background: var(--bg-tertiary); color: var(--accent-light); font-size: 12px; text-transform: uppercase; }
+        tr:hover { background: rgba(255,255,255,0.03); }
+        code {
+            background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-size: 13px;
+        }
+        footer {
+            text-align: center; padding: 40px 20px; color: var(--text-secondary); font-size: 13px;
+            border-top: 1px solid var(--border-color); margin-top: 40px;
+        }
+        .category-header {
+            display: flex; align-items: center; gap: 12px; padding: 16px 20px;
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+            border-radius: 8px; margin-bottom: 16px; border-left: 4px solid var(--accent);
+        }
+        .category-header h3 { flex: 1; font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0; }
+        .category-count { color: var(--text-secondary); font-size: 13px; background: var(--bg-tertiary); padding: 4px 10px; border-radius: 12px; }
+        .icon {
+            width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), var(--accent-light));
+            box-shadow: 0 0 8px rgba(46, 160, 67, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-text">KALI<span>HEKER</span></div>
+                <div class="version">Prefetch Analyzer v1.0</div>
+            </div>
+            <div class="scan-info">
+
+                <div class="info-card"><h3>Report Generated</h3><p>2026-02-05 10:06:04 UTC</p></div>
+                <div class="info-card"><h3>Prefetch Entries</h3><div class="score">173</div></div>
+                <div class="info-card"><h3>Unique Executables</h3><div class="score">104</div></div>
+                <div class="info-card"><h3>Total Findings</h3><p>Critical: 0 | High: 7 | Medium: 7 | Low: 0</p></div>
+
+            </div>
+        </div>
+    </header>
+
+    <nav>
+        <div class="nav-content">
+            <div class="filter-buttons">
+
+                <button class="filter-btn active">All <span class="count">(14)</span></button>
+                <button class="filter-btn">Critical <span class="count">(0)</span></button>
+                <button class="filter-btn">High <span class="count">(7)</span></button>
+                <button class="filter-btn">Medium <span class="count">(7)</span></button>
+
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search findings...">
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div class="stats-bar">
+
+            <div class="stat"><div class="stat-dot alert"></div> <span class="stat-label">Critical:</span> <span class="stat-value">0</span></div>
+            <div class="stat"><div class="stat-dot warning"></div> <span class="stat-label">High/Med:</span> <span class="stat-value">14</span></div>
+            <div class="stat"><div class="stat-dot notice"></div> <span class="stat-label">Low/Info:</span> <span class="stat-value">0</span></div>
+
+        </div>
+
+        <div class="category-header" style="border-left-color: var(--alert-bg);">
+            <span class="icon"></span>
+            <h3>🚨 Critical & High Severity Findings</h3>
+            <span class="category-count">7 findings</span>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">VCREDIST_X86.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Execution from Windows Temp directory</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\TEMP\{F4E85354-DA4C-4C63-99D8-E03AF12B9048}\.CR\VCREDIST_X86.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Suspicious Path</strong></div><div class="meta-tag">Run Count: <strong>1</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">VC_REDIST.X86.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Execution from Windows Temp directory</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\TEMP\{62779840-E306-4400-941C-52047F8E71B6}\.BE\VC_REDIST.X86.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Suspicious Path</strong></div><div class="meta-tag">Run Count: <strong>1</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">REGSVR32.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registry server - can execute remote scripts</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\SYSWOW64\REGSVR32.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>LOLBin</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1218/010" target="_blank"><strong>T1218.010</strong></a></div><div class="meta-tag">Run Count: <strong>2</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">VCREDIST_X64.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Execution from Windows Temp directory</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\TEMP\{335730CE-4EFE-408A-B023-8333CCA87AE3}\.CR\VCREDIST_X64.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Suspicious Path</strong></div><div class="meta-tag">Run Count: <strong>1</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">VC_REDIST.X64.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Execution from Windows Temp directory</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\TEMP\{AA407370-B6DD-4413-AA84-D8199061B138}\.BE\VC_REDIST.X64.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>Suspicious Path</strong></div><div class="meta-tag">Run Count: <strong>1</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">REGSVR32.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Registry server - can execute remote scripts</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\SYSTEM32\REGSVR32.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>LOLBin</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1218/010" target="_blank"><strong>T1218.010</strong></a></div><div class="meta-tag">Run Count: <strong>1</strong></div></div>
+            </div>
+        </div>
+
+        <div class="finding-card high">
+            <div class="finding-header">
+                <span class="severity-badge high">HIGH</span>
+                <span class="finding-title">SCHTASKS.EXE</span>
+            </div>
+            <div class="finding-body">
+                <div class="finding-description">Task scheduler utility</div>
+
+                <div class="evidence-box">
+                    <div class="evidence-line"><span class="evidence-label">[path]</span> \VOLUME{01d951602330db46-52233816}\WINDOWS\SYSTEM32\SCHTASKS.EXE</div>
+                </div>
+<div class="metadata-tags"><div class="meta-tag">Category: <strong>LOLBin</strong></div><div class="meta-tag">MITRE: <a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank"><strong>T1053.005</strong></a></div><div class="meta-tag">Run Count: <strong>8</strong></div></div>
+            </div>
+        </div>
+
+        <div class="category-header">
+            <span class="icon"></span>
+            <h3>📋 All Findings</h3>
+            <span class="category-count">14 total</span>
+        </div>
+        
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Executable</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th>MITRE ATT&CK</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>VCREDIST_X86.EXE</code></td>
+                        <td>Suspicious Path</td>
+                        <td>Execution from Windows Temp directory</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>VC_REDIST.X86.EXE</code></td>
+                        <td>Suspicious Path</td>
+                        <td>Execution from Windows Temp directory</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>REGSVR32.EXE</code></td>
+                        <td>LOLBin</td>
+                        <td>Registry server - can execute remote scripts</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1218/010" target="_blank">T1218.010</a></td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>VCREDIST_X64.EXE</code></td>
+                        <td>Suspicious Path</td>
+                        <td>Execution from Windows Temp directory</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>VC_REDIST.X64.EXE</code></td>
+                        <td>Suspicious Path</td>
+                        <td>Execution from Windows Temp directory</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>REGSVR32.EXE</code></td>
+                        <td>LOLBin</td>
+                        <td>Registry server - can execute remote scripts</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1218/010" target="_blank">T1218.010</a></td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge high">HIGH</span></td>
+                        <td><code>SCHTASKS.EXE</code></td>
+                        <td>LOLBin</td>
+                        <td>Task scheduler utility</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1053/005" target="_blank">T1053.005</a></td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>VCREDIST_X86.EXE</code></td>
+                        <td>Single Execution</td>
+                        <td>Single execution from suspicious location - potential att...</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>VC_REDIST.X86.EXE</code></td>
+                        <td>Single Execution</td>
+                        <td>Single execution from suspicious location - potential att...</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>WINRAR.EXE</code></td>
+                        <td>Malicious Tool</td>
+                        <td>Archive tool - check for pre-exfiltration staging</td>
+                        <td><a class="mitre-link" href="https://attack.mitre.org/techniques/T1560/001" target="_blank">T1560.001</a></td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>VCREDIST_X64.EXE</code></td>
+                        <td>Single Execution</td>
+                        <td>Single execution from suspicious location - potential att...</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>VC_REDIST.X64.EXE</code></td>
+                        <td>Single Execution</td>
+                        <td>Single execution from suspicious location - potential att...</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>VMTOOLSD.EXE</code></td>
+                        <td>Suspicious DLL</td>
+                        <td>Hooking DLL detected: \VOLUME{01d951602330db46-52233816}\...</td>
+                        <td>-</td>
+                    </tr>
+
+                    <tr>
+                        <td><span class="severity-badge medium">MEDIUM</span></td>
+                        <td><code>Multiple</code></td>
+                        <td>Timeline Anomaly</td>
+                        <td>Rapid execution burst: 5 programs in 114 seconds - ["SVCH...</td>
+                        <td>-</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+    
+    <footer>
+        <p>Generated by <strong>KaliHeker Prefetch Analyzer</strong></p>
+        <p>A forensic analysis tool for Windows Prefetch data</p>
+    </footer>
+
+    <script>
+        // Filter functionality
+        let currentFilter = 'all';
+        
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active state
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Get filter type from button text
+                const filterText = this.textContent.trim().toLowerCase();
+                if (filterText.startsWith('all')) currentFilter = 'all';
+                else if (filterText.startsWith('critical')) currentFilter = 'critical';
+                else if (filterText.startsWith('high')) currentFilter = 'high';
+                else if (filterText.startsWith('medium')) currentFilter = 'medium';
+                else if (filterText.startsWith('low')) currentFilter = 'low';
+                
+                applyFilters();
+            });
+        });
+        
+        function applyFilters() {
+            // Filter finding cards
+            document.querySelectorAll('.finding-card').forEach(card => {
+                const level = card.classList.contains('critical') ? 'critical' :
+                             card.classList.contains('high') ? 'high' :
+                             card.classList.contains('medium') ? 'medium' :
+                             card.classList.contains('low') ? 'low' : 'info';
+                
+                if (currentFilter === 'all' || level === currentFilter) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+            
+            // Filter table rows
+            document.querySelectorAll('tbody tr').forEach(row => {
+                const badge = row.querySelector('.severity-badge');
+                if (!badge) return;
+                
+                const level = badge.classList.contains('critical') ? 'critical' :
+                             badge.classList.contains('high') ? 'high' :
+                             badge.classList.contains('medium') ? 'medium' :
+                             badge.classList.contains('low') ? 'low' : 'info';
+                
+                if (currentFilter === 'all' || level === currentFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            updateVisibleCount();
+        }
+        
+        function updateVisibleCount() {
+            const visibleCards = document.querySelectorAll('.finding-card:not([style*="display: none"])').length;
+            const visibleRows = document.querySelectorAll('tbody tr:not([style*="display: none"])').length;
+            
+            // Update category counts if elements exist
+            const categoryHeaders = document.querySelectorAll('.category-header');
+            categoryHeaders.forEach(header => {
+                const countSpan = header.querySelector('.category-count');
+                if (countSpan && header.querySelector('h3').textContent.includes('All Findings')) {
+                    countSpan.textContent = visibleRows + ' visible';
+                }
+            });
+        }
+        
+        // Search functionality (if search box exists)
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase();
+                
+                document.querySelectorAll('.finding-card').forEach(card => {
+                    const text = card.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                document.querySelectorAll('tbody tr').forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+        
+        // Collapsible sections
+        document.querySelectorAll('.category-header').forEach(header => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', function() {
+                const nextSibling = this.nextElementSibling;
+                if (nextSibling && (nextSibling.tagName === 'DIV' || nextSibling.classList.contains('finding-card'))) {
+                    // Toggle visibility of all following finding cards until next header
+                    let sibling = this.nextElementSibling;
+                    while (sibling && !sibling.classList.contains('category-header')) {
+                        if (sibling.style.display === 'none') {
+                            sibling.style.display = '';
+                        } else {
+                            sibling.style.display = 'none';
+                        }
+                        sibling = sibling.nextElementSibling;
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

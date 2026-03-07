@@ -1,0 +1,1006 @@
+{% extends "base.html" %}
+
+{% block title %}Reporting - Resource Portal{% endblock %}
+
+{% block body_class %}reporting-page{% endblock %}
+
+{% block head %}
+<style>
+    /* Additional reporting-specific styles */
+    .reporting-page .main-content {
+        padding-bottom: 100px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fa-solid fa-lock logo-icon" aria-hidden="true"></i>
+                <span class="logo-text">Portal</span>
+            </div>
+        </div>
+
+        <div class="user-profile">
+            <div class="avatar">
+                <span>{{ avatar_letter }}</span>
+            </div>
+            <div class="user-info">
+                <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+                <span class="user-role">Investigator</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="nav-item">
+                    <a href="/dashboard">
+                        <i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="/tools/reporting">
+                        <i class="fa-solid fa-file-lines nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Reporting</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/auth/change-password">
+                        <i class="fa-solid fa-key nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Change Password</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/auth/logout" class="btn-logout">
+                <i class="fa-solid fa-right-from-bracket logout-icon" aria-hidden="true"></i>
+                <span>Sign Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <div class="header-left">
+                <button class="menu-toggle" aria-label="Toggle menu"><i class="fa-solid fa-bars"
+                        aria-hidden="true"></i></button>
+                <h1><i class="fa-solid fa-file-lines" aria-hidden="true"></i> Digital Forensics Report Builder</h1>
+            </div>
+            <div class="header-right">
+                <div class="session-timer" id="sessionTimer" title="Session timeout">
+                    <i class="fa-solid fa-stopwatch timer-icon" aria-hidden="true"></i>
+                    <span class="timer-text">{{ inactivity_timeout }}:00</span>
+                </div>
+                <button class="btn-save-report" onclick="saveReport()">
+                    <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save
+                </button>
+                <button class="btn-export-report" onclick="exportReport()">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> Export
+                </button>
+            </div>
+        </header>
+
+        <!-- Report Status Bar -->
+        <div class="report-status-bar">
+            <div class="status-left">
+                <span class="status-indicator draft" id="reportStatus">● Draft</span>
+                <span class="last-saved" id="lastSaved">Not saved yet</span>
+            </div>
+            <div class="status-right">
+                <button class="btn-new-report" onclick="newReport()">+ New Report</button>
+            </div>
+        </div>
+
+        <!-- Report Sections Navigation -->
+        <nav class="section-nav">
+            <button class="section-tab active" data-section="general">1. General Info</button>
+            <button class="section-tab" data-section="request">2. Request</button>
+            <button class="section-tab" data-section="evidence">3. Evidence</button>
+            <button class="section-tab" data-section="methodology">4. Methodology</button>
+            <button class="section-tab" data-section="findings">5. Findings</button>
+            <button class="section-tab" data-section="analysis">6. Analysis</button>
+            <button class="section-tab" data-section="conclusions">7. Conclusions</button>
+            <button class="section-tab" data-section="custody">8. Chain of Custody</button>
+            <button class="section-tab" data-section="authorization">9. Authorization</button>
+            <button class="section-tab" data-section="appendices">10. Appendices</button>
+        </nav>
+
+        <!-- Report Content Area -->
+        <div class="report-content">
+
+            <!-- Section 1: General Information -->
+            <section class="report-section active" id="section-general">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Section 1: General Information
+                    </h2>
+                    <p class="section-desc">Basic case identification and report metadata</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="report-title">Report Title</label>
+                        <input type="text" id="report-title" placeholder="Digital Forensics Examination Report"
+                            value="Digital Forensics Examination Report">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="case-id">Case Identifier *</label>
+                        <input type="text" id="case-id" placeholder="CASE-2026-001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="organization">Examining Organization</label>
+                        <input type="text" id="organization" placeholder="Forensic Laboratory Name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="report-date">Report Date</label>
+                        <input type="date" id="report-date" value="{{ current_date }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="examiner">Examiner Name</label>
+                        <input type="text" id="examiner" placeholder="Lead Examiner"
+                            value="{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="acronyms">Acronyms & Abbreviations Used</label>
+                        <textarea id="acronyms" rows="3"
+                            placeholder="Define any technical terms used in this report..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Request Details -->
+            <section class="report-section" id="section-request">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> Section 2: Request Details
+                    </h2>
+                    <p class="section-desc">Information about the examination request</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="request-date">Date of Request</label>
+                        <input type="date" id="request-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="requestor">Requestor Name</label>
+                        <input type="text" id="requestor" placeholder="Name of person requesting examination">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="requestor-org">Requestor Organization</label>
+                        <input type="text" id="requestor-org" placeholder="Organization name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="authority">Authority for Request</label>
+                        <select id="authority">
+                            <option value="">Select authority type...</option>
+                            <option value="search-warrant">Search Warrant</option>
+                            <option value="consent">Consent</option>
+                            <option value="subpoena">Subpoena</option>
+                            <option value="contract">Contract/Agreement</option>
+                            <option value="corporate-policy">Corporate Policy</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="scope">Scope & Purpose</label>
+                        <textarea id="scope" rows="4"
+                            placeholder="Clearly state the objectives and questions to be answered by this examination..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="tasks">Specific Tasks</label>
+                        <textarea id="tasks" rows="4"
+                            placeholder="Itemized list of what needs to be examined..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Evidence Received -->
+            <section class="report-section" id="section-evidence">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-box-archive" aria-hidden="true"></i> Section 3: Evidence Received</h2>
+                    <p class="section-desc">Documentation of all evidence items</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="receipt-date">Receipt Date</label>
+                        <input type="date" id="receipt-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="submitter">Submitter Name</label>
+                        <input type="text" id="submitter" placeholder="Who submitted the evidence">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="delivery-method">Delivery Method</label>
+                        <select id="delivery-method">
+                            <option value="">Select method...</option>
+                            <option value="in-person">In Person</option>
+                            <option value="courier">Courier</option>
+                            <option value="mail">Registered Mail</option>
+                            <option value="digital">Digital Transfer</option>
+                            <option value="on-site">On-Site Collection</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="evidence-condition">Overall Condition</label>
+                        <select id="evidence-condition">
+                            <option value="">Select condition...</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="evidence-items">
+                    <h3>Evidence Items</h3>
+                    <div id="evidence-list">
+                        <!-- Dynamic evidence items will be added here -->
+                    </div>
+                    <button class="btn-add-item" onclick="addEvidenceItem()">+ Add Evidence Item</button>
+                </div>
+            </section>
+
+            <!-- Section 4: Methodology -->
+            <section class="report-section" id="section-methodology">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-flask" aria-hidden="true"></i> Section 4: Methodology</h2>
+                    <p class="section-desc">Examination processes and tools used</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="tools-used">Tools Used</label>
+                        <textarea id="tools-used" rows="4"
+                            placeholder="List forensic tools with name, version, and manufacturer (e.g., FTK Imager 4.7.1, EnCase 8.12, Volatility 3.0)..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="standards">Standards Applied</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="standards" value="NIST SP 800-86"> NIST SP 800-86
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="standards" value="ISO/IEC 27037"> ISO/IEC 27037
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="standards" value="SWGDE"> SWGDE Guidelines
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" name="standards" value="RFC 3227"> RFC 3227
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="acquisition-method">Acquisition Method</label>
+                        <select id="acquisition-method">
+                            <option value="">Select method...</option>
+                            <option value="physical">Physical Acquisition</option>
+                            <option value="logical">Logical Acquisition</option>
+                            <option value="live">Live Forensics</option>
+                            <option value="targeted">Targeted Collection</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hash-algorithm">Hash Algorithm</label>
+                        <select id="hash-algorithm">
+                            <option value="">Select algorithm...</option>
+                            <option value="md5-sha256">MD5 + SHA-256</option>
+                            <option value="sha256">SHA-256 Only</option>
+                            <option value="sha1-sha256">SHA-1 + SHA-256</option>
+                            <option value="md5">MD5 Only</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="write-blocker">Write Blocker Used</label>
+                        <input type="text" id="write-blocker"
+                            placeholder="Specify hardware/software write blocker model">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="procedures">Examination Procedures</label>
+                        <textarea id="procedures" rows="6"
+                            placeholder="Step-by-step documentation of the examination workflow..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="deviations">Deviations from Standard Procedures</label>
+                        <textarea id="deviations" rows="3"
+                            placeholder="Document any departure from standard procedures with justification..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Findings -->
+            <section class="report-section" id="section-findings">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Section 5: Results and Technical
+                        Findings</h2>
+                    <p class="section-desc">Detailed technical findings organized by category</p>
+                </div>
+
+                <div class="findings-tabs">
+                    <button class="findings-tab active" data-finding="system">5.1 System Info</button>
+                    <button class="findings-tab" data-finding="events">5.2 Event Logs</button>
+                    <button class="findings-tab" data-finding="registry">5.3 Registry</button>
+                    <button class="findings-tab" data-finding="filesystem">5.4 File System</button>
+                    <button class="findings-tab" data-finding="timeline">5.5 Timeline</button>
+                    <button class="findings-tab" data-finding="user">5.6 User Activity</button>
+                    <button class="findings-tab" data-finding="network">5.7 Network</button>
+                </div>
+
+                <div class="findings-content">
+                    <div class="finding-panel active" id="finding-system">
+                        <h3>5.1 System Information</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="os-version">Operating System</label>
+                                <input type="text" id="os-version" placeholder="Windows 10 Pro 22H2">
+                            </div>
+                            <div class="form-group">
+                                <label for="install-date">Installation Date</label>
+                                <input type="text" id="install-date" placeholder="YYYY-MM-DD HH:MM:SS">
+                            </div>
+                            <div class="form-group">
+                                <label for="last-login">Last Login</label>
+                                <input type="text" id="last-login" placeholder="User and timestamp">
+                            </div>
+                            <div class="form-group">
+                                <label for="computer-name">Computer Name</label>
+                                <input type="text" id="computer-name" placeholder="DESKTOP-XXXXXX">
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="system-notes">Additional System Notes</label>
+                                <textarea id="system-notes" rows="4"
+                                    placeholder="Hardware configuration, network adapters, user accounts, privilege levels..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="finding-panel" id="finding-events">
+                        <h3>5.2 Event Log Analysis</h3>
+                        <textarea id="event-findings" rows="12" placeholder="Document findings from Windows Security, System, and Application logs...
+
+Examples:
+- Suspicious logon attempts (Event ID 4625)
+- Account modifications (Event ID 4720, 4722, 4738)
+- Service installations (Event ID 7045)
+- Security events of interest"></textarea>
+                    </div>
+
+                    <div class="finding-panel" id="finding-registry">
+                        <h3>5.3 Registry Analysis</h3>
+                        <textarea id="registry-findings" rows="12" placeholder="Document registry findings...
+
+Areas to examine:
+- UserAssist records (program execution)
+- ShellBags (folder access history)
+- MRU entries (recent files)
+- Run/RunOnce keys (persistence)
+- Network configuration
+- Installed applications"></textarea>
+                    </div>
+
+                    <div class="finding-panel" id="finding-filesystem">
+                        <h3>5.4 File System Analysis</h3>
+                        <textarea id="filesystem-findings" rows="12" placeholder="Document file system findings...
+
+Include:
+- MFT examination results
+- Deleted file recovery
+- File metadata (MAC timestamps)
+- Hidden or suspicious files
+- Alternate data streams"></textarea>
+                    </div>
+
+                    <div class="finding-panel" id="finding-timeline">
+                        <h3>5.5 Timeline Analysis</h3>
+                        <textarea id="timeline-findings" rows="12" placeholder="Chronological reconstruction of events...
+
+Format: YYYY-MM-DD HH:MM:SS | Event | Source | Details"></textarea>
+                    </div>
+
+                    <div class="finding-panel" id="finding-user">
+                        <h3>5.6 User Activity & Artifacts</h3>
+                        <textarea id="user-findings" rows="12" placeholder="Document user activity findings...
+
+Include:
+- Browser history, caches, cookies
+- Email artifacts
+- Document access history
+- Application-specific artifacts
+- Temporary files and cache directories"></textarea>
+                    </div>
+
+                    <div class="finding-panel" id="finding-network">
+                        <h3>5.7 Network & Communication Artifacts</h3>
+                        <textarea id="network-findings" rows="12" placeholder="Document network-related findings...
+
+Include:
+- Network configuration
+- Wi-Fi connection history
+- Network traffic analysis
+- Connection logs
+- Remote access evidence"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 6: Analysis & Interpretation -->
+            <section class="report-section" id="section-analysis">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-puzzle-piece" aria-hidden="true"></i> Section 6: Analysis & Interpretation
+                    </h2>
+                    <p class="section-desc">Significance of findings and correlations</p>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="analysis-content">Analysis</label>
+                    <textarea id="analysis-content" rows="15" placeholder="Explain the significance of findings...
+
+Include:
+- Correlations between different evidence types
+- Answer each investigative question from the scope
+- Confidence levels or uncertainty statements
+- Distinguish between FACTS (directly observed) and OPINIONS (analyst interpretation)
+- Document the basis for any opinions provided"></textarea>
+                </div>
+            </section>
+
+            <!-- Section 7: Conclusions -->
+            <section class="report-section" id="section-conclusions">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Section 7: Conclusions</h2>
+                    <p class="section-desc">Summary of key findings and answers to investigative questions</p>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="conclusions-content">Conclusions</label>
+                    <textarea id="conclusions-content" rows="15" placeholder="Summarize key findings in order of importance...
+
+Include:
+- Address the original questions posed in the request
+- State conclusions clearly and unambiguously
+- Limit conclusions to those logically derived from analyzed data
+- Note any incomplete analysis or outstanding leads
+- Document limitations of the examination"></textarea>
+                </div>
+            </section>
+
+            <!-- Section 8: Chain of Custody -->
+            <section class="report-section" id="section-custody">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-link" aria-hidden="true"></i> Section 8: Chain of Custody</h2>
+                    <p class="section-desc">Evidence handling and integrity documentation</p>
+                </div>
+
+                <div class="custody-table">
+                    <table id="custody-log">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Action</th>
+                                <th>Handler</th>
+                                <th>Location</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="custody-entries">
+                            <!-- Dynamic entries -->
+                        </tbody>
+                    </table>
+                    <button class="btn-add-item" onclick="addCustodyEntry()">+ Add Entry</button>
+                </div>
+
+                <div class="form-grid" style="margin-top: 2rem;">
+                    <div class="form-group full-width">
+                        <label for="hash-values">Hash Values for Integrity Verification</label>
+                        <textarea id="hash-values" rows="4" placeholder="Evidence Item | MD5 | SHA-256"></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="storage-location">Current Storage Location</label>
+                        <input type="text" id="storage-location"
+                            placeholder="Evidence room, locker number, or secure storage location">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 9: Authorization -->
+            <section class="report-section" id="section-authorization">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-circle-check" aria-hidden="true"></i> Section 9: Report Authorization</h2>
+                    <p class="section-desc">Examiner credentials and authorization</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="auth-examiner">Examiner Name</label>
+                        <input type="text" id="auth-examiner" value="{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-credentials">Credentials/Certifications</label>
+                        <input type="text" id="auth-credentials" placeholder="EnCE, GCFE, CCE, etc.">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-contact">Contact Information</label>
+                        <input type="text" id="auth-contact" placeholder="Email or phone">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-date">Date Signed</label>
+                        <input type="date" id="auth-date" value="{{ current_date }}">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auth-supervisor">Authorizer/Supervisor</label>
+                        <input type="text" id="auth-supervisor" placeholder="Senior analyst or supervisor name">
+                    </div>
+                </div>
+
+                <div class="signature-box">
+                    <p>Digital Signature</p>
+                    <div class="signature-line">
+                        <span id="signature-display">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+                    </div>
+                    <small>Electronically signed on {{ current_date }}</small>
+                </div>
+            </section>
+
+            <!-- Section 10: Appendices -->
+            <section class="report-section" id="section-appendices">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-paperclip" aria-hidden="true"></i> Section 10: Appendices</h2>
+                    <p class="section-desc">Supporting materials and references</p>
+                </div>
+
+                <div class="appendices-list">
+                    <div class="appendix-item">
+                        <h4>Appendix A: Tool Reports</h4>
+                        <textarea id="appendix-a" rows="4"
+                            placeholder="Automated tool reports (FTK, EnCase exports)..."></textarea>
+                    </div>
+
+                    <div class="appendix-item">
+                        <h4>Appendix B: Screenshots</h4>
+                        <textarea id="appendix-b" rows="4"
+                            placeholder="Reference screenshots of key findings..."></textarea>
+                    </div>
+
+                    <div class="appendix-item">
+                        <h4>Appendix C: Timeline Export</h4>
+                        <textarea id="appendix-c" rows="4" placeholder="Detailed timeline data..."></textarea>
+                    </div>
+
+                    <div class="appendix-item">
+                        <h4>Appendix D: IOC Matches</h4>
+                        <textarea id="appendix-d" rows="4"
+                            placeholder="YARA/Sigma rule matches, IOC hits..."></textarea>
+                    </div>
+
+                    <div class="appendix-item">
+                        <h4>Appendix E: Additional Notes</h4>
+                        <textarea id="appendix-e" rows="4"
+                            placeholder="Any additional supporting materials..."></textarea>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<!-- KaliHeker Mark -->
+<div class="creator-mark">
+    <i class="fa-solid fa-bolt mark-icon" aria-hidden="true"></i>
+    <span class="mark-text">KaliHeker</span>
+</div>
+
+<!-- Export Modal -->
+<div class="modal" id="exportModal" hidden>
+    <div class="modal-content export-modal">
+        <div class="modal-header">
+            <h2>📥 Export Report</h2>
+            <button class="modal-close" onclick="closeExportModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <pre id="exportContent" class="export-preview"></pre>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-primary" onclick="downloadReport()"><i class="fa-solid fa-download"
+                    aria-hidden="true"></i> Download as TXT</button>
+            <button class="btn-secondary" onclick="copyToClipboard()"><i class="fa-solid fa-copy"
+                    aria-hidden="true"></i> Copy to Clipboard</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast" id="toast" hidden>
+    <i class="fa-solid fa-check toast-icon" aria-hidden="true"></i>
+    <span class="toast-message" id="toastMessage">Report saved!</span>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Initialize inactivity timeout
+    const INACTIVITY_TIMEOUT = {{ inactivity_timeout }} * 60 * 1000;
+    if (typeof initInactivityTimer === 'function') {
+        initInactivityTimer(INACTIVITY_TIMEOUT);
+    }
+
+    // Current report state
+    let currentReport = {
+        id: null,
+        title: '',
+        sections: {}
+    };
+
+    let evidenceItemCount = 0;
+    let custodyEntryCount = 0;
+
+    // Mobile menu toggle
+    document.querySelector('.menu-toggle').addEventListener('click', function () {
+        document.querySelector('.sidebar').classList.toggle('open');
+    });
+
+    // Section navigation
+    document.querySelectorAll('.section-tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            const section = this.dataset.section;
+
+            // Update tabs
+            document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            // Update sections
+            document.querySelectorAll('.report-section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + section).classList.add('active');
+        });
+    });
+
+    // Findings sub-tabs
+    document.querySelectorAll('.findings-tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            const finding = this.dataset.finding;
+
+            document.querySelectorAll('.findings-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            document.querySelectorAll('.finding-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('finding-' + finding).classList.add('active');
+        });
+    });
+
+    // Add evidence item
+    function addEvidenceItem() {
+        evidenceItemCount++;
+        const container = document.getElementById('evidence-list');
+        const item = document.createElement('div');
+        item.className = 'evidence-item';
+        item.id = 'evidence-' + evidenceItemCount;
+        item.innerHTML = `
+            <div class="evidence-item-header">
+                <span class="item-number">#${evidenceItemCount}</span>
+                <button class="btn-remove" onclick="removeEvidenceItem(${evidenceItemCount})">×</button>
+            </div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Tag/ID</label>
+                    <input type="text" name="ev-tag-${evidenceItemCount}" placeholder="Evidence tag number">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="ev-type-${evidenceItemCount}">
+                        <option value="hdd">Hard Drive</option>
+                        <option value="ssd">SSD</option>
+                        <option value="usb">USB Device</option>
+                        <option value="mobile">Mobile Device</option>
+                        <option value="memory">Memory Dump</option>
+                        <option value="image">Forensic Image</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Make/Model</label>
+                    <input type="text" name="ev-model-${evidenceItemCount}" placeholder="Manufacturer and model">
+                </div>
+                <div class="form-group">
+                    <label>Serial Number</label>
+                    <input type="text" name="ev-serial-${evidenceItemCount}" placeholder="S/N">
+                </div>
+                <div class="form-group full-width">
+                    <label>Description/Condition</label>
+                    <textarea name="ev-desc-${evidenceItemCount}" rows="2" placeholder="Physical condition, any notable markings..."></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <label>Hash Values</label>
+                    <input type="text" name="ev-hash-${evidenceItemCount}" placeholder="MD5: ... | SHA-256: ...">
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
+    }
+
+    function removeEvidenceItem(id) {
+        const item = document.getElementById('evidence-' + id);
+        if (item) item.remove();
+    }
+
+    // Add custody entry
+    function addCustodyEntry() {
+        custodyEntryCount++;
+        const tbody = document.getElementById('custody-entries');
+        const row = document.createElement('tr');
+        row.id = 'custody-' + custodyEntryCount;
+        row.innerHTML = `
+            <td><input type="datetime-local" name="cust-time-${custodyEntryCount}"></td>
+            <td>
+                <select name="cust-action-${custodyEntryCount}">
+                    <option value="received">Received</option>
+                    <option value="checked-out">Checked Out</option>
+                    <option value="checked-in">Checked In</option>
+                    <option value="analyzed">Analyzed</option>
+                    <option value="transferred">Transferred</option>
+                    <option value="returned">Returned</option>
+                </select>
+            </td>
+            <td><input type="text" name="cust-handler-${custodyEntryCount}" placeholder="Name"></td>
+            <td><input type="text" name="cust-location-${custodyEntryCount}" placeholder="Location"></td>
+            <td>
+                <input type="text" name="cust-notes-${custodyEntryCount}" placeholder="Notes">
+                <button class="btn-remove-row" onclick="removeCustodyEntry(${custodyEntryCount})">×</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    function removeCustodyEntry(id) {
+        const row = document.getElementById('custody-' + id);
+        if (row) row.remove();
+    }
+
+    // Collect all form data
+    function collectFormData() {
+        const sections = {};
+
+        // General Information
+        sections.general = {
+            title: document.getElementById('report-title').value,
+            case_id: document.getElementById('case-id').value,
+            organization: document.getElementById('organization').value,
+            report_date: document.getElementById('report-date').value,
+            examiner: document.getElementById('examiner').value,
+            acronyms: document.getElementById('acronyms').value,
+        };
+
+        // Request Details
+        sections.request = {
+            request_date: document.getElementById('request-date').value,
+            requestor: document.getElementById('requestor').value,
+            requestor_org: document.getElementById('requestor-org').value,
+            authority: document.getElementById('authority').value,
+            scope: document.getElementById('scope').value,
+            tasks: document.getElementById('tasks').value,
+        };
+
+        // Evidence (simplified)
+        sections.evidence = {
+            receipt_date: document.getElementById('receipt-date').value,
+            submitter: document.getElementById('submitter').value,
+            delivery_method: document.getElementById('delivery-method').value,
+            condition: document.getElementById('evidence-condition').value,
+            items: collectEvidenceItems(),
+        };
+
+        // Methodology
+        sections.methodology = {
+            tools: document.getElementById('tools-used').value,
+            standards: Array.from(document.querySelectorAll('input[name="standards"]:checked')).map(cb => cb.value).join(', '),
+            acquisition: document.getElementById('acquisition-method').value,
+            hash_algorithm: document.getElementById('hash-algorithm').value,
+            write_blocker: document.getElementById('write-blocker').value,
+            procedures: document.getElementById('procedures').value,
+            deviations: document.getElementById('deviations').value,
+        };
+
+        // Findings
+        sections.system_info = document.getElementById('system-notes').value;
+        sections.event_logs = document.getElementById('event-findings').value;
+        sections.registry = document.getElementById('registry-findings').value;
+        sections.filesystem = document.getElementById('filesystem-findings').value;
+        sections.timeline = document.getElementById('timeline-findings').value;
+        sections.user_activity = document.getElementById('user-findings').value;
+        sections.network = document.getElementById('network-findings').value;
+
+        // Analysis & Conclusions
+        sections.analysis = document.getElementById('analysis-content').value;
+        sections.conclusions = document.getElementById('conclusions-content').value;
+
+        // Chain of Custody
+        sections.chain_of_custody = collectCustodyLog();
+        sections.hash_values = document.getElementById('hash-values').value;
+        sections.storage_location = document.getElementById('storage-location').value;
+
+        // Authorization
+        sections.authorization = {
+            examiner_name: document.getElementById('auth-examiner').value,
+            credentials: document.getElementById('auth-credentials').value,
+            contact: document.getElementById('auth-contact').value,
+            sign_date: document.getElementById('auth-date').value,
+            supervisor: document.getElementById('auth-supervisor').value,
+        };
+
+        // Appendices
+        sections.appendices = [
+            document.getElementById('appendix-a').value,
+            document.getElementById('appendix-b').value,
+            document.getElementById('appendix-c').value,
+            document.getElementById('appendix-d').value,
+            document.getElementById('appendix-e').value,
+        ].filter(a => a).join('\n\n---\n\n');
+
+        return sections;
+    }
+
+    function collectEvidenceItems() {
+        const items = [];
+        document.querySelectorAll('.evidence-item').forEach(item => {
+            const id = item.id.split('-')[1];
+            items.push({
+                tag: item.querySelector(`[name="ev-tag-${id}"]`)?.value || '',
+                type: item.querySelector(`[name="ev-type-${id}"]`)?.value || '',
+                model: item.querySelector(`[name="ev-model-${id}"]`)?.value || '',
+                serial: item.querySelector(`[name="ev-serial-${id}"]`)?.value || '',
+                description: item.querySelector(`[name="ev-desc-${id}"]`)?.value || '',
+                hash: item.querySelector(`[name="ev-hash-${id}"]`)?.value || '',
+            });
+        });
+        return items.map(i => `Tag: ${i.tag} | Type: ${i.type} | Model: ${i.model} | S/N: ${i.serial}\nDescription: ${i.description}\nHash: ${i.hash}`).join('\n\n');
+    }
+
+    function collectCustodyLog() {
+        const entries = [];
+        document.querySelectorAll('#custody-entries tr').forEach(row => {
+            const id = row.id.split('-')[1];
+            entries.push({
+                time: row.querySelector(`[name="cust-time-${id}"]`)?.value || '',
+                action: row.querySelector(`[name="cust-action-${id}"]`)?.value || '',
+                handler: row.querySelector(`[name="cust-handler-${id}"]`)?.value || '',
+                location: row.querySelector(`[name="cust-location-${id}"]`)?.value || '',
+                notes: row.querySelector(`[name="cust-notes-${id}"]`)?.value || '',
+            });
+        });
+        return entries.map(e => `${e.time} | ${e.action} | ${e.handler} | ${e.location} | ${e.notes}`).join('\n');
+    }
+
+    // Save report
+    async function saveReport() {
+        const sections = collectFormData();
+        const reportData = {
+            report_id: currentReport.id,
+            title: sections.general?.title || 'Untitled Report',
+            case_id: sections.general?.case_id || '',
+            sections: sections,
+            status: 'draft',
+        };
+
+        try {
+            const response = await fetch('/tools/reporting/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reportData),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                currentReport.id = result.report_id;
+                document.getElementById('lastSaved').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+                showToast('Report saved successfully!');
+            }
+        } catch (error) {
+            showToast('Error saving report', true);
+        }
+    }
+
+    // Export report
+    async function exportReport() {
+        const sections = collectFormData();
+
+        try {
+            const response = await fetch('/tools/reporting/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sections }),
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById('exportContent').textContent = result.content;
+                document.getElementById('exportModal').hidden = false;
+            }
+        } catch (error) {
+            showToast('Error exporting report', true);
+        }
+    }
+
+    function closeExportModal() {
+        document.getElementById('exportModal').hidden = true;
+    }
+
+    function downloadReport() {
+        const content = document.getElementById('exportContent').textContent;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `forensics-report-${document.getElementById('case-id').value || 'draft'}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        closeExportModal();
+        showToast('Report downloaded!');
+    }
+
+    function copyToClipboard() {
+        const content = document.getElementById('exportContent').textContent;
+        navigator.clipboard.writeText(content).then(() => {
+            showToast('Copied to clipboard!');
+        });
+    }
+
+    // New report
+    function newReport() {
+        if (confirm('Start a new report? Unsaved changes will be lost.')) {
+            location.reload();
+        }
+    }
+
+    // Toast notification
+    function showToast(message, isError = false) {
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        toastMessage.textContent = message;
+        toast.className = 'toast' + (isError ? ' error' : '');
+        toast.hidden = false;
+        setTimeout(() => { toast.hidden = true; }, 3000);
+    }
+
+    // Auto-save every 2 minutes
+    setInterval(() => {
+        if (document.getElementById('case-id').value) {
+            saveReport();
+        }
+    }, 120000);
+
+    // Initialize with one evidence item slot
+    addEvidenceItem();
+    addCustodyEntry();
+</script>
+{% endblock %}

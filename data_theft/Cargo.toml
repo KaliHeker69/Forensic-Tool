@@ -1,0 +1,18 @@
+[package]
+name = "forensic_analyzer"
+version = "0.1.0"
+edition = "2021"
+description = "A forensic analysis tool for detecting USB data theft/copying activity"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4.0", features = ["derive"] }
+colored = "2.0"
+csv = "1.3"
+anyhow = "1.0"
+glob = "0.3"
+tabled = "0.15"
+regex = "1.10"
+sha2 = "0.10"

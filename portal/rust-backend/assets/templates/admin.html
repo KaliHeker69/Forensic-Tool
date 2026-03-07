@@ -1,0 +1,559 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Resource Portal{% endblock %}
+
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" role="navigation" aria-label="Main navigation">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fa-solid fa-lock logo-icon" aria-hidden="true"></i>
+                <span class="logo-text">Portal</span>
+            </div>
+        </div>
+
+        <div class="user-profile">
+            <div class="avatar">
+                <span>{{ avatar_letter }}</span>
+            </div>
+            <div class="user-info">
+                <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+                <span class="user-role">Administrator</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <ul>
+                <li class="nav-item">
+                    <a href="/dashboard">
+                        <i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#resources">
+                        <i class="fa-solid fa-toolbox nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Resources</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#analytics">
+                        <i class="fa-solid fa-chart-bar nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="/admin/panel">
+                        <i class="fa-solid fa-users-gear nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">User Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#settings">
+                        <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/auth/change-password">
+                        <i class="fa-solid fa-key nav-icon" aria-hidden="true"></i>
+                        <span class="nav-text">Change Password</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="/auth/logout" class="btn-logout">
+                <i class="fa-solid fa-right-from-bracket logout-icon" aria-hidden="true"></i>
+                <span>Sign Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="content-header">
+            <div class="header-left">
+                <button class="menu-toggle" aria-label="Toggle menu"><i class="fa-solid fa-bars"
+                        aria-hidden="true"></i></button>
+                <h1>User Management</h1>
+            </div>
+            <div class="header-right">
+                <a href="/auth/logout" class="btn-header-logout">
+                    Sign Out
+                </a>
+            </div>
+        </header>
+
+        <!-- Alert Messages -->
+        {% if success %}
+        <div class="alert alert-success" id="alertMessage">
+            <i class="fa-solid fa-check alert-icon" aria-hidden="true"></i>
+            <span>{{ success }}</span>
+        </div>
+        {% endif %}
+        {% if error %}
+        <div class="alert alert-error" id="alertMessage">
+            <i class="fa-solid fa-xmark alert-icon" aria-hidden="true"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Admin Actions Section -->
+        <section class="admin-section">
+            <div class="admin-actions">
+                <!-- Add User Card -->
+                <div class="action-card">
+                    <h2>
+                        <i class="fa-solid fa-user-plus action-icon" aria-hidden="true"></i>
+                        Add New User
+                    </h2>
+                    <form method="POST" action="/admin/panel/add-user" class="admin-form">
+                        <div class="form-group">
+                            <label for="new_username">Username *</label>
+                            <input type="text" id="new_username" name="username" required pattern="[a-zA-Z0-9_]{3,20}"
+                                title="3-20 characters, letters, numbers, underscore only">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_password">Password *</label>
+                            <input type="password" id="new_password" name="password" required minlength="8"
+                                title="Minimum 8 characters">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_email">Email</label>
+                            <input type="email" id="new_email" name="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="new_full_name">Full Name</label>
+                            <input type="text" id="new_full_name" name="full_name">
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>
+                                <input type="checkbox" id="new_is_admin" name="is_admin" value="true">
+                                <span>Grant admin privileges</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Add User
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users List Section -->
+        <section class="users-section">
+            <h2>
+                <i class="fa-solid fa-users section-icon" aria-hidden="true"></i>
+                All Users
+            </h2>
+            <div class="users-table-container">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr class="{% if u.disabled %}user-disabled{% endif %}">
+                            <td>
+                                <strong>{{ u.username }}</strong>
+                                {% if u.username == user.username %}
+                                <span class="badge badge-self">(You)</span>
+                                {% endif %}
+                            </td>
+                            <td>{% if u.full_name %}{{ u.full_name }}{% else %}-{% endif %}</td>
+                            <td>{% if u.email %}{{ u.email }}{% else %}-{% endif %}</td>
+                            <td>
+                                {% if u.is_admin %}
+                                <span class="badge badge-admin"><i class="fa-solid fa-shield" aria-hidden="true"></i>
+                                    Admin</span>
+                                {% else %}
+                                <span class="badge badge-user"><i class="fa-solid fa-user" aria-hidden="true"></i>
+                                    User</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.disabled %}
+                                <span class="badge badge-disabled">Disabled</span>
+                                {% else %}
+                                <span class="badge badge-active">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if u.username != user.username %}
+                                    {% if u.is_admin %}
+                                    <form method="POST" action="/admin/panel/revoke-admin/{{ u.username }}"
+                                        style="display: inline;">
+                                        <button type="submit" class="btn-action btn-warning"
+                                            title="Revoke admin privileges"
+                                            onclick="return confirm('Remove admin privileges from {{ u.username }}?')">
+                                            <i class="fa-solid fa-user-slash" aria-hidden="true"></i> Revoke Admin
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="POST" action="/admin/panel/make-admin/{{ u.username }}"
+                                        style="display: inline;">
+                                        <button type="submit" class="btn-action btn-success"
+                                            title="Grant admin privileges"
+                                            onclick="return confirm('Grant admin privileges to {{ u.username }}?')">
+                                            <i class="fa-solid fa-user-shield" aria-hidden="true"></i> Make Admin
+                                        </button>
+                                    </form>
+                                    {% endif %}
+
+                                    <form method="POST" action="/admin/panel/delete-user/{{ u.username }}"
+                                        style="display: inline;">
+                                        <button type="submit" class="btn-action btn-danger" title="Delete user"
+                                            onclick="return confirm('Are you sure you want to delete {{ u.username }}? This action cannot be undone.')">
+                                            <i class="fa-solid fa-trash" aria-hidden="true"></i> Delete
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<style>
+    /* Admin Panel Specific Styles */
+    .admin-section {
+        margin-bottom: 2rem;
+    }
+
+    .admin-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+
+    .action-card h2 {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .action-icon {
+        font-size: 1.5rem;
+    }
+
+    .admin-form .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .admin-form label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.9rem;
+    }
+
+    .admin-form input[type="text"],
+    .admin-form input[type="password"],
+    .admin-form input[type="email"] {
+        width: 100%;
+        padding: 0.75rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1rem;
+    }
+
+    .admin-form input:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.8);
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        margin-bottom: 0;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: 1.25rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+
+    .users-section {
+        margin-top: 2rem;
+    }
+
+    .users-section h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-icon {
+        font-size: 1.75rem;
+    }
+
+    .users-table-container {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .users-table thead {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .users-table th {
+        padding: 1rem;
+        text-align: left;
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .users-table td {
+        padding: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .users-table tr:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .user-disabled {
+        opacity: 0.6;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .badge-admin {
+        background: rgba(99, 102, 241, 0.2);
+        color: #818cf8;
+        border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .badge-user {
+        background: rgba(156, 163, 175, 0.2);
+        color: #d1d5db;
+        border: 1px solid rgba(156, 163, 175, 0.3);
+    }
+
+    .badge-active {
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .badge-disabled {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-self {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+        font-size: 0.75rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-success {
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .btn-success:hover {
+        background: rgba(34, 197, 94, 0.3);
+    }
+
+    .btn-warning {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .btn-warning:hover {
+        background: rgba(251, 191, 36, 0.3);
+    }
+
+    .btn-danger {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-primary {
+        width: 100%;
+        padding: 0.75rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    }
+
+    .text-muted {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Alert Styles */
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        animation: slideIn 0.3s ease;
+    }
+
+    .alert-success {
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .alert-error {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .alert-icon {
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .admin-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .users-table-container {
+            overflow-x: auto;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .btn-action {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+    // Auto-hide alert messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        const alert = document.getElementById('alertMessage');
+        if (alert) {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-20px)';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+    });
+</script>
+{% endblock %}

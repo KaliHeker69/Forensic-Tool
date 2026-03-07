@@ -1,0 +1,620 @@
+{% extends "base.html" %}
+
+{% block title %}IOC Feed – Resource Portal{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- ── Sidebar ─────────────────────────────────────── -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fa-solid fa-lock logo-icon" aria-hidden="true"></i>
+        <span class="logo-text">Portal</span>
+      </div>
+    </div>
+    <div class="user-profile">
+      <div class="avatar"><span>{{ avatar_letter }}</span></div>
+      <div class="user-info">
+        <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+        <span class="user-role">{% if user.is_admin %}Administrator{% else %}User{% endif %}</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="nav-item">
+          <a href="/dashboard">
+            <i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/fetched-files">
+            <i class="fa-solid fa-file-arrow-down nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Fetched Files</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="/tools/iocs">
+            <i class="fa-solid fa-bullseye nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">IOC Feed</span>
+          </a>
+        </li>
+        {% if user.is_admin %}
+        <li class="nav-item">
+          <a href="/admin/panel">
+            <i class="fa-solid fa-users-gear nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">User Management</span>
+          </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+          <a href="/auth/change-password">
+            <i class="fa-solid fa-key nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Change Password</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="/auth/logout">
+            <i class="fa-solid fa-right-from-bracket nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Logout</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- ── Main content ────────────────────────────────── -->
+  <main class="main-content" role="main">
+
+    <!-- Header -->
+    <header class="content-header">
+      <div class="header-left">
+        <h1><i class="fa-solid fa-bullseye header-icon" aria-hidden="true"></i> IPsum Threat Feed</h1>
+        <p class="header-subtitle">
+          Daily IP blacklist aggregated from 30+ sources ·
+          <span id="feedDate">{% if ipsum_source_date %}{{ ipsum_source_date }}{% else %}loading…{% endif %}</span>
+        </p>
+      </div>
+      <div class="header-right">
+        {% if user.is_admin %}
+        <button class="btn btn-secondary" id="refreshBtn" title="Re-download latest feed from GitHub">
+          <i class="fa-solid fa-rotate"></i> Refresh Feed
+        </button>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- Stats cards -->
+    <section class="ioc-stats-row" aria-label="Feed statistics">
+      <div class="ioc-stat-card">
+        <div class="stat-icon stat-total"><i class="fa-solid fa-list" aria-hidden="true"></i></div>
+        <div class="stat-body">
+          <span class="stat-big" id="statTotal">{% if ipsum_total %}{{ ipsum_total }}{% else %}–{% endif %}</span>
+          <span class="stat-lbl">Total IPs</span>
+        </div>
+      </div>
+      <div class="ioc-stat-card">
+        <div class="stat-icon stat-high"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
+        <div class="stat-body">
+          <span class="stat-big" id="statHigh">{% if ipsum_high %}{{ ipsum_high }}{% else %}–{% endif %}</span>
+          <span class="stat-lbl">High Confidence (≥5)</span>
+        </div>
+      </div>
+      <div class="ioc-stat-card">
+        <div class="stat-icon stat-critical"><i class="fa-solid fa-skull-crossbones" aria-hidden="true"></i></div>
+        <div class="stat-body">
+          <span class="stat-big" id="statCritical">{% if ipsum_critical %}{{ ipsum_critical }}{% else %}–{% endif %}</span>
+          <span class="stat-lbl">Critical (≥8)</span>
+        </div>
+      </div>
+      <div class="ioc-stat-card">
+        <div class="stat-icon stat-updated"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
+        <div class="stat-body">
+          <span class="stat-big stat-date" id="statUpdated">{% if ipsum_last_updated %}{{ ipsum_last_updated }}{% else %}–{% endif %}</span>
+          <span class="stat-lbl">Feed Updated</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Score distribution bar chart -->
+    <section class="ioc-dist-section card-panel">
+      <h2 class="panel-title"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Score Distribution</h2>
+      <p class="panel-sub">Number of IPs by blacklist-hit count. Higher = more lists = higher threat confidence.</p>
+      <div class="dist-chart" id="distChart">
+        {% for row in ipsum_distribution %}
+        <div class="dist-bar-row">
+          <span class="dist-score-label">{{ row.score }}</span>
+          <div class="dist-bar-wrap">
+            <div class="dist-bar score-{% if row.score >= 8 %}critical{% elif row.score >= 5 %}high{% elif row.score >= 3 %}medium{% else %}low{% endif %}"
+                 data-count="{{ row.count }}" style="width:0%">
+            </div>
+          </div>
+          <span class="dist-count">{{ row.count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- IP Lookup panel -->
+    <section class="ioc-lookup-section card-panel">
+      <h2 class="panel-title"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> IP Lookup</h2>
+      <p class="panel-sub">Paste one or more IPs (one per line, up to 500) to check against the feed.</p>
+      <div class="lookup-input-row">
+        <textarea id="lookupInput" class="lookup-textarea"
+          placeholder="192.168.1.1&#10;10.0.0.1&#10;45.148.10.141"
+          rows="4" spellcheck="false"></textarea>
+        <button class="btn btn-primary" id="lookupBtn">
+          <i class="fa-solid fa-search"></i> Check IPs
+        </button>
+      </div>
+      <div id="lookupResults" class="lookup-results" style="display:none">
+        <table class="ioc-table">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Blacklist Score</th>
+              <th>Confidence</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="lookupTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Browse / Search panel -->
+    <section class="ioc-browse-section card-panel">
+      <h2 class="panel-title"><i class="fa-solid fa-table-list" aria-hidden="true"></i> Browse Feed</h2>
+      <div class="browse-controls">
+        <input type="text" id="browseSearch" class="form-control browse-search"
+               placeholder="Search IP prefix…" autocomplete="off" spellcheck="false" />
+        <select id="minScore" class="form-control browse-filter">
+          <option value="1">All scores</option>
+          <option value="3" selected>Score ≥ 3 (medium+)</option>
+          <option value="5">Score ≥ 5 (high+)</option>
+          <option value="8">Score ≥ 8 (critical)</option>
+        </select>
+        <select id="perPage" class="form-control browse-filter">
+          <option value="50" selected>50 / page</option>
+          <option value="100">100 / page</option>
+          <option value="200">200 / page</option>
+        </select>
+      </div>
+      <div id="browseStatus" class="browse-status"></div>
+      <div class="table-wrap">
+        <table class="ioc-table" id="browseTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>IP Address</th>
+              <th>Score</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody id="browseTbody">
+            <tr><td colspan="4" class="loading-cell"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="browse-pagination" id="pagination"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Refresh status toast -->
+<div id="toast" class="ioc-toast" style="display:none"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Constants ──────────────────────────────────────────────
+const API_STATS   = '/api/iocs/stats';
+const API_LOOKUP  = '/api/iocs/lookup';
+const API_LIST    = '/api/iocs/list';
+const API_REFRESH = '/api/iocs/refresh';
+
+// ── DOM refs ───────────────────────────────────────────────
+const els = {
+  lookupInput:   document.getElementById('lookupInput'),
+  lookupBtn:     document.getElementById('lookupBtn'),
+  lookupResults: document.getElementById('lookupResults'),
+  lookupTbody:   document.getElementById('lookupTbody'),
+  browseSearch:  document.getElementById('browseSearch'),
+  minScore:      document.getElementById('minScore'),
+  perPage:       document.getElementById('perPage'),
+  browseStatus:  document.getElementById('browseStatus'),
+  browseTbody:   document.getElementById('browseTbody'),
+  pagination:    document.getElementById('pagination'),
+  distChart:     document.getElementById('distChart'),
+  refreshBtn:    document.getElementById('refreshBtn'),
+  toast:         document.getElementById('toast'),
+};
+
+// ── Confidence badge ───────────────────────────────────────
+function confidenceBadge(score) {
+  if (score == null) return '<span class="badge badge-clean">Clean</span>';
+  if (score >= 8)    return `<span class="badge badge-critical">Critical</span>`;
+  if (score >= 5)    return `<span class="badge badge-high">High</span>`;
+  if (score >= 3)    return `<span class="badge badge-medium">Medium</span>`;
+  return             `<span class="badge badge-low">Low</span>`;
+}
+
+function scoreBar(score) {
+  const pct = Math.min(100, score * 10);
+  const cls = score >= 8 ? 'score-bar-critical' : score >= 5 ? 'score-bar-high' : score >= 3 ? 'score-bar-medium' : 'score-bar-low';
+  return `<div class="score-inline-bar ${cls}" style="width:${pct}%"></div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, ok = true) {
+  els.toast.textContent = msg;
+  els.toast.className = 'ioc-toast ' + (ok ? 'toast-ok' : 'toast-err');
+  els.toast.style.display = 'block';
+  setTimeout(() => { els.toast.style.display = 'none'; }, 5000);
+}
+
+// ── Score distribution bar animation ──────────────────────
+function animateDist() {
+  const bars = els.distChart.querySelectorAll('.dist-bar[data-count]');
+  if (!bars.length) return;
+  const maxCount = Math.max(...[...bars].map(b => parseInt(b.dataset.count, 10) || 0));
+  if (!maxCount) return;
+  bars.forEach(bar => {
+    const count = parseInt(bar.dataset.count, 10) || 0;
+    const pct = Math.round((count / maxCount) * 100);
+    // slight delay for animation
+    setTimeout(() => { bar.style.width = pct + '%'; }, 80);
+  });
+}
+
+// ── Browse state ───────────────────────────────────────────
+let browseState = { page: 1, total: 0, totalPages: 1 };
+let browseDebounce = null;
+
+async function loadList(page = 1) {
+  const q = encodeURIComponent(els.browseSearch.value.trim());
+  const min = els.minScore.value;
+  const pp  = els.perPage.value;
+  const url = `${API_LIST}?min_score=${min}&per_page=${pp}&page=${page}${q ? `&q=${q}` : ''}`;
+
+  els.browseTbody.innerHTML = '<tr><td colspan="4" class="loading-cell"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+  try {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    browseState = { page: data.page, total: data.total, totalPages: data.total_pages };
+    els.browseStatus.textContent = `${data.total.toLocaleString()} IPs match`;
+
+    if (!data.items.length) {
+      els.browseTbody.innerHTML = '<tr><td colspan="4" class="empty-cell">No results</td></tr>';
+      els.pagination.innerHTML = '';
+      return;
+    }
+
+    const offset = (data.page - 1) * parseInt(pp, 10);
+    els.browseTbody.innerHTML = data.items.map((item, i) => `
+      <tr class="ioc-row" data-ip="${escHtml(item.ip)}">
+        <td class="row-num">${offset + i + 1}</td>
+        <td class="ip-cell">
+          <span class="ip-addr">${escHtml(item.ip)}</span>
+          <button class="copy-btn" title="Copy IP" onclick="navigator.clipboard.writeText('${escHtml(item.ip)}')">
+            <i class="fa-solid fa-copy"></i>
+          </button>
+          <button class="lookup-quick-btn" title="Quick lookup" data-ip="${escHtml(item.ip)}">
+            <i class="fa-solid fa-search"></i>
+          </button>
+        </td>
+        <td class="score-cell">
+          <span class="score-num score-${item.score >= 8 ? 'critical' : item.score >= 5 ? 'high' : item.score >= 3 ? 'medium' : 'low'}">${item.score}</span>
+          <div class="score-bar-wrap">${scoreBar(item.score)}</div>
+        </td>
+        <td>${confidenceBadge(item.score)}</td>
+      </tr>`).join('');
+
+    // Quick lookup buttons
+    els.browseTbody.querySelectorAll('.lookup-quick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        els.lookupInput.value = btn.dataset.ip;
+        els.lookupInput.scrollIntoView({ behavior: 'smooth' });
+        doLookup();
+      });
+    });
+
+    renderPagination(data.page, data.total_pages);
+  } catch (e) {
+    els.browseTbody.innerHTML = `<tr><td colspan="4" class="error-cell">${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+function renderPagination(current, total) {
+  if (total <= 1) { els.pagination.innerHTML = ''; return; }
+  const pages = [];
+  const range = new Set([1, total, current - 1, current, current + 1].filter(p => p >= 1 && p <= total));
+  const sorted = [...range].sort((a, b) => a - b);
+  let prev = 0;
+  sorted.forEach(p => {
+    if (p - prev > 1) pages.push('<span class="pg-ellipsis">…</span>');
+    const active = p === current ? ' pg-active' : '';
+    pages.push(`<button class="pg-btn${active}" data-page="${p}">${p}</button>`);
+    prev = p;
+  });
+  els.pagination.innerHTML = `
+    <button class="pg-btn" data-page="${current - 1}" ${current <= 1 ? 'disabled' : ''}>‹ Prev</button>
+    ${pages.join('')}
+    <button class="pg-btn" data-page="${current + 1}" ${current >= total ? 'disabled' : ''}>Next ›</button>`;
+  els.pagination.querySelectorAll('.pg-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = parseInt(btn.dataset.page, 10);
+      if (p >= 1 && p <= total) { loadList(p); window.scrollTo(0, 0); }
+    });
+  });
+}
+
+// ── IP Lookup ──────────────────────────────────────────────
+async function doLookup() {
+  const raw = els.lookupInput.value.trim();
+  if (!raw) return;
+
+  const ips = [...new Set(raw.split(/[\n,\s]+/).map(s => s.trim()).filter(Boolean))];
+  if (!ips.length) return;
+
+  const prev = els.lookupBtn.innerHTML;
+  els.lookupBtn.disabled = true;
+  els.lookupBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking…';
+
+  try {
+    const res = await fetch(API_LOOKUP, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ips }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    els.lookupTbody.innerHTML = data.results.map(r => `
+      <tr class="${r.found ? 'row-found' : 'row-clean'}">
+        <td class="ip-cell"><span class="ip-addr">${escHtml(r.ip)}</span></td>
+        <td class="score-cell">
+          ${r.score != null
+            ? `<span class="score-num score-${r.score >= 8 ? 'critical' : r.score >= 5 ? 'high' : r.score >= 3 ? 'medium' : 'low'}">${r.score}</span>`
+            : '<span class="score-na">–</span>'}
+        </td>
+        <td>${confidenceBadge(r.score)}</td>
+        <td>${r.found
+          ? '<span class="status-found"><i class="fa-solid fa-circle-exclamation"></i> In feed</span>'
+          : '<span class="status-clean"><i class="fa-solid fa-circle-check"></i> Not in feed</span>'}</td>
+      </tr>`).join('');
+    els.lookupResults.style.display = 'block';
+  } catch (e) {
+    showToast('Lookup failed: ' + e.message, false);
+  } finally {
+    els.lookupBtn.disabled = false;
+    els.lookupBtn.innerHTML = prev;
+  }
+}
+
+// ── Refresh feed (admin) ───────────────────────────────────
+if (els.refreshBtn) {
+  els.refreshBtn.addEventListener('click', async () => {
+    if (!confirm('Re-download the latest ipsum.txt from GitHub?\nThis may take up to 30 seconds.')) return;
+    const prev = els.refreshBtn.innerHTML;
+    els.refreshBtn.disabled = true;
+    els.refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Refreshing…';
+    try {
+      const res = await fetch(API_REFRESH, { method: 'POST', credentials: 'same-origin' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Refresh failed');
+      showToast(`${data.message} — reload page to see updated stats.`);
+    } catch (e) {
+      showToast(e.message, false);
+    } finally {
+      els.refreshBtn.disabled = false;
+      els.refreshBtn.innerHTML = prev;
+    }
+  });
+}
+
+// ── Event wiring ───────────────────────────────────────────
+els.lookupBtn.addEventListener('click', doLookup);
+els.lookupInput.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') doLookup();
+});
+
+[els.browseSearch, els.minScore, els.perPage].forEach(el => {
+  el.addEventListener('input', () => {
+    clearTimeout(browseDebounce);
+    browseDebounce = setTimeout(() => loadList(1), 400);
+  });
+  el.addEventListener('change', () => {
+    clearTimeout(browseDebounce);
+    browseDebounce = setTimeout(() => loadList(1), 100);
+  });
+});
+
+// ── Init ───────────────────────────────────────────────────
+animateDist();
+loadList(1);
+</script>
+
+<style>
+/* ── IOC page styles ─────────────────────────────────────── */
+.ioc-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.ioc-stat-card {
+  background: var(--card-bg, rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  backdrop-filter: blur(10px);
+}
+.stat-icon { font-size: 1.6rem; opacity: 0.85; }
+.stat-total { color: #667eea; }
+.stat-high  { color: #f59e0b; }
+.stat-critical { color: #ef4444; }
+.stat-updated { color: #10b981; }
+.stat-big { font-size: 1.6rem; font-weight: 700; color: #fff; display: block; line-height: 1.1; }
+.stat-big.stat-date { font-size: 1rem; }
+.stat-lbl { font-size: 0.75rem; color: rgba(255,255,255,0.55); margin-top: 0.2rem; display: block; }
+
+.card-panel {
+  background: var(--card-bg, rgba(255,255,255,0.04));
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+.panel-title { font-size: 1rem; font-weight: 600; color: #e2e8f0; margin: 0 0 0.4rem; }
+.panel-title i { margin-right: 0.5rem; opacity: 0.7; }
+.panel-sub { font-size: 0.8rem; color: rgba(255,255,255,0.45); margin: 0 0 1rem; }
+
+/* Distribution chart */
+.dist-bar-row { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.45rem; }
+.dist-score-label { width: 1.4rem; text-align: right; font-size: 0.8rem; font-weight: 600; color: #94a3b8; flex-shrink: 0; }
+.dist-bar-wrap { flex: 1; height: 14px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+.dist-bar { height: 100%; border-radius: 4px; transition: width 0.7s ease; }
+.dist-bar.score-critical { background: linear-gradient(90deg, #ef4444, #dc2626); }
+.dist-bar.score-high     { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.dist-bar.score-medium   { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+.dist-bar.score-low      { background: linear-gradient(90deg, #6b7280, #4b5563); }
+.dist-count { width: 5rem; font-size: 0.75rem; color: rgba(255,255,255,0.5); flex-shrink: 0; }
+
+/* Lookup */
+.lookup-input-row { display: flex; gap: 0.75rem; align-items: flex-start; }
+.lookup-textarea {
+  flex: 1;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: #e2e8f0;
+  padding: 0.7rem 0.9rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+.lookup-textarea:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+.lookup-results { margin-top: 1rem; }
+
+/* Browse controls */
+.browse-controls { display: flex; gap: 0.7rem; margin-bottom: 0.8rem; flex-wrap: wrap; }
+.browse-search { flex: 1; min-width: 180px; }
+.browse-filter { width: 160px; }
+.form-control {
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #e2e8f0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+.form-control:focus { outline: none; border-color: #667eea; }
+.browse-status { font-size: 0.78rem; color: rgba(255,255,255,0.45); margin-bottom: 0.5rem; min-height: 1.2em; }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+.ioc-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.ioc-table th {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.6);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.ioc-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1; }
+.ioc-table tr:hover td { background: rgba(255,255,255,0.04); }
+.ioc-row.row-found td { border-left: 2px solid rgba(239,68,68,0.4); }
+.row-num { color: rgba(255,255,255,0.25); font-size: 0.75rem; width: 2.5rem; }
+.ip-cell { display: flex; align-items: center; gap: 0.4rem; }
+.ip-addr { font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #93c5fd; }
+.copy-btn, .lookup-quick-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.3); font-size: 0.7rem; padding: 2px 4px; border-radius: 4px;
+}
+.copy-btn:hover, .lookup-quick-btn:hover { color: #667eea; background: rgba(102,126,234,0.15); }
+.score-cell { display: flex; align-items: center; gap: 0.5rem; }
+.score-num { font-weight: 700; font-size: 0.9rem; width: 1.3rem; text-align: center; }
+.score-num.score-critical { color: #ef4444; }
+.score-num.score-high     { color: #f59e0b; }
+.score-num.score-medium   { color: #3b82f6; }
+.score-num.score-low      { color: #6b7280; }
+.score-na { color: rgba(255,255,255,0.2); }
+.score-bar-wrap { width: 60px; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+.score-inline-bar { height: 100%; border-radius: 3px; }
+.score-bar-critical { background: #ef4444; }
+.score-bar-high     { background: #f59e0b; }
+.score-bar-medium   { background: #3b82f6; }
+.score-bar-low      { background: #6b7280; }
+
+/* Badges */
+.badge { font-size: 0.7rem; font-weight: 600; padding: 0.2em 0.6em; border-radius: 4px; white-space: nowrap; }
+.badge-critical { background: rgba(239,68,68,0.2);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.badge-high     { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+.badge-medium   { background: rgba(59,130,246,0.2); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.badge-low      { background: rgba(107,114,128,0.2);color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
+.badge-clean    { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+
+/* Lookup result status */
+.status-found { color: #fca5a5; font-size: 0.8rem; }
+.status-clean { color: #6ee7b7; font-size: 0.8rem; }
+
+/* Pagination */
+.browse-pagination { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+.pg-btn {
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #94a3b8; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.8rem; cursor: pointer;
+}
+.pg-btn:hover:not(:disabled) { background: rgba(102,126,234,0.25); color: #a5b4fc; }
+.pg-btn.pg-active { background: #667eea; color: #fff; border-color: #667eea; }
+.pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.pg-ellipsis { color: rgba(255,255,255,0.3); padding: 0 0.3rem; }
+
+/* Table cell states */
+.loading-cell, .empty-cell, .error-cell { text-align: center; color: rgba(255,255,255,0.4); padding: 2rem !important; }
+.error-cell { color: #fca5a5; }
+
+/* Toast */
+.ioc-toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: rgba(30,30,50,0.95); color: #e2e8f0;
+  border-radius: 10px; padding: 0.9rem 1.3rem;
+  font-size: 0.85rem; max-width: 400px;
+  backdrop-filter: blur(20px); z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.toast-ok  { border-left: 3px solid #10b981; }
+.toast-err { border-left: 3px solid #ef4444; }
+
+/* Dashboard ioc date font tweak */
+.ioc-date { font-size: 0.9rem !important; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem;
+       border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.15s; }
+.btn-primary { background: linear-gradient(135deg,#667eea,#764ba2); color: #fff; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-secondary { background: rgba(255,255,255,0.08); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.12); }
+.btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.13); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+</style>
+{% endblock %}

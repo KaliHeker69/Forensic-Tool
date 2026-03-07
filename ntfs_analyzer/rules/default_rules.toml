@@ -1,0 +1,605 @@
+# =============================================================================
+# NTFS Forensic Analyzer - Detection Rules Configuration
+# =============================================================================
+# 
+# This file defines all detection rules used by the correlation and analysis
+# engines. Rules are grouped by category. Each rule specifies:
+#   - id:          Unique rule identifier
+#   - name:        Human-readable rule name
+#   - description: What the rule detects and why it matters
+#   - severity:    Info | Low | Medium | High | Critical
+#   - enabled:     Whether the rule is active
+#   - parameters:  Rule-specific thresholds and configuration
+#
+# Modify thresholds to tune for your environment and reduce false positives.
+# =============================================================================
+
+[metadata]
+version = "1.0.0"
+author = "NTFS Forensic Analyzer"
+description = "Default detection rules for NTFS forensic analysis"
+
+# =============================================================================
+# CATEGORY: Timestomping Detection
+# Compares $STANDARD_INFORMATION vs $FILE_NAME timestamps to detect
+# anti-forensic timestamp manipulation.
+# =============================================================================
+
+[[rules]]
+id = "TS-001"
+name = "SI Created Before FN Created"
+category = "timestomping"
+description = """
+$STANDARD_INFORMATION creation timestamp is earlier than $FILE_NAME creation \
+timestamp. Since $FN timestamps are kernel-managed and set when the file entry \
+is created, the $SI creation time should never predate $FN unless the $SI \
+timestamp was manually set to an earlier value (timestomping). This is a \
+primary indicator of anti-forensic timestamp manipulation."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# Minimum time difference (in seconds) to trigger. Small differences
+# can occur from legitimate cross-volume moves.
+min_difference_seconds = 60
+
+[[rules]]
+id = "TS-002"
+name = "Zero Nanosecond Precision"
+category = "timestomping"
+description = """
+$STANDARD_INFORMATION timestamps have zero sub-second precision (e.g., \
+ending in .0000000). NTFS stores timestamps at 100-nanosecond resolution. \
+In natural system operation, the sub-second portion follows a random \
+distribution. Perfect zero precision is statistically improbable and \
+strongly suggests the timestamp was artificially set by a timestomping \
+tool that only copies seconds-level precision."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+# Minimum number of $SI timestamps with zero sub-seconds to trigger
+# (a file has 4 SI timestamps; require 3+ for higher confidence)
+min_zero_timestamps = 3
+
+[[rules]]
+id = "TS-003"
+name = "SI Timestamps Match Known System File"
+category = "timestomping"
+description = """
+$STANDARD_INFORMATION timestamps exactly match common Windows system file \
+dates (e.g., kernel32.dll, ntdll.dll creation times). Attackers frequently \
+copy legitimate system file timestamps onto malware to blend in with the \
+operating system files."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# Known system file timestamp patterns to match against (ISO 8601 date portion)
+known_system_dates = [
+    "2019-03-19",
+    "2019-08-15",
+    "2020-05-12",
+    "2021-06-05",
+    "2021-10-14",
+    "2022-05-10",
+    "2023-05-24",
+]
+
+[[rules]]
+id = "TS-004"
+name = "USN BASIC_INFO_CHANGE With Old Timestamps"
+category = "timestomping"
+description = """
+USN Journal records a BASIC_INFO_CHANGE (0x8000) event for a file whose \
+$STANDARD_INFORMATION timestamps appear old or unchanged. The \
+BASIC_INFO_CHANGE reason code fires when file attributes or timestamps are \
+explicitly modified. If a file shows old timestamps but a recent \
+BASIC_INFO_CHANGE in the USN journal, the timestamps were likely altered."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# If $SI timestamp is older than this many days relative to the
+# BASIC_INFO_CHANGE USN event, flag as suspicious
+max_age_difference_days = 30
+
+# =============================================================================
+# CATEGORY: Mass File Operations
+# Detects patterns indicative of ransomware, data theft staging,
+# or anti-forensic bulk wiping.
+# =============================================================================
+
+[[rules]]
+id = "MO-001"
+name = "Mass File Rename (Ransomware Indicator)"
+category = "mass_operation"
+description = """
+A large number of files were renamed within a short time window. This is a \
+primary indicator of ransomware encryption, which typically renames files \
+with new extensions (e.g., .docx -> .encrypted, .locked, .crypt). The USN \
+Journal captures RENAME_OLD_NAME/RENAME_NEW_NAME pairs for each rename."""
+severity = "Critical"
+enabled = true
+
+[rules.parameters]
+# Minimum number of renames within the time window to trigger
+min_renames = 50
+# Time window in seconds
+time_window_seconds = 60
+
+[[rules]]
+id = "MO-002"
+name = "Mass File Deletion"
+category = "mass_operation"
+description = """
+A large number of files were deleted within a short time window. Could \
+indicate evidence destruction, ransomware cleanup, or anti-forensic wiping. \
+Correlate with $I30 slack space to recover deleted file metadata."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+min_deletions = 50
+time_window_seconds = 120
+
+[[rules]]
+id = "MO-003"
+name = "Mass File Creation"
+category = "mass_operation"
+description = """
+A large number of files were created within a short time window. Could \
+indicate malware deployment, data staging for exfiltration, or archive \
+extraction. Examine file paths and naming patterns for context."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+min_creations = 100
+time_window_seconds = 120
+
+[[rules]]
+id = "MO-004"
+name = "Wiping Tool Signature"
+category = "mass_operation"
+description = """
+Detected the characteristic pattern of a free-space wiping tool: rapid \
+sequence of file creates with DATA_EXTEND (filling disk space) followed by \
+deletions. Tools like SDelete and Eraser create temporary files, expand \
+them to consume free clusters, then delete them. This leaves a distinctive \
+noise signature in the USN Journal."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# Number of create+extend+delete cycles in the time window
+min_cycles = 20
+time_window_seconds = 300
+# Suspicious temp file name patterns (regex)
+temp_file_patterns = ["^[A-Z0-9]{6,8}\\.tmp$", "^~DF[A-F0-9]+\\.tmp$"]
+
+[[rules]]
+id = "MO-005"
+name = "Mass Extension Change"
+category = "mass_operation"
+description = """
+Multiple files had their extensions changed to the same new extension within \
+a short time window. Strong ransomware indicator when the new extension is \
+not a standard file type."""
+severity = "Critical"
+enabled = true
+
+[rules.parameters]
+min_changes = 20
+time_window_seconds = 120
+
+# =============================================================================
+# CATEGORY: Suspicious File Locations
+# Detects files in unusual or high-risk locations.
+# =============================================================================
+
+[[rules]]
+id = "SL-001"
+name = "Executable in Temp Directory"
+category = "suspicious_location"
+description = """
+An executable file (.exe, .dll, .scr, .bat, .ps1, .vbs, .cmd, .com) was \
+found in a temporary directory. Malware commonly drops executables into \
+%TEMP%, %TMP%, or AppData\\Local\\Temp for execution."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+suspicious_extensions = [".exe", ".dll", ".scr", ".bat", ".ps1", ".vbs", ".cmd", ".com", ".pif", ".hta", ".js", ".wsf", ".msi"]
+suspicious_paths = ["\\Temp\\", "\\tmp\\", "\\AppData\\Local\\Temp\\", "\\Windows\\Temp\\"]
+
+[[rules]]
+id = "SL-002"
+name = "Executable in User Profile Root"
+category = "suspicious_location"
+description = """
+An executable was found directly in a user profile root directory \
+(C:\\Users\\<name>\\). Legitimate software rarely places executables here; \
+this pattern is common in social engineering attacks."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+profile_path_pattern = "\\Users\\"
+
+[[rules]]
+id = "SL-003"
+name = "Hidden Executable File"
+category = "suspicious_location"
+description = """
+A file with an executable extension has the HIDDEN attribute set in \
+$STANDARD_INFORMATION. While some system files are legitimately hidden, \
+user-space hidden executables warrant investigation."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed
+
+[[rules]]
+id = "SL-004"
+name = "Executable Masquerading as System File"
+category = "suspicious_location"
+description = """
+A file uses the name of a known Windows system process (svchost.exe, \
+csrss.exe, lsass.exe, etc.) but is located outside the expected system \
+directory (System32/SysWOW64). Malware commonly impersonates system \
+processes to evade casual inspection."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+system_process_names = [
+    "svchost.exe", "csrss.exe", "lsass.exe", "services.exe",
+    "winlogon.exe", "wininit.exe", "smss.exe", "explorer.exe",
+    "taskhost.exe", "taskhostw.exe", "conhost.exe", "dwm.exe",
+    "spoolsv.exe", "dllhost.exe", "msiexec.exe"
+]
+legitimate_paths = [
+    "\\Windows\\System32\\", "\\Windows\\SysWOW64\\",
+    "\\Windows\\WinSxS\\", "\\Windows\\servicing\\",
+    "\\Windows\\WinSxS\\Temp\\", "\\Windows\\Installer\\",
+    "\\Windows\\assembly\\"
+]
+
+# =============================================================================
+# CATEGORY: Alternate Data Streams (ADS) Anomalies
+# Detects suspicious or malicious use of NTFS alternate data streams.
+# =============================================================================
+
+[[rules]]
+id = "ADS-001"
+name = "Non-Standard Alternate Data Stream"
+category = "ads_anomaly"
+description = """
+A file contains an alternate data stream other than the well-known \
+Zone.Identifier. While some applications create legitimate ADS, they \
+are also used by malware to hide executable payloads, configuration \
+data, or exfiltrated information within innocent-looking files."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+# ADS names that are considered benign/expected
+known_safe_streams = [
+    "Zone.Identifier", "encryptable", "SummaryInformation",
+    "DocumentSummaryInformation", "favicon",
+    "WofCompressedData",
+    "$Bad", "$SDS", "$T", "$I30", "$O", "$Q", "$R",
+    "$TXF_DATA", "$LOGGED_UTILITY_STREAM",
+    "SmartScreen", "motw",
+    "com.dropbox.attrs", "com.dropbox.attributes",
+    "OECustomProperty", "MsoDataStore",
+    "AfpInfo", "AFP_AfpInfo", "AFP_Resource"
+]
+
+[[rules]]
+id = "ADS-002"
+name = "Large Alternate Data Stream"
+category = "ads_anomaly"
+description = """
+An alternate data stream is unusually large, potentially hiding significant \
+amounts of data. Legitimate ADS (like Zone.Identifier) are typically under \
+1KB. Large streams may contain hidden executables, archives, or stolen data."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# Size threshold in bytes to consider an ADS "large" (1 MB)
+size_threshold_bytes = 1048576
+known_safe_streams = [
+    "Zone.Identifier", "WofCompressedData",
+    "$Bad", "$SDS", "$T", "$I30", "$O", "$Q", "$R",
+    "$TXF_DATA", "$LOGGED_UTILITY_STREAM",
+    "SmartScreen", "encryptable",
+    "SummaryInformation", "DocumentSummaryInformation"
+]
+
+[[rules]]
+id = "ADS-003"
+name = "Executable Content in ADS"
+category = "ads_anomaly"
+description = """
+An alternate data stream contains content that begins with known executable \
+signatures (MZ header, script shebangs, PowerShell markers). Attackers hide \
+executable payloads in ADS to evade file listing and antivirus scans."""
+severity = "Critical"
+enabled = true
+
+[rules.parameters]
+# Executable signatures to look for in ADS content (hex prefixes)
+executable_signatures = ["MZ", "TVqQ", "#!/", "powershell", "cmd /c", "<script", "<?xml"]
+
+[[rules]]
+id = "ADS-004"
+name = "Zone.Identifier Indicates Internet Download"
+category = "ads_anomaly"
+description = """
+File has a Zone.Identifier ADS with ZoneId=3 (Internet) or ZoneId=4 \
+(Restricted). This marks the file as downloaded from the internet or a \
+restricted zone. Critical for tracing the origin of malicious files."""
+severity = "Info"
+enabled = true
+
+[rules.parameters]
+# Zone IDs to flag: 3 = Internet, 4 = Restricted Sites
+flagged_zone_ids = [3, 4]
+
+# =============================================================================
+# CATEGORY: Deleted File Analysis
+# Detects patterns in deleted file metadata.
+# =============================================================================
+
+[[rules]]
+id = "DF-001"
+name = "Recently Deleted Executables"
+category = "deleted_files"
+description = """
+Executable files were recently deleted. Attackers often delete their tools \
+after use. Deleted MFT entries still contain rich metadata including \
+timestamps, file size, and path information."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+executable_extensions = [".exe", ".dll", ".scr", ".bat", ".ps1", ".vbs", ".cmd"]
+
+[[rules]]
+id = "DF-002"
+name = "Deleted Files Recovered from I30 Slack"
+category = "deleted_files"
+description = """
+File entries were recovered from $I30 directory index slack space. These \
+represent files that were deleted and whose directory entries were \
+overwritten, but remnants persist in the index node slack. This provides \
+proof of file existence even when MFT entries have been reused."""
+severity = "Low"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed
+
+[[rules]]
+id = "DF-003"
+name = "Deleted Archive or Container Files"
+category = "deleted_files"
+description = """
+Archive files (.zip, .rar, .7z) or encrypted containers (.tc, .hc, .vhd) \
+were deleted. This pattern is common in data exfiltration: files are \
+collected into an archive, the archive is transferred, then deleted to \
+cover tracks."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+archive_extensions = [".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".xz", ".cab"]
+container_extensions = [".tc", ".hc", ".vhd", ".vhdx", ".vmdk", ".iso", ".img"]
+
+# =============================================================================
+# CATEGORY: Temporal Anomalies
+# Detects suspicious timing patterns in file system activity.
+# =============================================================================
+
+[[rules]]
+id = "TA-001"
+name = "Off-Hours File Activity"
+category = "temporal_anomaly"
+description = """
+Significant file system activity occurred outside normal business hours. \
+While not inherently malicious, off-hours activity from user directories \
+warrants investigation, especially if combined with other indicators."""
+severity = "Low"
+enabled = true
+
+[rules.parameters]
+# Business hours definition (24-hour format, UTC)
+business_hours_start = 7
+business_hours_end = 19
+# Minimum events outside business hours to trigger
+min_off_hours_events = 20
+# Only flag activity in user directories
+user_directory_pattern = "\\Users\\"
+
+[[rules]]
+id = "TA-002"
+name = "Activity Gap (Possible Log Deletion)"
+category = "temporal_anomaly"
+description = """
+A significant gap in USN Journal activity was detected, followed by resumed \
+activity. This may indicate journal tampering, log deletion, or a period \
+where the system was offline. Compare with $LogFile and Event Logs for \
+corroboration."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+# Minimum gap duration in hours to flag
+min_gap_hours = 4
+
+[[rules]]
+id = "TA-003"
+name = "Timestamp In The Future"
+category = "temporal_anomaly"
+description = """
+A file has a timestamp set to a date in the future. This is almost always \
+an indicator of timestamp manipulation, system clock issues, or corrupted \
+metadata."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed
+
+[[rules]]
+id = "TA-004"
+name = "Accessed Before Created"
+category = "temporal_anomaly"
+description = """
+A file's accessed timestamp predates its creation timestamp within the same \
+attribute source. This violates causality and indicates metadata corruption \
+or manipulation."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed
+
+# =============================================================================
+# CATEGORY: Known Tool Detection
+# Detects filenames associated with common attack/forensic tools.
+# =============================================================================
+
+[[rules]]
+id = "KT-001"
+name = "Known Attack Tool Detected"
+category = "known_tools"
+description = """
+A filename matching a known offensive security or hacking tool was detected \
+in the MFT or recovered from deleted entries / I30 slack. Even if the file \
+has been deleted, the metadata proves the tool existed on the system."""
+severity = "Critical"
+enabled = true
+
+[rules.parameters]
+tool_names = [
+    "mimikatz", "procdump", "psexec", "plink", "ncat", "nmap", "wireshark",
+    "bloodhound", "sharphound", "rubeus", "seatbelt", "lazagne",
+    "crackmapexec", "impacket", "responder", "hashcat",
+    "hydra", "cobalt-strike", "cobaltstrike", "meterpreter",
+    "pwdump", "gsecdump", "secretsdump", "invoke-mimikatz",
+    "powercat", "powersploit", "empire", "covenant", "sliver", "chisel",
+    "ligolo", "ngrok", "metasploit", "burpsuite", "sqlmap", "aircrack-ng",
+    "owasp-zap", "masscan", "amass", "nikto", "beef-xss", "openvas",
+    "zmap", "dsniff", "kismet", "reaver", "wp-scan", "maltego",
+    "theharvester", "recon-ng", "hping3", "unicornscan",
+    "setoolkit", "arpspoof", "wifite", "airmon-ng",
+    "airodump-ng", "aireplay-ng",
+    "pupy", "poshc2", "ghostpack", "kerbrute", "kekeo",
+    "pwncat", "donut", "runascs", "proxychains", "sshuttle",
+    "lapsdumper", "modlishka", "evilginx2", "mitm6", "dirsearch",
+    "seclists", "gobuster", "wfuzz", "feroxbuster",
+    "rustscan", "nuclei", "gophish",
+    "socialfish", "nessus",
+    "medusa", "cain-abel", "ophcrack",
+    "netcat", "nc.exe", "nc64.exe"
+]
+
+
+[[rules]]
+id = "KT-002"
+name = "Known Wiping Tool Detected"
+category = "known_tools"
+description = """
+A filename matching a known secure deletion or anti-forensic wiping tool \
+was detected. The presence of such tools (even deleted) is evidence of \
+intent to destroy evidence."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+tool_names = [
+    "eraser.exe", "sdelete", "sdelete64", "bleachbit", "ccleaner", "privazer",
+    "dban", "cipher.exe",
+    "nwipe", "secure-eraser", "killdisk", "disk-wipe",
+    "hard-drive-eraser", "winutilities-file-eraser",
+    "oo-safeerase", "lavasoft-file-eraser", "remo-file-eraser",
+    "wise-force-deleter", "iobit-unlocker", "freeraser",
+    "soft4boost-secure-eraser", "wipefile", "aceerase-file-shredder",
+    "moo0-fileshredder", "pocket-killbox", "privacy-eraser",
+    "hard-drive-wipe-app", "wipe3", "shredit",
+    "blancco-drive-eraser", "bitraser-drive-eraser",
+    "blancco-file-eraser", "nsys-data-erasure",
+    "long-path-eraser", "do-your-data-super-eraser", "hardwipe",
+    "cbl-data-shredder", "file-shredder", "privacy-eraser-free",
+    "hdderase", "hdparm-secure-erase", "ata-secure-erase"
+]
+
+
+# =============================================================================
+# CATEGORY: $Bitmap Cluster Allocation Anomaly Detection
+# Detects anomalies in cluster allocation bitmap data.
+# =============================================================================
+
+[[rules]]
+id = "BM-001"
+name = "Bitmap/MFT Allocation Mismatch"
+category = "bitmap_anomaly"
+description = """
+Clusters allocated in MFT records do not match $Bitmap allocation status. \
+This may indicate file system corruption, incomplete deletion, anti-forensic \
+tools that manipulate cluster allocation, or interrupted write operations."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed
+
+[[rules]]
+id = "BM-002"
+name = "Large Zeroed (Wiped) Regions"
+category = "bitmap_anomaly"
+description = """
+Large contiguous regions of zeroed clusters detected in $Bitmap analysis. \
+This is consistent with disk wiping or secure deletion tools (e.g., cipher /w, \
+sdelete, eraser) that overwrite free space to prevent data recovery."""
+severity = "High"
+enabled = true
+
+[rules.parameters]
+# Minimum region size in clusters to flag (default: 1000 clusters ≈ 4MB)
+min_region_clusters = 1000
+
+[[rules]]
+id = "BM-003"
+name = "Extreme Volume Fragmentation"
+category = "bitmap_anomaly"
+description = """
+The volume shows extreme fragmentation exceeding the configured threshold. \
+While high fragmentation alone may be benign, extreme values combined with \
+other indicators may suggest anti-forensic cluster manipulation or repeated \
+file creation/deletion cycles."""
+severity = "Medium"
+enabled = true
+
+[rules.parameters]
+# Maximum fragmentation ratio before flagging (0.0 = contiguous, 1.0 = fully fragmented)
+max_fragmentation_ratio = 0.85
+
+[[rules]]
+id = "BM-004"
+name = "Out-of-Bounds Allocated Clusters"
+category = "bitmap_anomaly"
+description = """
+Clusters beyond the volume boundary are marked as allocated. This indicates \
+file system corruption, deliberate manipulation to hide data outside the \
+visible volume boundary, or volume resizing artifacts."""
+severity = "Critical"
+enabled = true
+
+[rules.parameters]
+# No additional parameters needed

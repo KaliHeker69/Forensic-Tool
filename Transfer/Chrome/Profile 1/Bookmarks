@@ -1,0 +1,47 @@
+{
+   "checksum": "034834c34a6d26736b10eb80bddcfea2",
+   "roots": {
+      "bookmark_bar": {
+         "children": [ {
+            "date_added": "13416237783421127",
+            "date_last_used": "0",
+            "guid": "85180b1b-b30c-4830-81e6-a7aa7e33cee5",
+            "id": "5",
+            "meta_info": {
+               "power_bookmark_meta": ""
+            },
+            "name": "What is Kali Linux? | Kali Linux Documentation",
+            "type": "url",
+            "url": "https://www.kali.org/docs/introduction/what-is-kali-linux/"
+         } ],
+         "date_added": "13416237761794773",
+         "date_last_used": "0",
+         "date_modified": "13416237787176403",
+         "guid": "0bc5d13f-2cba-5d74-951f-3f233fe6c908",
+         "id": "1",
+         "name": "Bookmarks bar",
+         "type": "folder"
+      },
+      "other": {
+         "children": [  ],
+         "date_added": "13416237761794773",
+         "date_last_used": "0",
+         "date_modified": "13416237783421127",
+         "guid": "82b081ec-3dd3-529c-8475-ab6c344590dd",
+         "id": "2",
+         "name": "Other bookmarks",
+         "type": "folder"
+      },
+      "synced": {
+         "children": [  ],
+         "date_added": "13416237761794773",
+         "date_last_used": "0",
+         "date_modified": "0",
+         "guid": "4cf2e351-0e85-532b-bb37-df045d8f8d0f",
+         "id": "3",
+         "name": "Mobile bookmarks",
+         "type": "folder"
+      }
+   },
+   "version": 1
+}

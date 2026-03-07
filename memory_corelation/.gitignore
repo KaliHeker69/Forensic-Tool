@@ -1,0 +1,31 @@
+target/
+.DS_Store
+__pycache__/
+*.log
+# Build outputs
+/target/
+debug/
+release/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Rust
+Cargo.lock
+
+# Sensitive configuration files - DO NOT COMMIT
+config/api_keys.json
+
+# Log files
+*.log
+
+# Test outputs
+*.tmp

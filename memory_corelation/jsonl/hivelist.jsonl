@@ -1,0 +1,25 @@
+
+{"File output": "Disabled", "FileFullPath": "", "Offset": 244133560213504, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\REGISTRY\\MACHINE\\SYSTEM", "Offset": 244133560619008, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\REGISTRY\\MACHINE\\HARDWARE", "Offset": 244133564809216, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\SystemRoot\\System32\\Config\\SAM", "Offset": 244133583622144, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\SystemRoot\\System32\\Config\\SECURITY", "Offset": 244133584146432, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\SystemRoot\\System32\\Config\\DEFAULT", "Offset": 244133584154624, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\SystemRoot\\System32\\Config\\SOFTWARE", "Offset": 244133584138240, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\Device\\HarddiskVolume1\\Boot\\BCD", "Offset": 244133588520960, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Windows\\ServiceProfiles\\NetworkService\\NTUSER.DAT", "Offset": 244133627043840, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\SystemRoot\\System32\\Config\\BBI", "Offset": 244133629136896, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Windows\\ServiceProfiles\\LocalService\\NTUSER.DAT", "Offset": 244133629128704, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Windows\\AppCompat\\Programs\\Amcache.hve", "Offset": 244133646864384, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\ntuser.dat", "Offset": 244133581373440, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\AppData\\Local\\Microsoft\\Windows\\UsrClass.dat", "Offset": 244133590372352, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\ProgramData\\Microsoft\\Windows\\AppRepository\\Packages\\Microsoft.Windows.StartMenuExperienceHost_10.0.19041.1023_neutral_neutral_cw5n1h2txyewy\\ActivationStore.dat", "Offset": 244133659975680, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\AppData\\Local\\Packages\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\\Settings\\settings.dat", "Offset": 244133660606464, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\ProgramData\\Microsoft\\Windows\\AppRepository\\Packages\\MicrosoftWindows.Client.CBS_120.2212.4190.0_x64__cw5n1h2txyewy\\ActivationStore.dat", "Offset": 244133659734016, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\ProgramData\\Microsoft\\Windows\\AppRepository\\Packages\\Microsoft.Windows.Search_1.14.7.19041_neutral_neutral_cw5n1h2txyewy\\ActivationStore.dat", "Offset": 244133678596096, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\AppData\\Local\\Packages\\Microsoft.Windows.Search_cw5n1h2txyewy\\Settings\\settings.dat", "Offset": 244133681012736, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\AppData\\Local\\Packages\\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\\Settings\\settings.dat", "Offset": 244133664116736, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\State\\dosvcState.dat", "Offset": 244133667893248, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\ProgramData\\Microsoft\\Windows\\AppRepository\\Packages\\Microsoft.Windows.ShellExperienceHost_10.0.19041.1949_neutral_neutral_cw5n1h2txyewy\\ActivationStore.dat", "Offset": 244133648306176, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\Users\\BlackPerl\\AppData\\Local\\Packages\\Microsoft.Windows.ShellExperienceHost_cw5n1h2txyewy\\Settings\\settings.dat", "Offset": 244133729710080, "__children": []}
+{"File output": "Disabled", "FileFullPath": "\\??\\C:\\ProgramData\\Microsoft\\Windows\\AppRepository\\Packages\\windows.immersivecontrolpanel_10.0.2.1000_neutral_neutral_cw5n1h2txyewy\\ActivationStore.dat", "Offset": 244133671063552, "__children": []}

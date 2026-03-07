@@ -1,0 +1,13 @@
+//! Certificate Rules detection rules
+
+pub mod cert001_rogue_c_a_certificate;
+pub mod cert002_mimicked_c_a_certificate;
+pub mod cert003_known_malware_certificate;
+pub mod cert004_self_signed_root_certificate;
+pub mod cert005_certificate_store_anomaly;
+
+pub use cert001_rogue_c_a_certificate::RogueCACertificateRule;
+pub use cert002_mimicked_c_a_certificate::MimickedCACertificateRule;
+pub use cert003_known_malware_certificate::KnownMalwareCertificateRule;
+pub use cert004_self_signed_root_certificate::SelfSignedRootCertificateRule;
+pub use cert005_certificate_store_anomaly::CertificateStoreAnomalyRule;

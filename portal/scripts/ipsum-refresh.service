@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh IPsum IP threat intelligence feed
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/home/kali_arch/tools/portal/scripts/ipsum-refresh.sh
+StandardOutput=journal
+StandardError=journal

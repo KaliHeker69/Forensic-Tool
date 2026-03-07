@@ -1,0 +1,49 @@
+# macOS
+.DS_Store
+
+# Editor directories
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+
+# Node
+node_modules/
+
+# Rust
+**/target/
+**/Cargo.lock
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.class
+*.jar
+
+# Misc
+.pytest_cache/
+coverage/
+
+# Exclude ez_tools_net9 per user request
+/ez_tools_net9/
+
+# Exclude output directories and timeline CSVs
+**/output/
+timeline.csv
+
+# Ignore all JSON and CSV files from all folders
+**/*.json
+**/*.csv
+**/*.dat
