@@ -1,0 +1,32 @@
+# ============================================================
+# Report Paths – Portal report file locations
+# Edit this file to update report paths without recompiling.
+# Set REPORT_PATHS_FILE=/path/to/report_paths.toml in .env
+# to use a custom location (default: ./report_paths.toml).
+# ============================================================
+
+[reports]
+
+[reports.memory]
+name = "Memory Analysis"
+path = "/Users/kali/Codes/wsl/memory_corelation/report.html"
+
+[reports.shimcache-amcache]
+name = "Shimcache Amcache"
+path = "/home/kali_arch/tools/shim-amcache_analyzer/kaliheker_report.html"
+
+[reports.prefetch]
+name = "Prefetch"
+path = "/Users/kali/Codes/wsl/prefetch_analyzer/report.html"
+
+[reports.ioc-scan]
+name = "IOC Scan"
+path = "/home/kali_arch/tools/loki-rs/loki_KaliNigha_2026-02-10_12-37-14.html"
+
+[reports.browser-forensics]
+name = "Browser Forensics"
+path = "/home/kali/Forensic-Tool/browser_forensics/report.html"
+
+[reports.windows-event]
+name = "Windows Event"
+path = "/Users/kali/Downloads/Hayabusa/hayabusa-main/forensic_report.html"

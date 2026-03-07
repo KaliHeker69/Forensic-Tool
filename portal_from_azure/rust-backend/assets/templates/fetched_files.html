@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}Fetched Files – Resource Portal{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+  <!-- ── Sidebar (reuse portal sidebar) ─────────────────────── -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fa-solid fa-lock logo-icon" aria-hidden="true"></i>
+        <span class="logo-text">Portal</span>
+      </div>
+    </div>
+    <div class="user-profile">
+      <div class="avatar"><span>{{ avatar_letter }}</span></div>
+      <div class="user-info">
+        <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+        <span class="user-role">{% if user.is_admin %}Administrator{% else %}User{% endif %}</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="nav-item">
+          <a href="/dashboard">
+            <i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Dashboard</span>
+          </a>
+        </li>
+        <li class="nav-item active">
+          <a href="/fetched-files">
+            <i class="fa-solid fa-file-arrow-down nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Fetched Files</span>
+          </a>
+        </li>
+        {% if user.is_admin %}
+        <li class="nav-item">
+          <a href="/admin/panel">
+            <i class="fa-solid fa-users-gear nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">User Management</span>
+          </a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+          <a href="/auth/change-password">
+            <i class="fa-solid fa-key nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Change Password</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/auth/logout" class="btn-logout">
+        <i class="fa-solid fa-right-from-bracket logout-icon" aria-hidden="true"></i>
+        <span>Sign Out</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main content ────────────────────────────────────────── -->
+  <main class="main-content">
+    <header class="content-header">
+      <div class="header-left">
+        <button class="menu-toggle" aria-label="Toggle menu">
+          <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <h1><i class="fa-solid fa-file-arrow-down" style="color:var(--accent-green);margin-right:10px;"></i>Fetched Files</h1>
+      </div>
+      <div class="header-right">
+        <a href="/dashboard" class="btn-header-logout" style="text-decoration:none;">
+          <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+      </div>
+    </header>
+
+    <!-- search + toolbar -->
+    <section style="padding:24px 32px 0;">
+      <div class="ff-toolbar">
+        <div class="ff-search-wrap">
+          <i class="fa-solid fa-magnifying-glass ff-search-icon"></i>
+          <input id="ffSearch" class="ff-search" type="text" placeholder="Search files…" autocomplete="off">
+          <button class="ff-search-clear" id="ffSearchClear" title="Clear">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <button class="ff-btn ff-btn-refresh" id="ffRefresh" title="Refresh file list">
+          <i class="fa-solid fa-rotate"></i> Refresh
+        </button>
+
+        <button class="ff-btn ff-btn-primary" id="ffDownloadSelected" disabled>
+          <i class="fa-solid fa-download"></i> Download selected (<span id="ffSelCount">0</span>)
+        </button>
+
+        {% if pe_entropy_mode %}
+        <button class="ff-btn ff-btn-primary" id="ffRunPeEntropy" disabled>
+          <i class="fa-solid fa-bolt"></i> Run PE Entropy
+        </button>
+        {% endif %}
+
+        <span class="ff-total-label">
+          <span id="ffTotalShown">0</span> / <span id="ffTotalAll">0</span> files
+        </span>
+      </div>
+
+      <!-- dir badge -->
+      <div class="ff-dir-badge">
+        <i class="fa-solid fa-folder-open"></i>
+        <code>{{ fetched_dir }}</code>
+      </div>
+
+      {% if pe_entropy_mode %}
+      <div class="ff-pe-mode-note">
+        <i class="fa-solid fa-shield-halved"></i>
+        PE Entropy mode is active: only PE files are shown (.exe, .dll, .sys, .scr, .drv, .ocx). Select exactly one file, then run analysis.
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- file table -->
+    <section style="padding:16px 32px 32px;">
+      <div class="ff-table-wrap" id="ffTableWrap">
+
+        <!-- loading state -->
+        <div class="ff-loading" id="ffLoading">
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>Loading files…</span>
+        </div>
+
+        <!-- empty state -->
+        <div class="ff-empty" id="ffEmpty" style="display:none;">
+          <i class="fa-solid fa-folder-open"></i>
+          <p>No files found</p>
+          <small>The directory is empty or nothing matched your search.</small>
+        </div>
+
+        <!-- table -->
+        <table class="ff-table" id="ffTable" style="display:none;">
+          <thead>
+            <tr>
+              <th class="ff-col-check">
+                <input type="checkbox" id="ffSelectAll" title="Select / deselect all visible">
+              </th>
+              <th class="ff-col-name ff-sortable" data-col="name">
+                Name <i class="fa-solid fa-sort ff-sort-icon"></i>
+              </th>
+              <th class="ff-col-path ff-sortable" data-col="rel_path">
+                Path <i class="fa-solid fa-sort ff-sort-icon"></i>
+              </th>
+              <th class="ff-col-size ff-sortable" data-col="size_bytes">
+                Size <i class="fa-solid fa-sort ff-sort-icon"></i>
+              </th>
+              <th class="ff-col-date ff-sortable" data-col="modified">
+                Modified <i class="fa-solid fa-sort ff-sort-icon"></i>
+              </th>
+              <th class="ff-col-action">Action</th>
+            </tr>
+          </thead>
+          <tbody id="ffTableBody"></tbody>
+        </table>
+      </div>
+
+      {% if pe_entropy_mode %}
+      <div class="ff-pe-result" id="ffPeResult" style="display:none;">
+        <div class="ff-pe-result-header">
+          <i class="fa-solid fa-chart-column"></i>
+          <span>PE Entropy Result</span>
+        </div>
+        <div class="ff-pe-report-link" id="ffPeReportLink" style="display:none;"></div>
+        <pre id="ffPeResultBody"></pre>
+      </div>
+      {% endif %}
+    </section>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* ── Fetched Files page styles ────────────────────────────── */
+:root{
+  --ff-bg:rgba(22,27,34,.85);
+  --ff-border:rgba(48,54,61,.8);
+  --ff-row-hover:rgba(46,160,67,.07);
+  --ff-row-sel:rgba(46,160,67,.13);
+  --accent-green:#2ea043;
+  --accent-green-dim:#238636;
+}
+
+/* toolbar */
+.ff-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+
+.ff-search-wrap{position:relative;display:flex;align-items:center;flex:1;min-width:240px;max-width:480px;}
+.ff-search-icon{position:absolute;left:12px;color:var(--text-secondary);font-size:.85rem;pointer-events:none;}
+.ff-search{width:100%;padding:9px 36px 9px 36px;background:var(--ff-bg);border:1px solid var(--ff-border);border-radius:10px;color:var(--text-primary);font-size:.9rem;transition:border-color .15s;}
+.ff-search:focus{outline:none;border-color:var(--accent-green);box-shadow:0 0 0 3px rgba(46,160,67,.15);}
+.ff-search-clear{position:absolute;right:8px;background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:4px 6px;border-radius:6px;opacity:0;pointer-events:none;font-size:.85rem;}
+.ff-search:not(:placeholder-shown)~.ff-search-clear{opacity:1;pointer-events:auto;}
+.ff-search-clear:hover{color:var(--text-primary);background:var(--ff-border);}
+
+.ff-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--ff-bg);border:1px solid var(--ff-border);border-radius:8px;color:var(--text-primary);font-size:.85rem;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.ff-btn:hover:not(:disabled){border-color:var(--accent-green);box-shadow:0 0 12px rgba(46,160,67,.2);}
+.ff-btn:disabled{opacity:.4;cursor:not-allowed;}
+.ff-btn-primary{background:var(--accent-green-dim);border-color:transparent;color:#fff;}
+.ff-btn-primary:hover:not(:disabled){background:var(--accent-green);box-shadow:0 4px 16px rgba(46,160,67,.35);}
+
+.ff-total-label{margin-left:auto;font-size:.82rem;color:var(--text-secondary);}
+.ff-total-label span{color:var(--text-primary);font-weight:600;}
+
+.ff-dir-badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(0,0,0,.25);border:1px solid var(--ff-border);border-radius:8px;font-size:.8rem;color:var(--text-secondary);margin-bottom:6px;}
+.ff-dir-badge code{color:var(--accent-green);font-family:'SF Mono',Consolas,monospace;}
+
+/* table wrapper */
+.ff-table-wrap{background:var(--ff-bg);backdrop-filter:blur(16px);border:1px solid var(--ff-border);border-radius:14px;overflow:hidden;}
+
+/* states */
+.ff-loading,.ff-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;color:var(--text-secondary);}
+.ff-loading i,.ff-empty i{font-size:2.5rem;opacity:.5;}
+.ff-empty small{color:var(--text-secondary);opacity:.6;}
+
+/* table */
+.ff-table{width:100%;border-collapse:collapse;}
+.ff-table thead{background:rgba(31,36,40,.95);border-bottom:1px solid var(--ff-border);}
+.ff-table th{padding:11px 14px;text-align:left;font-size:.8rem;font-weight:600;color:var(--text-secondary);white-space:nowrap;user-select:none;}
+.ff-table th.ff-sortable{cursor:pointer;}
+.ff-table th.ff-sortable:hover{color:var(--text-primary);}
+.ff-sort-icon{margin-left:4px;opacity:.4;font-size:.7rem;}
+th.sort-asc .ff-sort-icon,th.sort-desc .ff-sort-icon{opacity:1;color:var(--accent-green);}
+.ff-table tbody tr{border-bottom:1px solid rgba(48,54,61,.5);transition:background .12s;}
+.ff-table tbody tr:last-child{border-bottom:none;}
+.ff-table tbody tr:hover{background:var(--ff-row-hover);}
+.ff-table tbody tr.ff-selected{background:var(--ff-row-sel);}
+.ff-table td{padding:10px 14px;font-size:.85rem;color:var(--text-primary);vertical-align:middle;}
+
+/* columns */
+.ff-col-check{width:40px;}
+.ff-col-check input[type=checkbox]{accent-color:var(--accent-green);cursor:pointer;width:15px;height:15px;}
+.ff-col-name{max-width:260px;}
+.ff-col-path{max-width:220px;color:var(--text-secondary) !important;font-family:'SF Mono',Consolas,monospace;font-size:.78rem !important;}
+.ff-col-size{width:90px;text-align:right;}
+.ff-col-date{width:140px;}
+.ff-col-action{width:80px;text-align:center;}
+
+.ff-name-cell{display:flex;align-items:center;gap:8px;overflow:hidden;}
+.ff-name-cell span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+.ff-ext-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.7rem;font-weight:600;background:rgba(46,160,67,.15);color:var(--accent-green);text-transform:uppercase;flex-shrink:0;}
+
+.ff-dl-btn{background:none;border:1px solid var(--ff-border);color:var(--text-secondary);border-radius:7px;padding:5px 10px;cursor:pointer;font-size:.8rem;transition:all .15s;}
+.ff-dl-btn:hover{border-color:var(--accent-green);color:var(--accent-green);background:rgba(46,160,67,.08);}
+
+.ff-pe-mode-note{margin-top:10px;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--ff-border);border-radius:8px;background:rgba(46,160,67,.1);color:var(--text-primary);font-size:.82rem;}
+.ff-pe-result{margin-top:14px;border:1px solid var(--ff-border);border-radius:10px;background:var(--ff-bg);overflow:hidden;}
+.ff-pe-result-header{padding:10px 12px;border-bottom:1px solid var(--ff-border);display:flex;align-items:center;gap:8px;color:var(--accent-green);font-weight:600;font-size:.85rem;}
+.ff-pe-report-link{padding:10px 12px;border-bottom:1px solid var(--ff-border);font-size:.82rem;color:var(--text-secondary);}
+.ff-pe-report-link a{color:var(--accent-green);text-decoration:none;font-weight:600;}
+.ff-pe-report-link a:hover{text-decoration:underline;}
+.ff-pe-result pre{margin:0;padding:14px;max-height:360px;overflow:auto;color:var(--text-primary);font-size:.78rem;line-height:1.45;font-family:'SF Mono',Consolas,monospace;background:rgba(0,0,0,.2);}
+</style>
+
+<script>
+(function () {
+  const API_LIST     = '/api/fetched-files/list';
+  const API_DOWNLOAD = '/api/fetched-files/download';
+  const API_PE_RUN   = '/api/fetched-files/run-pe-entropy';
+  const PE_MODE      = {% if pe_entropy_mode %}true{% else %}false{% endif %};
+  const PE_EXTENSIONS = new Set(['exe', 'dll', 'sys', 'scr', 'drv', 'ocx']);
+
+  let allFiles  = [];
+  let sortCol   = 'name';
+  let sortAsc   = true;
+  let debounceTimer;
+
+  const $ = id => document.getElementById(id);
+
+  const els = {
+    search:          $('ffSearch'),
+    searchClear:     $('ffSearchClear'),
+    refresh:         $('ffRefresh'),
+    dlSelected:      $('ffDownloadSelected'),
+    selCount:        $('ffSelCount'),
+    totalShown:      $('ffTotalShown'),
+    totalAll:        $('ffTotalAll'),
+    selectAll:       $('ffSelectAll'),
+    loading:         $('ffLoading'),
+    empty:           $('ffEmpty'),
+    table:           $('ffTable'),
+    tbody:           $('ffTableBody'),
+    runPeEntropy:    $('ffRunPeEntropy'),
+    peResult:        $('ffPeResult'),
+    peReportLink:    $('ffPeReportLink'),
+    peResultBody:    $('ffPeResultBody'),
+  };
+  const dlSelectedOriginalHTML = els.dlSelected.innerHTML;
+
+  // ── fetch file list ───────────────────────────────────────
+
+  async function loadFiles(query = '') {
+    showState('loading');
+    try {
+      const url = API_LIST + (query ? `?search=${encodeURIComponent(query)}` : '');
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      allFiles = PE_MODE ? data.files.filter(f => PE_EXTENSIONS.has((f.extension || '').toLowerCase())) : data.files;
+      els.totalAll.textContent = allFiles.length;
+      renderTable(allFiles);
+    } catch (err) {
+      showState('empty');
+      console.error('Failed to load files:', err);
+    }
+  }
+
+  // ── render ────────────────────────────────────────────────
+
+  function renderTable(files) {
+    if (!files.length) { showState('empty'); return; }
+
+    const sorted = [...files].sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sortAsc ? -1 : 1;
+      if (av > bv) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    els.tbody.innerHTML = sorted.map(f => {
+      const ext = f.extension || '?';
+      const icon = extIcon(f.extension);
+      return `
+        <tr data-path="${escHtml(f.rel_path)}">
+          <td class="ff-col-check"><input type="checkbox" class="ff-row-check" value="${escHtml(f.rel_path)}"></td>
+          <td class="ff-col-name">
+            <div class="ff-name-cell">
+              <i class="fa-solid ${icon}" style="color:var(--accent-green);flex-shrink:0;"></i>
+              <span title="${escHtml(f.name)}">${escHtml(f.name)}</span>
+              <span class="ff-ext-badge">${escHtml(ext)}</span>
+            </div>
+          </td>
+          <td class="ff-col-path" title="${escHtml(f.rel_path)}">${escHtml(f.rel_path)}</td>
+          <td class="ff-col-size">${f.size}</td>
+          <td class="ff-col-date">${f.modified}</td>
+          <td class="ff-col-action">
+            <button class="ff-dl-btn" data-path="${escHtml(f.rel_path)}" title="Download ${escHtml(f.name)}">
+              <i class="fa-solid fa-download"></i>
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    showState('table');
+    els.totalShown.textContent = sorted.length;
+    els.selectAll.checked = false;
+    updateSelectionCount();
+    bindRowEvents();
+    updateSortHeaders();
+  }
+
+  function showState(state) {
+    els.loading.style.display = state === 'loading' ? 'flex' : 'none';
+    els.empty.style.display   = state === 'empty'   ? 'flex' : 'none';
+    els.table.style.display   = state === 'table'   ? 'table': 'none';
+  }
+
+  // ── row events ────────────────────────────────────────────
+
+  function bindRowEvents() {
+    // row checkbox
+    els.tbody.querySelectorAll('.ff-row-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        cb.closest('tr').classList.toggle('ff-selected', cb.checked);
+        syncSelectAll();
+        updateSelectionCount();
+      });
+    });
+
+    // single-file download button
+    els.tbody.querySelectorAll('.ff-dl-btn').forEach(btn => {
+      btn.addEventListener('click', () => downloadFile(btn.dataset.path));
+    });
+  }
+
+  // ── select all ────────────────────────────────────────────
+
+  els.selectAll.addEventListener('change', () => {
+    const checked = els.selectAll.checked;
+    els.tbody.querySelectorAll('.ff-row-check').forEach(cb => {
+      cb.checked = checked;
+      cb.closest('tr').classList.toggle('ff-selected', checked);
+    });
+    updateSelectionCount();
+  });
+
+  function syncSelectAll() {
+    const all  = els.tbody.querySelectorAll('.ff-row-check');
+    const done = els.tbody.querySelectorAll('.ff-row-check:checked');
+    els.selectAll.indeterminate = done.length > 0 && done.length < all.length;
+    els.selectAll.checked = all.length > 0 && done.length === all.length;
+  }
+
+  function updateSelectionCount() {
+    const n = els.tbody.querySelectorAll('.ff-row-check:checked').length;
+    els.selCount.textContent = n;
+    els.dlSelected.disabled  = n === 0;
+    if (PE_MODE && els.runPeEntropy) {
+      els.runPeEntropy.disabled = n !== 1;
+    }
+  }
+
+  // ── download ──────────────────────────────────────────────
+
+  function downloadFile(relPath) {
+    const a = document.createElement('a');
+    a.href = `${API_DOWNLOAD}?path=${encodeURIComponent(relPath)}`;
+    a.download = relPath.split('/').pop();
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  els.dlSelected.addEventListener('click', async () => {
+    const selected = [...els.tbody.querySelectorAll('.ff-row-check:checked')].map(cb => cb.value);
+    if (!selected.length) return;
+
+    try {
+      els.dlSelected.disabled = true;
+      els.dlSelected.innerHTML = '<i class="fa-solid fa-clock"></i> Preparing ZIP...';
+
+      const res = await fetch('/api/fetched-files/download-zip', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selected)
+      });
+
+      if (!res.ok) {
+        // Try to extract a useful error message from JSON; fall back to text
+        let errMsg = 'Server error preparing ZIP';
+        try {
+          const j = await res.json();
+          if (j && j.detail) {
+            if (Array.isArray(j.detail)) errMsg = JSON.stringify(j.detail);
+            else if (typeof j.detail === 'string') errMsg = j.detail;
+            else if (j.detail.message) errMsg = j.detail.message;
+          }
+        } catch (e) {
+          const txt = await res.text().catch(() => null);
+          if (txt) errMsg = txt;
+        }
+        throw new Error(errMsg);
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const name = `fetched_files_${new Date().toISOString().slice(0,19).replace(/[:-T]/g,'')}.zip`;
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+    } catch (err) {
+      console.error(err);
+      alert('Failed to prepare ZIP: ' + (err.message || err));
+    } finally {
+      els.dlSelected.disabled = false;
+      els.dlSelected.innerHTML = dlSelectedOriginalHTML;
+    }
+  });
+
+  if (PE_MODE && els.runPeEntropy) {
+    els.runPeEntropy.addEventListener('click', async () => {
+      const selected = [...els.tbody.querySelectorAll('.ff-row-check:checked')].map(cb => cb.value);
+      if (selected.length !== 1) {
+        alert('Select exactly one PE file to run analysis.');
+        return;
+      }
+
+      const prev = els.runPeEntropy.innerHTML;
+      try {
+        els.runPeEntropy.disabled = true;
+        els.runPeEntropy.innerHTML = '<i class="fa-solid fa-hourglass-half"></i> Running...';
+
+        const res = await fetch(API_PE_RUN, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: selected[0] })
+        });
+
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = payload.detail || 'Failed to run PE Entropy';
+          throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
+
+        if (els.peResult && els.peResultBody) {
+          els.peResult.style.display = 'block';
+          els.peResultBody.textContent = JSON.stringify(payload.result, null, 2);
+
+          if (els.peReportLink && payload.report_url) {
+            const safePath = escHtml(payload.report_path || payload.report_name || payload.report_url);
+            const safeUrl = escHtml(payload.report_url);
+            els.peReportLink.innerHTML = `Report generated at <strong>${safePath}</strong> · <a href="${safeUrl}" target="_blank" rel="noopener">Open report</a>`;
+            els.peReportLink.style.display = 'block';
+            window.open(payload.report_url, '_blank', 'noopener');
+          }
+        }
+
+      } catch (err) {
+        alert('PE Entropy run failed: ' + (err.message || err));
+      } finally {
+        els.runPeEntropy.innerHTML = prev;
+        updateSelectionCount();
+      }
+    });
+  }
+
+  // ── search ────────────────────────────────────────────────
+
+  els.search.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadFiles(els.search.value.trim()), 350);
+  });
+
+  els.searchClear.addEventListener('click', () => {
+    els.search.value = '';
+    loadFiles('');
+  });
+
+  // ── sort ─────────────────────────────────────────────────
+
+  document.querySelectorAll('.ff-sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) { sortAsc = !sortAsc; }
+      else { sortCol = col; sortAsc = true; }
+      renderTable(allFiles);
+    });
+  });
+
+  function updateSortHeaders() {
+    document.querySelectorAll('.ff-sortable').forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.col === sortCol) {
+        th.classList.add(sortAsc ? 'sort-asc' : 'sort-desc');
+        const icon = th.querySelector('.ff-sort-icon');
+        if (icon) icon.className = `fa-solid fa-sort-${sortAsc ? 'up' : 'down'} ff-sort-icon`;
+      } else {
+        const icon = th.querySelector('.ff-sort-icon');
+        if (icon) icon.className = 'fa-solid fa-sort ff-sort-icon';
+      }
+    });
+  }
+
+  // ── refresh ───────────────────────────────────────────────
+
+  els.refresh.addEventListener('click', () => loadFiles(els.search.value.trim()));
+
+  // ── helpers ───────────────────────────────────────────────
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function extIcon(ext) {
+    const m = {
+      csv:'fa-file-csv', txt:'fa-file-lines', log:'fa-file-lines',
+      pdf:'fa-file-pdf', zip:'fa-file-zipper', gz:'fa-file-zipper',
+      tar:'fa-file-zipper', json:'fa-file-code', xml:'fa-file-code',
+      html:'fa-file-code', xlsx:'fa-file-excel', xls:'fa-file-excel',
+    };
+    return m[ext] || 'fa-file';
+  }
+
+  // ── init ──────────────────────────────────────────────────
+  loadFiles();
+})();
+</script>
+{% endblock %}
