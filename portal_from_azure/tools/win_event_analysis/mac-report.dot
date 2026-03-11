@@ -1,0 +1,15 @@
+digraph ProcessExecution {
+  rankdir=LR;
+  graph [fontname="Segoe UI", bgcolor="#0d1117", pad=0.35, ranksep=1.2, nodesep=0.45, overlap=false, splines=curved, concentrate=true];
+  node [shape=box, style="rounded,filled", fontname="Segoe UI", color="#1f6feb", fillcolor="#13233c", fontcolor="#c9d1d9", margin="0.18,0.12"];
+  edge [fontname="Segoe UI", color="#3fb950", fontcolor="#8b949e", arrowsize=0.8];
+  "Registry" [width="2.70", height="0.45", penwidth="2.80", fillcolor="#1c2128", color="#8b949e", fontcolor="#c9d1d9", tooltip="Registry (system): 11 executions"];
+  "smss.exe" [width="2.70", height="0.45", penwidth="2.80", fillcolor="#1c2128", color="#8b949e", fontcolor="#c9d1d9", tooltip="smss.exe (system): 11 executions"];
+  "Unknown" [width="2.70", height="0.45", penwidth="2.80", fillcolor="#1c2128", color="#8b949e", fontcolor="#c9d1d9", tooltip="Unknown (system): 11 executions"];
+  "autochk.exe" [width="2.70", height="0.45", penwidth="2.80", fillcolor="#13233c", color="#58a6ff", fontcolor="#a5d6ff", tooltip="autochk.exe (normal): 11 executions"];
+  "wininit.exe" [width="1.39", height="0.45", penwidth="1.33", fillcolor="#1c2128", color="#8b949e", fontcolor="#c9d1d9", tooltip="wininit.exe (system): 2 executions"];
+  "WerFault.exe" [width="1.39", height="0.45", penwidth="1.33", fillcolor="#13233c", color="#58a6ff", fontcolor="#a5d6ff", tooltip="WerFault.exe (normal): 2 executions"];
+  "smss.exe" -> "autochk.exe" [label="11", penwidth="5.00", weight="11", color="#484f58", tooltip="smss.exe → autochk.exe: 11 executions"];
+  "Unknown" -> "Registry" [label="11", penwidth="5.00", weight="11", color="#484f58", tooltip="Unknown → Registry: 11 executions"];
+  "wininit.exe" -> "WerFault.exe" [label="2", penwidth="1.73", weight="2", color="#484f58", tooltip="wininit.exe → WerFault.exe: 2 executions"];
+}
