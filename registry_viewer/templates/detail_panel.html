@@ -1,0 +1,46 @@
+<div class="key-header">
+    <div class="key-path">
+        <svg viewBox="0 0 16 16" width="14" height="14" class="key-path-icon">
+            <path d="M2 3h5l2 2h5v8H2z" fill="#dcb67a" stroke="#aa8844" stroke-width="0.5"/>
+        </svg>
+        {{ key_info.pretty_path }}
+    </div>
+    <div class="key-meta">
+        <span class="meta-item">
+            <svg viewBox="0 0 16 16" width="12" height="12"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4v4l3 2" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+            {{ key_info.last_written }}
+        </span>
+        <span class="meta-item">{{ key_info.num_sub_keys }} subkeys</span>
+        <span class="meta-item">{{ key_info.num_values }} values</span>
+    </div>
+</div>
+
+{% if values.is_empty() %}
+<div class="empty-values">
+    <p>This key has no values.</p>
+</div>
+{% else %}
+<table class="value-table">
+    <thead>
+        <tr>
+            <th class="col-name">Name</th>
+            <th class="col-type">Type</th>
+            <th class="col-data">Data</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for val in values %}
+        <tr class="{% if val.is_default %}default-value{% endif %}">
+            <td class="val-name">
+                <span class="value-icon {% if val.data_type == "REG_SZ" || val.data_type == "REG_EXPAND_SZ" || val.data_type == "REG_LINK" %}type-string{% else if val.data_type == "REG_BIN" %}type-binary{% else if val.data_type == "REG_MULTI_SZ" %}type-multi{% else %}type-number{% endif %}">
+                    {% if val.data_type == "REG_SZ" || val.data_type == "REG_EXPAND_SZ" || val.data_type == "REG_LINK" %}ab{% else if val.data_type == "REG_BIN" %}01{% else if val.data_type == "REG_MULTI_SZ" %}[]{% else %}#{% endif %}
+                </span>
+                {{ val.name }}
+            </td>
+            <td class="val-type">{{ val.data_type }}</td>
+            <td class="val-data">{{ val.data }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}

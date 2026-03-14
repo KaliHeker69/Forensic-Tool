@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registry Viewer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+    <!-- TOOLBAR -->
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <svg class="app-logo" viewBox="0 0 24 24" width="22" height="22">
+                <rect x="2" y="3" width="8" height="8" rx="1" fill="#569cd6"/>
+                <rect x="14" y="3" width="8" height="8" rx="1" fill="#4ec9b0"/>
+                <rect x="2" y="13" width="8" height="8" rx="1" fill="#dcdcaa"/>
+                <rect x="14" y="13" width="8" height="8" rx="1" fill="#ce9178"/>
+            </svg>
+            <h1>Registry Viewer</h1>
+        </div>
+        <div class="toolbar-center">
+            <div class="address-bar" id="address-bar">
+                <svg viewBox="0 0 16 16" width="14" height="14" class="address-icon">
+                    <path d="M1 3.5h14v1H1zM3 6.5h10v1H3zM5 9.5h6v1H5z" fill="currentColor"/>
+                </svg>
+                <span id="address-text" class="address-text">Select a hive to begin browsing</span>
+            </div>
+        </div>
+        <div class="toolbar-right">
+            <div class="search-box" id="search-box">
+                <svg viewBox="0 0 16 16" width="14" height="14">
+                    <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                    <line x1="10" y1="10" x2="14" y2="14" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="Search keys and values..."
+                       autocomplete="off" disabled>
+                <span id="search-spinner" class="htmx-indicator spinner"></span>
+            </div>
+            <span class="kbd-hint">Esc clears search</span>
+            <form id="upload-form" hx-encoding="multipart/form-data">
+                <label class="upload-btn" for="hive-upload">
+                    <svg viewBox="0 0 16 16" width="14" height="14">
+                        <path d="M8 2v8M4 6l4-4 4 4M2 12h12v2H2z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Load Hive
+                </label>
+                <input type="file" id="hive-upload" name="hive_file" style="display:none"
+                       hx-post="/api/upload"
+                       hx-target="#hive-sidebar"
+                       hx-encoding="multipart/form-data"
+                       hx-indicator="#upload-spinner">
+            </form>
+            <span id="upload-spinner" class="htmx-indicator spinner"></span>
+        </div>
+    </header>
+
+    <!-- MAIN LAYOUT -->
+    <div class="main-layout">
+        <!-- HIVE SIDEBAR -->
+        <aside class="hive-sidebar" id="hive-sidebar">
+            <div class="sidebar-header">Loaded Hives</div>
+            {% for hive in hives %}
+            <div class="hive-item" data-hive-id="{{ hive.id }}">
+                <div class="hive-info"
+                     hx-get="/api/keys/{{ hive.id }}"
+                     hx-target="#tree-content"
+                     hx-on::after-request="selectHive('{{ hive.id }}', '{{ hive.name }}')">
+                    <svg class="hive-icon" viewBox="0 0 16 16" width="16" height="16">
+                        <path d="M2 3h5l2 2h5v8H2z" fill="#dcb67a" stroke="#aa8844" stroke-width="0.5"/>
+                    </svg>
+                    <div>
+                        <div class="hive-name">{{ hive.name }}</div>
+                        <div class="hive-size">{{ hive.size_display }}</div>
+                    </div>
+                </div>
+                <button class="hive-remove"
+                        hx-delete="/api/hives/{{ hive.id }}"
+                        hx-target="#hive-sidebar"
+                        hx-confirm="Unload {{ hive.name }}?"
+                        title="Unload hive">&times;</button>
+            </div>
+            {% endfor %}
+            {% if hives.is_empty() %}
+            <div class="empty-state sidebar-empty">
+                <svg viewBox="0 0 48 48" width="48" height="48">
+                    <path d="M8 10h14l4 4h14v24H8z" fill="none" stroke="#555" stroke-width="2"/>
+                    <line x1="20" y1="24" x2="28" y2="24" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="24" y1="20" x2="24" y2="28" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <p>No hives loaded</p>
+                <p class="hint">Drag &amp; drop a registry hive file or click Load Hive</p>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- SPLIT PANE -->
+        <div class="split-pane" id="split-pane">
+            <!-- TREE PANEL -->
+            <div class="tree-panel" id="tree-panel">
+                <div class="panel-header">
+                    <svg viewBox="0 0 16 16" width="14" height="14">
+                        <path d="M1 2h4l1.5 1.5H15v2H1zM1 7h14v7H1z" fill="currentColor" opacity="0.6"/>
+                    </svg>
+                    Registry Keys
+                </div>
+                <div class="tree-content" id="tree-content">
+                    <div class="empty-state">
+                        <p>Load a registry hive to begin browsing.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESIZE HANDLE -->
+            <div class="resize-handle" id="resize-handle"></div>
+
+            <!-- DETAIL PANEL -->
+            <div class="detail-panel" id="detail-panel">
+                <div class="panel-header">
+                    <svg viewBox="0 0 16 16" width="14" height="14">
+                        <rect x="1" y="2" width="14" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                        <line x1="1" y1="5" x2="15" y2="5" stroke="currentColor" stroke-width="1.2"/>
+                        <line x1="6" y1="5" x2="6" y2="14" stroke="currentColor" stroke-width="1"/>
+                        <line x1="11" y1="5" x2="11" y2="14" stroke="currentColor" stroke-width="1"/>
+                    </svg>
+                    Values
+                </div>
+                <div class="detail-content" id="detail-content">
+                    <div class="empty-state">
+                        <p>Select a key to view its values.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DROP ZONE OVERLAY -->
+    <div class="drop-overlay" id="drop-overlay">
+        <div class="drop-message">
+            <svg viewBox="0 0 64 64" width="64" height="64">
+                <path d="M12 18h16l6 6h18v28H12z" fill="none" stroke="#0078d4" stroke-width="3"/>
+                <line x1="32" y1="30" x2="32" y2="46" stroke="#0078d4" stroke-width="3" stroke-linecap="round"/>
+                <polyline points="24,38 32,30 40,38" fill="none" stroke="#0078d4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>Drop registry hive file here</p>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

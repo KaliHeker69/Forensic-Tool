@@ -1,0 +1,31 @@
+<ul class="tree-list">
+{% for child in children %}
+<li class="tree-node">
+    <div class="tree-node-header"
+         hx-get="/api/values/{{ hive_id }}?path={{ child.path|urlencode }}"
+         hx-target="#detail-content"
+         hx-swap="innerHTML"
+         onclick="selectNode(this, '{{ hive_id }}', '{{ child.path|urlencode }}')">
+        {% if child.has_children %}
+        <span class="expand-arrow collapsed"
+              data-hive-id="{{ hive_id }}"
+              data-path="{{ child.path|urlencode }}"
+              onclick="toggleNode(event, this)"></span>
+        {% else %}
+        <span class="expand-arrow leaf"></span>
+        {% endif %}
+        <svg class="folder-icon" viewBox="0 0 16 16" width="16" height="16">
+            <path d="M2 3h5l2 2h5v8H2z" fill="#dcb67a" stroke="#aa8844" stroke-width="0.5"/>
+        </svg>
+        <span class="node-name">{{ child.name }}</span>
+        {% if child.num_values > 0 %}
+        <span class="value-count">({{ child.num_values }})</span>
+        {% endif %}
+    </div>
+    <div class="tree-children"></div>
+</li>
+{% endfor %}
+{% if children.is_empty() %}
+<li class="tree-empty">No subkeys</li>
+{% endif %}
+</ul>

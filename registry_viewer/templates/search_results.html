@@ -1,0 +1,27 @@
+<div class="search-header">
+    Found {{ results.len() }} result(s) for "<strong>{{ query }}</strong>"
+</div>
+{% if results.is_empty() %}
+<div class="empty-state">
+    <p>No matches found.</p>
+</div>
+{% else %}
+<div class="search-results-list">
+{% for result in results %}
+    <div class="search-result"
+         hx-get="/api/values/{{ hive_id }}?path={{ result.path|urlencode }}"
+         hx-target="#detail-content"
+         hx-swap="innerHTML"
+         onclick="highlightSearchResult(this)">
+        <div class="result-path">{{ result.path }}</div>
+        <div class="result-match">
+            <span class="result-type">{{ result.match_type }}</span>
+            <span class="result-name">{{ result.name }}</span>
+        </div>
+        {% if !result.preview.is_empty() %}
+        <div class="result-preview">{{ result.preview }}</div>
+        {% endif %}
+    </div>
+{% endfor %}
+</div>
+{% endif %}

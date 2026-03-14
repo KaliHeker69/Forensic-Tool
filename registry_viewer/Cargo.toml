@@ -1,0 +1,31 @@
+[package]
+name = "registry_viewer"
+version = "1.0.0"
+edition = "2021"
+description = "KaliHeker Registry Viewer — Interactive web-based Windows registry hive browser"
+authors = ["KaliHeker"]
+
+[dependencies]
+nt-hive = "0.3"
+notatin = "1"
+axum = { version = "0.8", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { version = "0.6", features = ["trace"] }
+askama = "0.12"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+open = "5"
+mime_guess = "2"
+include_dir = "0.7"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
