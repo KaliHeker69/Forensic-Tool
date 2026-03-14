@@ -7,6 +7,47 @@ let selectedNode = null;
 let currentHiveId = null;
 let isResizing = false;
 
+function switchMainTab(tab) {
+    var browserTab = document.getElementById('tab-browser');
+    var refTab = document.getElementById('tab-reference');
+    var browserView = document.getElementById('browser-view');
+    var refView = document.getElementById('reference-view');
+
+    if (!browserTab || !refTab || !browserView || !refView) return;
+
+    if (tab === 'reference') {
+        browserTab.classList.remove('active');
+        browserTab.setAttribute('aria-selected', 'false');
+        refTab.classList.add('active');
+        refTab.setAttribute('aria-selected', 'true');
+        browserView.style.display = 'none';
+        refView.style.display = 'flex';
+        refView.setAttribute('aria-hidden', 'false');
+    } else {
+        refTab.classList.remove('active');
+        refTab.setAttribute('aria-selected', 'false');
+        browserTab.classList.add('active');
+        browserTab.setAttribute('aria-selected', 'true');
+        refView.style.display = 'none';
+        refView.setAttribute('aria-hidden', 'true');
+        browserView.style.display = 'flex';
+    }
+}
+
+function scrollQuickRefTo(sectionId, button) {
+    var container = document.getElementById('quickref-content');
+    var section = document.getElementById(sectionId);
+    if (!container || !section) return;
+
+    var sectionTop = section.offsetTop - container.offsetTop - 8;
+    container.scrollTo({ top: Math.max(0, sectionTop), behavior: 'smooth' });
+
+    document.querySelectorAll('.quickref-nav').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    if (button) button.classList.add('active');
+}
+
 function setBusy(target, busy) {
     if (!target) return;
     target.classList.toggle('is-loading', !!busy);
@@ -21,7 +62,47 @@ function autoSelectFirstHive() {
 
 document.addEventListener('DOMContentLoaded', function() {
     autoSelectFirstHive();
+    initQuickRefSpy();
 });
+
+function initQuickRefSpy() {
+    var container = document.getElementById('quickref-content');
+    if (!container) return;
+
+    var ticking = false;
+    var updateActive = function() {
+        ticking = false;
+        var sections = Array.from(container.querySelectorAll('.qr-section'));
+        if (sections.length === 0) return;
+
+        var containerTop = container.getBoundingClientRect().top;
+        var best = sections[0];
+        var bestDistance = Number.POSITIVE_INFINITY;
+
+        sections.forEach(function(section) {
+            var rect = section.getBoundingClientRect();
+            var distance = Math.abs((rect.top - containerTop) - 12);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = section;
+            }
+        });
+
+        var activeTarget = best.id;
+        document.querySelectorAll('.quickref-nav').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-target') === activeTarget);
+        });
+    };
+
+    container.addEventListener('scroll', function() {
+        if (!ticking) {
+            ticking = true;
+            requestAnimationFrame(updateActive);
+        }
+    });
+
+    updateActive();
+}
 
 document.body.addEventListener('htmx:beforeRequest', function(evt) {
     var target = evt.detail && evt.detail.target;
@@ -200,6 +281,11 @@ function selectHive(hiveId, hiveName) {
         searchInput.placeholder = 'Search in ' + hiveName + '...';
     }
 
+    var searchScope = document.getElementById('search-scope');
+    if (searchScope && searchScope.value === 'selected') {
+        searchInput.placeholder = 'Search in ' + hiveName + '...';
+    }
+
     // Update address bar
     var addressText = document.getElementById('address-text');
     if (addressText) {
@@ -219,31 +305,66 @@ function selectHive(hiveId, hiveName) {
 // ── Search ─────────────────────────────────────────────────────
 (function initSearch() {
     var searchInput = document.getElementById('search-input');
+    var searchScope = document.getElementById('search-scope');
     if (!searchInput) return;
+
+    function runSearch(query) {
+        var scope = searchScope ? searchScope.value : 'selected';
+        if (scope === 'all') {
+            htmx.ajax('GET', '/api/search-all?q=' + encodeURIComponent(query), {
+                target: '#detail-content',
+                swap: 'innerHTML'
+            });
+        } else if (currentHiveId) {
+            htmx.ajax('GET', '/api/search/' + currentHiveId + '?q=' + encodeURIComponent(query), {
+                target: '#detail-content',
+                swap: 'innerHTML'
+            });
+        }
+    }
 
     var debounceTimer;
     searchInput.addEventListener('input', function() {
         clearTimeout(debounceTimer);
         var query = searchInput.value.trim();
-        if (!currentHiveId) return;
+        var scope = searchScope ? searchScope.value : 'selected';
+        if (scope === 'selected' && !currentHiveId) return;
 
         if (query.length === 0) {
-            htmx.ajax('GET', '/api/values/' + currentHiveId, {
-                target: '#detail-content',
-                swap: 'innerHTML'
-            });
+            if (currentHiveId) {
+                htmx.ajax('GET', '/api/values/' + currentHiveId, {
+                    target: '#detail-content',
+                    swap: 'innerHTML'
+                });
+            }
             return;
         }
 
         if (query.length < 2) return;
 
         debounceTimer = setTimeout(function() {
-            htmx.ajax('GET', '/api/search/' + currentHiveId + '?q=' + encodeURIComponent(query), {
-                target: '#detail-content',
-                swap: 'innerHTML'
-            });
+            runSearch(query);
         }, 400);
     });
+
+    if (searchScope) {
+        searchScope.addEventListener('change', function() {
+            var scope = searchScope.value;
+            if (scope === 'all') {
+                searchInput.placeholder = 'Search across all loaded hives...';
+            } else {
+                var activeName = document.querySelector('.hive-item.active .hive-name');
+                searchInput.placeholder = activeName
+                    ? 'Search in ' + activeName.textContent.trim() + '...'
+                    : 'Search keys and values...';
+            }
+
+            var q = searchInput.value.trim();
+            if (q.length >= 2) {
+                runSearch(q);
+            }
+        });
+    }
 
     searchInput.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
@@ -263,6 +384,30 @@ function highlightSearchResult(element) {
         el.classList.remove('active');
     });
     element.classList.add('active');
+}
+
+function openSearchResult(element, hiveId, hiveName, encodedPath) {
+    highlightSearchResult(element);
+
+    if (currentHiveId !== hiveId) {
+        selectHive(hiveId, hiveName);
+        htmx.ajax('GET', '/api/keys/' + hiveId, {
+            target: '#tree-content',
+            swap: 'innerHTML'
+        });
+    }
+
+    htmx.ajax('GET', '/api/values/' + hiveId + '?path=' + encodedPath, {
+        target: '#detail-content',
+        swap: 'innerHTML'
+    });
+
+    var addressText = document.getElementById('address-text');
+    if (addressText) {
+        var decodedPath = decodeURIComponent(encodedPath);
+        addressText.textContent = decodedPath;
+        addressText.title = decodedPath;
+    }
 }
 
 // ── Drag & Drop File Upload ────────────────────────────────────

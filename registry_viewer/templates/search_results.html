@@ -1,5 +1,5 @@
 <div class="search-header">
-    Found {{ results.len() }} result(s) for "<strong>{{ query }}</strong>"
+    Found {{ results.len() }} result(s) in {{ scope_label }} for "<strong>{{ query }}</strong>"
 </div>
 {% if results.is_empty() %}
 <div class="empty-state">
@@ -9,10 +9,8 @@
 <div class="search-results-list">
 {% for result in results %}
     <div class="search-result"
-         hx-get="/api/values/{{ hive_id }}?path={{ result.path|urlencode }}"
-         hx-target="#detail-content"
-         hx-swap="innerHTML"
-         onclick="highlightSearchResult(this)">
+         onclick="openSearchResult(this, '{{ result.hive_id }}', '{{ result.hive_name }}', '{{ result.path|urlencode }}')">
+        <div class="result-hive">{{ result.hive_name }}</div>
         <div class="result-path">{{ result.path }}</div>
         <div class="result-match">
             <span class="result-type">{{ result.match_type }}</span>

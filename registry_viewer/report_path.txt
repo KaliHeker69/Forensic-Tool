@@ -1,0 +1,1 @@
+/Users/kali/Codes/wsl/registry_analyzer/registry_report.html

@@ -1,6 +1,7 @@
 pub mod hives;
 pub mod keys;
 pub mod pages;
+pub mod report;
 pub mod search;
 pub mod values;
 
@@ -27,6 +28,9 @@ pub fn build_router(state: SharedState) -> Router {
         .route("/api/keys/{hive_id}", get(keys::get_children))
         .route("/api/values/{hive_id}", get(values::get_values))
         .route("/api/search/{hive_id}", get(search::search))
+        .route("/api/search-all", get(search::search_all))
+        .route("/forensic-report", get(report::redirect_to_report))
+        .route("/forensic-report/view", get(report::view_report))
         .route("/static/{*file}", get(serve_static))
         .with_state(state)
 }

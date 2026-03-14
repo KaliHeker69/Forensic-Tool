@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registry Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/htmx.min.js"></script>
 </head>
@@ -37,7 +40,12 @@
                        autocomplete="off" disabled>
                 <span id="search-spinner" class="htmx-indicator spinner"></span>
             </div>
+            <select id="search-scope" class="search-scope" title="Search scope">
+                <option value="selected">Selected Hive</option>
+                <option value="all">All Loaded Hives</option>
+            </select>
             <span class="kbd-hint">Esc clears search</span>
+            <a class="report-btn" href="/forensic-report" target="_blank" rel="noopener">Forensic Report</a>
             <form id="upload-form" hx-encoding="multipart/form-data">
                 <label class="upload-btn" for="hive-upload">
                     <svg viewBox="0 0 16 16" width="14" height="14">
@@ -55,8 +63,15 @@
         </div>
     </header>
 
+        <div class="main-tabs" role="tablist" aria-label="Main sections">
+        <button class="main-tab active" id="tab-browser" role="tab" aria-selected="true"
+            onclick="switchMainTab('browser')">Browser</button>
+        <button class="main-tab" id="tab-reference" role="tab" aria-selected="false"
+            onclick="switchMainTab('reference')">Quick Reference</button>
+        </div>
+
     <!-- MAIN LAYOUT -->
-    <div class="main-layout">
+        <div class="main-layout" id="browser-view">
         <!-- HIVE SIDEBAR -->
         <aside class="hive-sidebar" id="hive-sidebar">
             <div class="sidebar-header">Loaded Hives</div>
@@ -133,6 +148,227 @@
             </div>
         </div>
     </div>
+
+    <section class="quickref-view" id="reference-view" style="display:none;" aria-hidden="true">
+        <aside class="quickref-sidebar">
+            <div class="quickref-title">Registry Cheatsheets</div>
+            <button class="quickref-nav active" data-target="qr-ntuser" onclick="scrollQuickRefTo('qr-ntuser', this)">NTUSER.DAT</button>
+            <button class="quickref-nav" data-target="qr-system" onclick="scrollQuickRefTo('qr-system', this)">SYSTEM</button>
+            <button class="quickref-nav" data-target="qr-software" onclick="scrollQuickRefTo('qr-software', this)">SOFTWARE</button>
+            <button class="quickref-nav" data-target="qr-sam" onclick="scrollQuickRefTo('qr-sam', this)">SAM</button>
+            <button class="quickref-nav" data-target="qr-security" onclick="scrollQuickRefTo('qr-security', this)">SECURITY</button>
+            <button class="quickref-nav" data-target="qr-sysinfo" onclick="scrollQuickRefTo('qr-sysinfo', this)">System Info Q/A</button>
+        </aside>
+
+        <div class="quickref-content" id="quickref-content">
+            <section class="qr-section" id="qr-ntuser">
+                <h2>NTUSER.DAT - User Activity & Persistence</h2>
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <h3>Recent Activity</h3>
+                        <ul>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\OpenSavePidlMRU</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\ComDlg32\LastVisitedPidlMRU</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Persistence</h3>
+                        <ul>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Run</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\RunOnce</li>
+                            <li>Software\Microsoft\Windows NT\CurrentVersion\Windows\Load</li>
+                            <li>Environment</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Network</h3>
+                        <ul>
+                            <li>Network\&lt;DriveLetter&gt;</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Internet Settings</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Shell / Bags</h3>
+                        <ul>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist</li>
+                            <li>Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\BagMRU</li>
+                            <li>Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\Bags</li>
+                            <li>Software\Microsoft\Windows\CurrentVersion\Search\RecentApps</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Desktop / Office</h3>
+                        <ul>
+                            <li>Software\Microsoft\Internet Explorer\Main\Start Page</li>
+                            <li>Control Panel\Desktop\Wallpaper</li>
+                            <li>Software\Microsoft\Office\&lt;ver&gt;\&lt;app&gt;\File MRU</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="qr-section" id="qr-system">
+                <h2>SYSTEM - System Configuration & Services</h2>
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <h3>Services</h3>
+                        <ul>
+                            <li>ControlSet001\Services</li>
+                            <li>Control\Session Manager\BootExecute</li>
+                            <li>ControlSet001\Control\SafeBoot\Minimal</li>
+                            <li>Select</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Network</h3>
+                        <ul>
+                            <li>Services\Tcpip\Parameters\Interfaces</li>
+                            <li>Services\Dnscache\Parameters</li>
+                            <li>Services\SharedAccess\Parameters\FirewallPolicy</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Identity</h3>
+                        <ul>
+                            <li>ControlSet001\Control\ComputerName\ComputerName</li>
+                            <li>ControlSet001\Control\TimeZoneInformation</li>
+                            <li>ControlSet001\Control\Shutdown\ForcedReboot</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>USB</h3>
+                        <ul>
+                            <li>ControlSet001\Enum\USBSTOR</li>
+                            <li>ControlSet001\Enum\USB</li>
+                            <li>ControlSet001\Control\DeviceClasses</li>
+                            <li>MountedDevices</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="qr-section" id="qr-software">
+                <h2>SOFTWARE - Installed Apps & System Config</h2>
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <h3>Persistence</h3>
+                        <ul>
+                            <li>Microsoft\Windows\CurrentVersion\Run</li>
+                            <li>Microsoft\Windows\CurrentVersion\RunOnce</li>
+                            <li>Microsoft\Windows NT\CurrentVersion\Winlogon</li>
+                            <li>Microsoft\Windows NT\CurrentVersion\Image File Execution Options</li>
+                            <li>Microsoft\Windows\CurrentVersion\Explorer\Shell Folders</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Software</h3>
+                        <ul>
+                            <li>Microsoft\Windows\CurrentVersion\Uninstall</li>
+                            <li>Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</li>
+                            <li>Microsoft\Windows\CurrentVersion\App Paths</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>OS Identity</h3>
+                        <ul>
+                            <li>Microsoft\Windows NT\CurrentVersion\BuildLabEx</li>
+                            <li>Microsoft\Windows NT\CurrentVersion\InstallDate</li>
+                            <li>Microsoft\Windows NT\CurrentVersion\ProfileList</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Security</h3>
+                        <ul>
+                            <li>Microsoft\Windows\CurrentVersion\Policies\System</li>
+                            <li>Microsoft\Windows Defender\Exclusions</li>
+                            <li>Microsoft\Windows\CurrentVersion\WindowsUpdate</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="qr-section" id="qr-sam">
+                <h2>SAM - Local Accounts</h2>
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <h3>Accounts</h3>
+                        <ul>
+                            <li>SAM\Domains\Account\Users</li>
+                            <li>SAM\Domains\Account\Users\Names</li>
+                            <li>SAM\Domains\Account\Groups</li>
+                            <li>SAM\Domains\Builtin</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Internals</h3>
+                        <ul>
+                            <li>F value layout: login metadata and flags</li>
+                            <li>V value layout: username/profile/hash offsets</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="qr-section" id="qr-security">
+                <h2>SECURITY - Audit & Secrets</h2>
+                <div class="qr-grid">
+                    <article class="qr-card">
+                        <h3>Secrets</h3>
+                        <ul>
+                            <li>Policy\Secrets</li>
+                            <li>Cache (DCC2 hashes)</li>
+                            <li>Policy\Accounts</li>
+                        </ul>
+                    </article>
+                    <article class="qr-card">
+                        <h3>Audit</h3>
+                        <ul>
+                            <li>Policy\PolAdtEv</li>
+                            <li>Policy\PolPrDmS</li>
+                        </ul>
+                    </article>
+                </div>
+            </section>
+
+            <section class="qr-section" id="qr-sysinfo">
+                <h2>System Info - Forensic Question Lookup</h2>
+                <div class="qr-table-wrap">
+                    <table class="qr-table">
+                        <thead>
+                            <tr>
+                                <th>Question</th>
+                                <th>Hive</th>
+                                <th>Path</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>When was the OS installed?</td><td>SOFTWARE</td><td>Microsoft\Windows NT\CurrentVersion</td><td>InstallDate</td></tr>
+                            <tr><td>What Windows build is this?</td><td>SOFTWARE</td><td>Microsoft\Windows NT\CurrentVersion</td><td>CurrentBuild / BuildLabEx</td></tr>
+                            <tr><td>What is the computer name?</td><td>SYSTEM</td><td>ControlSet001\Control\ComputerName\ComputerName</td><td>ComputerName</td></tr>
+                            <tr><td>What timezone was configured?</td><td>SYSTEM</td><td>ControlSet001\Control\TimeZoneInformation</td><td>TimeZoneKeyName</td></tr>
+                            <tr><td>Which USB drives were connected?</td><td>SYSTEM</td><td>ControlSet001\Enum\USBSTOR</td><td>Device subkeys</td></tr>
+                            <tr><td>What drives were mounted?</td><td>SYSTEM</td><td>MountedDevices</td><td>Binary mappings</td></tr>
+                            <tr><td>What did the user type in Run?</td><td>NTUSER.DAT</td><td>Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU</td><td>a, b, c..., MRUList</td></tr>
+                            <tr><td>Which files/folders were recently opened?</td><td>NTUSER.DAT</td><td>Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs</td><td>MRU entries</td></tr>
+                            <tr><td>What paths were typed in Explorer?</td><td>NTUSER.DAT</td><td>Software\Microsoft\Windows\CurrentVersion\Explorer\TypedPaths</td><td>url1, url2...</td></tr>
+                            <tr><td>Which apps were recently used?</td><td>NTUSER.DAT</td><td>Software\Microsoft\Windows\CurrentVersion\Search\RecentApps</td><td>Subkeys</td></tr>
+                            <tr><td>What startup persistence exists (user)?</td><td>NTUSER.DAT</td><td>Software\Microsoft\Windows\CurrentVersion\Run</td><td>Autorun values</td></tr>
+                            <tr><td>What startup persistence exists (machine)?</td><td>SOFTWARE</td><td>Microsoft\Windows\CurrentVersion\Run / RunOnce</td><td>Autorun values</td></tr>
+                            <tr><td>Which programs are installed (64-bit)?</td><td>SOFTWARE</td><td>Microsoft\Windows\CurrentVersion\Uninstall</td><td>DisplayName, InstallDate</td></tr>
+                            <tr><td>Which programs are installed (32-bit)?</td><td>SOFTWARE</td><td>Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall</td><td>DisplayName, InstallDate</td></tr>
+                            <tr><td>Which user accounts exist locally?</td><td>SAM</td><td>SAM\Domains\Account\Users\Names</td><td>Subkeys (usernames)</td></tr>
+                            <tr><td>Are credential cache entries present?</td><td>SECURITY</td><td>Cache</td><td>NL$1..NL$10</td></tr>
+                            <tr><td>What local secrets are stored?</td><td>SECURITY</td><td>Policy\Secrets</td><td>Secret subkeys</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </section>
 
     <!-- DROP ZONE OVERLAY -->
     <div class="drop-overlay" id="drop-overlay">
