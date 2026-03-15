@@ -1,5 +1,5 @@
 #Requires -Version 5.1
-<
+<#
 .SYNOPSIS
     Collect volatile live Windows network forensic artifacts and store outputs to disk.
 
@@ -76,6 +76,13 @@ function Invoke-Safe {
         Write-Step "Collecting $Name"
         $result = & $Script
 
+        if ($null -eq $result) {
+            # Some cmdlets (e.g., Get-DnsClientCache) return $null when the feature
+            # is unavailable or no records exist; write an empty array to keep the
+            # file consistent and avoid parameter binding errors.
+            $result = @()
+        }
+
         switch ($Format) {
             "json" { Save-Json -Path $OutFile -Data $result }
             "txt"  { Save-Text -Path $OutFile -Text ($result | Out-String) }
@@ -84,7 +91,7 @@ function Invoke-Safe {
         Write-OK "Saved $Name -> $OutFile"
     }
     catch {
-        Write-Warn "Failed $Name: $($_.Exception.Message)"
+        Write-Warn "Failed ${Name}: $($_.Exception.Message)"
     }
 }
 
@@ -156,11 +163,11 @@ Invoke-Safe -Name "process_inventory" -OutFile (Join-Path $caseDir "process_inve
 
 if (-not $SkipModuleDump) {
     Invoke-Safe -Name "network_process_modules" -OutFile (Join-Path $caseDir "network_process_modules.json") -Format json -Script {
-        $pids = Get-NetTCPConnection | Select-Object -ExpandProperty OwningProcess -Unique
+        $owningPids = Get-NetTCPConnection | Select-Object -ExpandProperty OwningProcess -Unique
         $output = @()
-        foreach ($pid in $pids) {
+        foreach ($owningPid in $owningPids) {
             try {
-                $p = Get-Process -Id $pid -ErrorAction Stop
+                $p = Get-Process -Id $owningPid -ErrorAction Stop
                 $mods = @()
                 try {
                     $mods = $p.Modules | Select-Object ModuleName, FileName
@@ -168,14 +175,14 @@ if (-not $SkipModuleDump) {
                     $mods = @([PSCustomObject]@{ ModuleName = "<access_denied>"; FileName = "" })
                 }
                 $output += [PSCustomObject]@{
-                    PID = $pid
+                    PID = $owningPid
                     ProcessName = $p.Name
                     Path = $p.Path
                     Modules = $mods
                 }
             } catch {
                 $output += [PSCustomObject]@{
-                    PID = $pid
+                    PID = $owningPid
                     ProcessName = "<not_found>"
                     Path = ""
                     Modules = @()
@@ -189,8 +196,8 @@ if (-not $SkipModuleDump) {
 Invoke-Safe -Name "unsigned_network_binaries" -OutFile (Join-Path $caseDir "unsigned_network_binaries.json") -Format json -Script {
     $procs = Get-NetTCPConnection -State Established | Select-Object -ExpandProperty OwningProcess -Unique
     $rows = @()
-    foreach ($pid in $procs) {
-        $p = Get-Process -Id $pid -ErrorAction SilentlyContinue
+    foreach ($owningPid in $procs) {
+        $p = Get-Process -Id $owningPid -ErrorAction SilentlyContinue
         if ($p -and $p.Path) {
             $sig = Get-AuthenticodeSignature $p.Path
             if ($sig.Status -ne "Valid") {
