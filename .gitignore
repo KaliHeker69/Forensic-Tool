@@ -47,3 +47,8 @@ timeline.csv
 **/*.json
 **/*.csv
 **/*.dat
+
+portal.pid
+portal.log*
+
+forensic_correlation

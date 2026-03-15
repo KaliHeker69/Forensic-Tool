@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Forensic Acquisition Checklist</title>
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #1f2428;
+      --border-color: #30363d;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --accent: #238636;
+      --accent-light: #2ea043;
+      --warning: #9e6a03;
+      --danger: #da3633;
+      --focus-ring: rgba(46, 160, 67, 0.35);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.45;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .layout {
+      max-width: 1460px;
+      margin: 0 auto;
+    }
+
+    .card {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-secondary);
+    }
+
+    .header {
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      flex: 1;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 8px 10px;
+      width: 100%;
+    }
+
+    .field input:focus-visible,
+    .field select:focus-visible {
+      outline: none;
+      border-color: var(--accent-light);
+      box-shadow: 0 0 0 2px var(--focus-ring);
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    button:hover { border-color: var(--accent-light); }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-light);
+      border-color: var(--accent-light);
+    }
+
+    .btn-warning {
+      border-color: var(--warning);
+      color: #f8e3b4;
+    }
+
+    .btn-danger {
+      border-color: var(--danger);
+      color: #ffb3b0;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .use-case-label {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .use-case-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .uc-btn {
+      border-radius: 999px;
+      font-size: 12px;
+      padding: 6px 12px;
+    }
+
+    .uc-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 8px;
+    }
+
+    .search-row input,
+    .search-row select {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 8px 10px;
+      width: 100%;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .stat {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 9px;
+      text-align: center;
+    }
+
+    .stat-n {
+      color: var(--accent-light);
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .stat-l {
+      color: var(--text-secondary);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-top: 2px;
+    }
+
+    .status {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .section {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      background: var(--bg-secondary);
+    }
+
+    .section-hdr {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 11px 12px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .section-hdr .arrow {
+      width: 10px;
+      color: var(--text-secondary);
+      transition: transform 0.2s;
+    }
+
+    .section-hdr.open .arrow { transform: rotate(90deg); }
+
+    .section-hdr h2 {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .badge {
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 2px 8px;
+      font-weight: 600;
+    }
+
+    .items { display: none; }
+    .items.open { display: block; }
+
+    .item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(48, 54, 61, 0.55);
+      cursor: pointer;
+    }
+
+    .item:hover { background: rgba(255, 255, 255, 0.03); }
+    .item.hidden { display: none; }
+
+    .cb {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1.4px solid var(--text-secondary);
+      margin-top: 2px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cb.checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .cb svg { display: none; }
+    .cb.checked svg { display: block; }
+
+    .item-text { flex: 1; }
+
+    .item-name {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .item-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .meta-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .tag {
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 10px;
+      padding: 2px 8px;
+      line-height: 1.3;
+    }
+
+    @media (max-width: 780px) {
+      body { padding: 12px; }
+      h1 { font-size: 20px; }
+      .search-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <div class="header card">
+      <div class="title-row">
+        <h1>Company Forensic Acquisition Checklist</h1>
+      </div>
+      <div class="subtitle">Enterprise master checklist for endpoint, user activity, registry, browser, cloud, memory, and timeline artefacts. Select items and click Submit to export CSV.</div>
+
+      <div class="meta-grid">
+        <div class="field"><label>Company</label><input id="metaCompany" placeholder="Example Corp"></div>
+        <div class="field"><label>Case ID</label><input id="metaCaseId" placeholder="IR-2026-001"></div>
+        <div class="field"><label>Investigator</label><input id="metaInvestigator" placeholder="Analyst Name"></div>
+        <div class="field"><label>Business Unit</label><input id="metaUnit" placeholder="Finance / HR / Engineering"></div>
+        <div class="field"><label>Endpoint Hostname</label><input id="metaHost" placeholder="WS-00123"></div>
+        <div class="field"><label>Evidence ID</label><input id="metaEvidence" placeholder="EV-0001"></div>
+        <div class="field"><label>Scope</label>
+          <select id="metaScope">
+            <option value="Full">Full</option>
+            <option value="Triage">Triage</option>
+            <option value="Targeted">Targeted</option>
+            <option value="Legal Hold">Legal Hold</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="selectAllItems()">Select all</button>
+        <button class="btn-warning" onclick="selectCorporateBaseline()">Corporate baseline</button>
+        <button class="btn-warning" onclick="selectHighValue()">High value only</button>
+        <button class="btn-danger" onclick="resetAll()">Reset</button>
+        <button class="btn-primary" id="submitBtn" onclick="exportSelectedCsv()">Submit</button>
+      </div>
+
+      <div class="filters">
+        <div class="use-case-label">Filter by investigation type</div>
+        <div class="use-case-row" id="ucRow"></div>
+        <div class="search-row">
+          <input id="searchInput" placeholder="Search artefact, path, source, or purpose" oninput="applyTextFilter()">
+          <select id="priorityFilter" onchange="applyTextFilter()">
+            <option value="all">All priorities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-n" id="stTotal">0</div><div class="stat-l">Selected</div></div>
+        <div class="stat"><div class="stat-n" id="stSections">0</div><div class="stat-l">Categories</div></div>
+        <div class="stat"><div class="stat-n" id="stPct">0%</div><div class="stat-l">Coverage</div></div>
+        <div class="stat"><div class="stat-n" id="stVisible">0</div><div class="stat-l">Visible</div></div>
+      </div>
+    </div>
+
+    <div class="status" id="statusBox">No artefacts selected yet.</div>
+    <div id="sectionsContainer"></div>
+  </div>
+
+  <script>
+    const USE_CASES = [
+      { id: "intrusion", label: "Intrusion" },
+      { id: "ransomware", label: "Ransomware" },
+      { id: "datatheft", label: "Data Theft" },
+      { id: "insider", label: "Insider Threat" },
+      { id: "fraud", label: "Fraud" },
+      { id: "hr", label: "HR / Policy" },
+      { id: "legal", label: "Legal Hold" },
+      { id: "compliance", label: "Compliance" }
+    ];
+
+    const SECTIONS = [
+      {
+        id: "foundational",
+        title: "Foundational Acquisition",
+        items: [
+          { name: "Disk image (physical/logical)", desc: "Primary evidence source for full reconstruction.", path: "Disk/Volume image", source: "Imager", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "ransomware", "datatheft", "legal", "compliance"] },
+          { name: "Memory image (RAM)", desc: "Captures volatile processes, sockets, keys, and injected code.", path: "Live memory dump", source: "Memory collector", priority: "Critical", acquisition: "Live", tags: ["intrusion", "ransomware", "datatheft"] },
+          { name: "pagefile.sys", desc: "Contains process and string remnants from memory paging.", path: "C:/pagefile.sys", source: "OS", priority: "High", acquisition: "Dead", tags: ["intrusion", "datatheft", "legal"] },
+          { name: "hiberfil.sys", desc: "System hibernation memory snapshot.", path: "C:/hiberfil.sys", source: "OS", priority: "High", acquisition: "Dead", tags: ["intrusion", "datatheft", "legal"] },
+          { name: "Volume Shadow Copies", desc: "Point-in-time snapshots before attacker cleanup.", path: "\\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy*", source: "VSS", priority: "High", acquisition: "Live/Dead", tags: ["ransomware", "intrusion", "legal"] },
+          { name: "System time and timezone", desc: "Needed for timeline normalization.", path: "Registry and OS settings", source: "OS", priority: "Critical", acquisition: "Live/Dead", tags: ["compliance", "legal", "intrusion"] },
+          { name: "Installed patches and hotfixes", desc: "Supports exploitability and exposure analysis.", path: "WMI/Registry", source: "OS", priority: "Medium", acquisition: "Live", tags: ["intrusion", "compliance"] },
+          { name: "BitLocker recovery and protector metadata", desc: "Required to access encrypted volumes legally.", path: "Volume metadata", source: "Disk", priority: "High", acquisition: "Live/Dead", tags: ["legal", "compliance", "intrusion"] }
+        ]
+      },
+      {
+        id: "ntfs",
+        title: "NTFS and File System Metadata",
+        items: [
+          { name: "$MFT", desc: "Master file index with timestamps and attributes.", path: "<Volume>/$MFT", source: "NTFS", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "ransomware", "datatheft", "legal"] },
+          { name: "$UsnJrnl:$J", desc: "High-value file create/modify/rename/delete stream.", path: "<Volume>/$Extend/$UsnJrnl:$J", source: "NTFS", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "datatheft", "ransomware"] },
+          { name: "$LogFile", desc: "Recent NTFS transaction evidence.", path: "<Volume>/$LogFile", source: "NTFS", priority: "High", acquisition: "Dead", tags: ["intrusion", "ransomware", "legal"] },
+          { name: "$Bitmap", desc: "Cluster allocation evidence and deletion context.", path: "<Volume>/$Bitmap", source: "NTFS", priority: "Medium", acquisition: "Dead", tags: ["legal", "compliance", "intrusion"] },
+          { name: "$I30 directory index entries", desc: "Recover deleted name references from directory index.", path: "Directory $I30 streams", source: "NTFS", priority: "High", acquisition: "Dead", tags: ["datatheft", "legal", "intrusion"] },
+          { name: "Recycle Bin $I/$R files", desc: "Original path and delete time for deleted files.", path: "C:/$Recycle.Bin/<SID>/", source: "NTFS", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "legal", "datatheft"] },
+          { name: "Alternate Data Streams (Zone.Identifier)", desc: "Download source and internet zone provenance.", path: "<file>:Zone.Identifier", source: "NTFS", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "fraud", "hr"] },
+          { name: "Shortcut-rich user folders", desc: "Desktop, Downloads, Documents for suspicious staging.", path: "C:/Users/*", source: "File system", priority: "Medium", acquisition: "Dead", tags: ["insider", "datatheft", "hr"] }
+        ]
+      },
+      {
+        id: "registrycore",
+        title: "Registry Core Hives",
+        items: [
+          { name: "SYSTEM hive", desc: "Services, devices, startup, and network config.", path: "C:/Windows/System32/config/SYSTEM", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "ransomware", "compliance"] },
+          { name: "SOFTWARE hive", desc: "Installed software and policy configuration.", path: "C:/Windows/System32/config/SOFTWARE", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "compliance", "fraud"] },
+          { name: "SAM hive", desc: "Local account data and security identifiers.", path: "C:/Windows/System32/config/SAM", source: "Registry", priority: "High", acquisition: "Dead", tags: ["intrusion", "legal"] },
+          { name: "SECURITY hive", desc: "Security policy and cached credential references.", path: "C:/Windows/System32/config/SECURITY", source: "Registry", priority: "High", acquisition: "Dead", tags: ["intrusion", "legal"] },
+          { name: "DEFAULT hive", desc: "Default profile settings and baseline artifacts.", path: "C:/Windows/System32/config/DEFAULT", source: "Registry", priority: "Medium", acquisition: "Dead", tags: ["intrusion", "compliance"] },
+          { name: "All users NTUSER.DAT", desc: "Per-user activity artifacts and MRUs.", path: "C:/Users/*/NTUSER.DAT", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["insider", "hr", "fraud", "legal"] },
+          { name: "All users UsrClass.dat", desc: "Shell and COM activity for user profile context.", path: "C:/Users/*/AppData/Local/Microsoft/Windows/UsrClass.dat", source: "Registry", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "legal"] },
+          { name: "Amcache.hve", desc: "Executed binaries metadata and hash context.", path: "C:/Windows/AppCompat/Programs/Amcache.hve", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "ransomware", "datatheft"] }
+        ]
+      },
+      {
+        id: "registryactivity",
+        title: "Registry Execution and Persistence Keys",
+        items: [
+          { name: "Run/RunOnce keys", desc: "Classic user and machine persistence entries.", path: "HKLM/HKCU ... CurrentVersion/Run*", source: "Registry", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Services and service DLL configuration", desc: "Startup service abuse and malicious binaries.", path: "HKLM/SYSTEM/CurrentControlSet/Services", source: "Registry", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "AppCompatCache (Shimcache)", desc: "Executables observed by compatibility subsystem.", path: "HKLM/SYSTEM/.../AppCompatCache", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "datatheft"] },
+          { name: "UserAssist", desc: "GUI execution frequency and last run hints.", path: "HKCU/.../Explorer/UserAssist", source: "Registry", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "fraud"] },
+          { name: "BAM/DAM execution data", desc: "Recent process execution by user context.", path: "HKLM/SYSTEM/.../Services/bam|dam", source: "Registry", priority: "High", acquisition: "Dead", tags: ["intrusion", "insider", "ransomware"] },
+          { name: "RecentDocs", desc: "Recently accessed documents references.", path: "HKCU/.../Explorer/RecentDocs", source: "Registry", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "legal"] },
+          { name: "OpenSaveMRU and LastVisitedMRU", desc: "Files opened through common dialogs.", path: "HKCU/.../ComDlg32", source: "Registry", priority: "High", acquisition: "Dead", tags: ["insider", "fraud", "legal"] },
+          { name: "MountPoints2", desc: "Per-user mounted media history.", path: "HKCU/.../Explorer/MountPoints2", source: "Registry", priority: "High", acquisition: "Dead", tags: ["datatheft", "insider"] },
+          { name: "USBSTOR/USB keys", desc: "Device serial and connection evidence.", path: "HKLM/SYSTEM/CurrentControlSet/Enum/USB*", source: "Registry", priority: "Critical", acquisition: "Dead", tags: ["datatheft", "insider", "hr"] },
+          { name: "WordWheelQuery and TypedPaths", desc: "Explorer searches and manually typed paths.", path: "HKCU/.../Explorer/WordWheelQuery|TypedPaths", source: "Registry", priority: "Medium", acquisition: "Dead", tags: ["insider", "hr", "fraud"] },
+          { name: "WMI Event Subscription registry remnants", desc: "Fileless persistence indicator.", path: "HKLM/SOFTWARE/Microsoft/Wbem", source: "Registry", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "EMDMgmt (ReadyBoost)", desc: "Can preserve USB serial artifacts after cleanup.", path: "HKLM/SOFTWARE/.../EMDMgmt", source: "Registry", priority: "Medium", acquisition: "Dead", tags: ["datatheft", "insider"] }
+        ]
+      },
+      {
+        id: "eventlogs",
+        title: "Event Logs",
+        items: [
+          { name: "Collect all Windows Event Logs", desc: "Acquire full EVTX set for complete retrospective analysis.", path: "C:/Windows/System32/winevt/Logs/*.evtx", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware", "datatheft", "legal", "compliance"] },
+          { name: "Security.evtx", desc: "Authentication, privilege, object access, process creation.", path: "C:/Windows/System32/winevt/Logs/Security.evtx", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "fraud", "legal", "compliance"] },
+          { name: "System.evtx", desc: "Driver/service/system changes and uptime events.", path: "C:/Windows/System32/winevt/Logs/System.evtx", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Application.evtx", desc: "Application crashes and security tooling alerts.", path: "C:/Windows/System32/winevt/Logs/Application.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "fraud"] },
+          { name: "PowerShell Operational", desc: "PowerShell invocation and script execution traces.", path: "Microsoft-Windows-PowerShell/Operational.evtx", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware", "datatheft"] },
+          { name: "PowerShell Script Block (4104)", desc: "Deobfuscated script body where enabled.", path: "PowerShell script block logs", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Sysmon operational log", desc: "Detailed process, network, and file telemetry.", path: "Microsoft-Windows-Sysmon/Operational.evtx", source: "Event Log", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware", "datatheft"] },
+          { name: "TaskScheduler operational log", desc: "Task create/modify/run evidence.", path: "Microsoft-Windows-TaskScheduler/Operational.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "RDP and TerminalServices logs", desc: "Remote session source and logon details.", path: "TerminalServices*.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "fraud"] },
+          { name: "BITS Client log", desc: "Background transfer abuse for payload delivery.", path: "Microsoft-Windows-Bits-Client/Operational.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "datatheft"] },
+          { name: "DriverFrameworks UserMode log", desc: "USB connect/disconnect and device timeline evidence.", path: "Microsoft-Windows-DriverFrameworks-UserMode%4Operational.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["datatheft", "insider"] },
+          { name: "NTFS operational log", desc: "NTFS behavior and file-level events.", path: "Microsoft-Windows-Ntfs%4Operational.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware", "datatheft"] },
+          { name: "Defender operational log", desc: "Antimalware detections and remediations.", path: "Microsoft-Windows-Windows Defender/Operational.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware", "compliance"] }
+        ]
+      },
+      {
+        id: "execution",
+        title: "Program Execution and Persistence Files",
+        items: [
+          { name: "Prefetch folder", desc: "Execution count and run history for binaries.", path: "C:/Windows/Prefetch", source: "Prefetch", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "ransomware", "datatheft"] },
+          { name: "Scheduled task XML files", desc: "Persistence and delayed execution definitions.", path: "C:/Windows/System32/Tasks", source: "Task Scheduler", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "WMI repository", desc: "Event filter/consumer persistence chain.", path: "C:/Windows/System32/wbem/Repository/OBJECTS.DATA", source: "WMI", priority: "High", acquisition: "Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Startup folders and startup shortcuts", desc: "User and all-users startup persistence.", path: "C:/ProgramData/.../Startup and C:/Users/*/.../Startup", source: "File system", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "insider"] },
+          { name: "Command history (cmd)", desc: "Interactive command shell traces.", path: "C:/Users/*/AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ and console artifacts", source: "User profile", priority: "High", acquisition: "Dead", tags: ["intrusion", "insider", "fraud"] },
+          { name: "PowerShell PSReadLine history", desc: "Operator command history in plaintext.", path: "C:/Users/*/AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt", source: "User profile", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "datatheft"] },
+          { name: "Service binaries and configs", desc: "Binary path validation for suspicious services.", path: "Service ImagePath targets", source: "Registry/File system", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Crash dumps and WER reports", desc: "May contain faulting module and execution evidence.", path: "C:/ProgramData/Microsoft/Windows/WER", source: "WER", priority: "Medium", acquisition: "Dead", tags: ["intrusion", "fraud"] },
+          { name: "Autoruns locations", desc: "Comprehensive startup vectors from common autorun points.", path: "Run keys, Services, Winlogon, AppInit, Tasks, Startup", source: "Mixed", priority: "Critical", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "SRUM database", desc: "Network and resource usage per app over time.", path: "C:/Windows/System32/sru/SRUDB.dat", source: "SRUM", priority: "Critical", acquisition: "Dead", tags: ["datatheft", "intrusion", "ransomware"] }
+        ]
+      },
+      {
+        id: "useractivity",
+        title: "User Activity and Shell Artefacts",
+        items: [
+          { name: "LNK files", desc: "Recent file and path access, including removable media.", path: "C:/Users/*/AppData/Roaming/Microsoft/Windows/Recent", source: "Shell", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "datatheft", "legal"] },
+          { name: "Jump Lists (AutomaticDestinations)", desc: "Per-app document and file usage history.", path: "C:/Users/*/AppData/Roaming/Microsoft/Windows/Recent/AutomaticDestinations", source: "Shell", priority: "High", acquisition: "Dead", tags: ["insider", "fraud", "legal"] },
+          { name: "Jump Lists (CustomDestinations)", desc: "Additional app-driven recent files list.", path: "C:/Users/*/AppData/Roaming/Microsoft/Windows/Recent/CustomDestinations", source: "Shell", priority: "Medium", acquisition: "Dead", tags: ["insider", "fraud"] },
+          { name: "Shellbags", desc: "Folder browsing history including deleted paths.", path: "NTUSER.DAT and UsrClass.dat shell bag keys", source: "Registry", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "legal"] },
+          { name: "Thumbcache and icon cache", desc: "Visual evidence of opened files and apps.", path: "C:/Users/*/AppData/Local/Microsoft/Windows/Explorer", source: "Shell cache", priority: "Medium", acquisition: "Dead", tags: ["insider", "hr", "legal"] },
+          { name: "Recent file lists in Office", desc: "MRU trail of opened Office documents.", path: "Office File MRU keys", source: "Registry", priority: "High", acquisition: "Dead", tags: ["fraud", "insider", "legal"] },
+          { name: "Clipboard artifacts", desc: "Potential copied sensitive values context.", path: "Windows clipboard databases", source: "User profile", priority: "Low", acquisition: "Live/Dead", tags: ["datatheft", "insider"] },
+          { name: "Recycle Bin metadata per user", desc: "User-linked delete actions and original paths.", path: "C:/$Recycle.Bin/<SID>", source: "NTFS", priority: "High", acquisition: "Dead", tags: ["insider", "hr", "legal"] }
+        ]
+      },
+      {
+        id: "browser",
+        title: "Browser and Web Activity",
+        items: [
+          { name: "Google Chrome application", desc: "Collect Chrome profile and application data.", path: "C:/Users/*/AppData/Local/Google/Chrome/User Data", source: "Browser", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "fraud", "hr", "legal", "datatheft"] },
+          { name: "Microsoft Edge application", desc: "Collect Edge profile and application data.", path: "C:/Users/*/AppData/Local/Microsoft/Edge/User Data", source: "Browser", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "fraud", "hr", "legal", "datatheft"] },
+          { name: "Mozilla Firefox application", desc: "Collect Firefox profiles and browser data.", path: "C:/Users/*/AppData/Roaming/Mozilla/Firefox/Profiles", source: "Browser", priority: "Critical", acquisition: "Dead", tags: ["intrusion", "fraud", "hr", "legal", "datatheft"] },
+          { name: "Brave Browser application", desc: "Collect Brave profile and browser data.", path: "C:/Users/*/AppData/Local/BraveSoftware/Brave-Browser/User Data", source: "Browser", priority: "High", acquisition: "Dead", tags: ["intrusion", "fraud", "hr", "datatheft"] },
+          { name: "Internet Explorer legacy artifacts", desc: "Collect IE/legacy web cache and typed URL data.", path: "C:/Users/*/AppData/Local/Microsoft/Windows/WebCache and IE registry keys", source: "Browser", priority: "Medium", acquisition: "Dead", tags: ["fraud", "legal", "hr"] },
+          { name: "Opera Browser application", desc: "Collect Opera profile and browser data if deployed.", path: "C:/Users/*/AppData/Roaming/Opera Software", source: "Browser", priority: "Medium", acquisition: "Dead", tags: ["intrusion", "fraud", "hr"] }
+        ]
+      },
+      {
+        id: "communications",
+        title: "Email and Enterprise Communications",
+        items: [
+          { name: "Outlook OST/PST", desc: "Mailbox and attachment records.", path: "C:/Users/*/AppData/Local/Microsoft/Outlook", source: "Outlook", priority: "Critical", acquisition: "Dead", tags: ["fraud", "legal", "hr", "datatheft"] },
+          { name: "Outlook attachment cache", desc: "Recovered attachment usage evidence.", path: "C:/Users/*/AppData/Local/Microsoft/Windows/INetCache/Content.Outlook", source: "Outlook", priority: "High", acquisition: "Dead", tags: ["fraud", "datatheft", "legal"] },
+          { name: "Teams cache and logs", desc: "Message, file, and call artifacts.", path: "C:/Users/*/AppData/Roaming/Microsoft/Teams", source: "Teams", priority: "High", acquisition: "Dead", tags: ["hr", "legal", "insider"] },
+          { name: "Skype and legacy comms stores", desc: "Legacy chat and call records where present.", path: "User profile app data", source: "Comms app", priority: "Medium", acquisition: "Dead", tags: ["hr", "legal"] },
+          { name: "Signal/Telegram desktop data", desc: "Encrypted messaging app usage context.", path: "User profile app data", source: "Comms app", priority: "High", acquisition: "Dead", tags: ["datatheft", "insider", "hr"] }
+        ]
+      },
+      {
+        id: "cloud",
+        title: "Cloud, SaaS, and Sync",
+        items: [
+          { name: "OneDrive sync logs and local cache", desc: "Sync events and file movement context.", path: "C:/Users/*/AppData/Local/Microsoft/OneDrive", source: "OneDrive", priority: "High", acquisition: "Dead", tags: ["datatheft", "legal", "compliance"] },
+          { name: "SharePoint local sync artifacts", desc: "Enterprise document sync history.", path: "OneDrive/SharePoint cache", source: "M365", priority: "High", acquisition: "Dead", tags: ["legal", "compliance", "fraud"] },
+          { name: "Google Drive desktop sync artifacts", desc: "File sync and cloud transfer behavior.", path: "User profile Google Drive paths", source: "Google Drive", priority: "High", acquisition: "Dead", tags: ["datatheft", "legal"] },
+          { name: "Dropbox and Box sync metadata", desc: "Third-party storage data movement timeline.", path: "User profile sync paths", source: "Cloud sync", priority: "High", acquisition: "Dead", tags: ["datatheft", "legal", "compliance"] },
+          { name: "Microsoft 365 Unified Audit logs", desc: "Tenant-level mailbox and file actions.", path: "M365 tenant export", source: "Cloud", priority: "Critical", acquisition: "Cloud", tags: ["fraud", "legal", "compliance", "datatheft"] },
+          { name: "Exchange Online mailbox audit", desc: "Mailbox access and send rules abuse.", path: "Exchange admin export", source: "Cloud", priority: "Critical", acquisition: "Cloud", tags: ["fraud", "intrusion", "legal"] },
+          { name: "Azure AD sign-in and risky user logs", desc: "Identity abuse and impossible travel analysis.", path: "Entra logs export", source: "Cloud", priority: "Critical", acquisition: "Cloud", tags: ["intrusion", "fraud", "compliance"] },
+          { name: "AWS/Azure/GCP audit logs", desc: "Cloud control-plane and data-plane access.", path: "Cloud provider logs", source: "Cloud", priority: "Critical", acquisition: "Cloud", tags: ["intrusion", "datatheft", "compliance"] }
+        ]
+      },
+      {
+        id: "usbnetwork",
+        title: "USB, Device, and Network Artifacts",
+        items: [
+          { name: "setupapi.dev.log", desc: "Most reliable first-connect device timestamps.", path: "C:/Windows/INF/setupapi.dev.log", source: "System log", priority: "Critical", acquisition: "Dead", tags: ["datatheft", "insider", "legal"] },
+          { name: "MountedDevices registry", desc: "Volume GUID to drive letter mapping history.", path: "HKLM/SYSTEM/MountedDevices", source: "Registry", priority: "High", acquisition: "Dead", tags: ["datatheft", "insider"] },
+          { name: "DeviceClasses registry", desc: "Connected interface GUID traces.", path: "HKLM/SYSTEM/.../Control/DeviceClasses", source: "Registry", priority: "Medium", acquisition: "Dead", tags: ["datatheft", "intrusion"] },
+          { name: "Partition diagnostic log", desc: "Partition and attach details for removable media.", path: "Microsoft-Windows-Partition%4Diagnostic.evtx", source: "Event Log", priority: "High", acquisition: "Live/Dead", tags: ["datatheft", "insider"] },
+          { name: "Firewall logs", desc: "Allowed and blocked network flows.", path: "Firewall event logs and files", source: "Network", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "datatheft", "compliance"] },
+          { name: "Proxy and web gateway logs", desc: "External domain and transfer evidence.", path: "Enterprise proxy export", source: "Network", priority: "High", acquisition: "Cloud/Network", tags: ["intrusion", "datatheft", "compliance"] },
+          { name: "VPN client logs and profiles", desc: "Remote access and geolocation timeline.", path: "Client logs", source: "VPN", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "fraud"] },
+          { name: "WLAN profiles and connection history", desc: "Location context via SSID history.", path: "WLAN profiles export", source: "Network", priority: "Medium", acquisition: "Live", tags: ["hr", "insider", "fraud"] },
+          { name: "ARP table snapshot", desc: "Lateral movement hints in local segments.", path: "Live ARP output", source: "Network", priority: "Medium", acquisition: "Live", tags: ["intrusion"] },
+          { name: "Netstat and active socket capture", desc: "Live command and control endpoint context.", path: "Live network snapshot", source: "Network", priority: "High", acquisition: "Live", tags: ["intrusion", "ransomware"] }
+        ]
+      },
+      {
+        id: "memoryandsecurity",
+        title: "Memory, Security Tooling, and Correlation Inputs",
+        items: [
+          { name: "Volatility process list and command lines", desc: "Correlates active/injected processes with disk artifacts.", path: "Memory analysis output", source: "Memory", priority: "Critical", acquisition: "Live", tags: ["intrusion", "ransomware"] },
+          { name: "Volatility network and connection objects", desc: "Live sockets tied to processes.", path: "Memory analysis output", source: "Memory", priority: "High", acquisition: "Live", tags: ["intrusion", "datatheft"] },
+          { name: "LSASS memory related artifacts", desc: "Credential theft and auth token investigations.", path: "Protected memory analysis", source: "Memory", priority: "High", acquisition: "Live", tags: ["intrusion", "fraud", "legal"] },
+          { name: "EDR alerts and endpoint timeline export", desc: "High-fidelity detections and suppression history.", path: "EDR console export", source: "EDR", priority: "Critical", acquisition: "Cloud", tags: ["intrusion", "ransomware", "compliance"] },
+          { name: "Antivirus quarantine records", desc: "Recovered samples and detection signatures.", path: "AV logs and quarantine stores", source: "AV", priority: "High", acquisition: "Live/Dead", tags: ["intrusion", "ransomware"] },
+          { name: "Sigma/Chainsaw hunt results", desc: "Hunting output for event log analytics.", path: "chainsaw/results", source: "Hunt", priority: "Medium", acquisition: "Offline", tags: ["intrusion", "compliance"] },
+          { name: "Correlated timeline exports (CSV/JSON)", desc: "Unified timeline from NTFS, registry, and event data.", path: "Timeline outputs", source: "Correlation engine", priority: "High", acquisition: "Offline", tags: ["legal", "compliance", "intrusion"] },
+          { name: "Case notes and chain-of-custody forms", desc: "Operational and legal defensibility records.", path: "Case management records", source: "Process", priority: "Critical", acquisition: "Administrative", tags: ["legal", "compliance", "hr"] }
+        ]
+      }
+    ];
+
+    let activeUC = null;
+    let checked = {};
+
+    function itemKey(sectionId, idx) {
+      return sectionId + "-" + idx;
+    }
+
+    function allItems() {
+      const rows = [];
+      SECTIONS.forEach((sec) => {
+        sec.items.forEach((item, idx) => rows.push({ sec, item, idx, key: itemKey(sec.id, idx) }));
+      });
+      return rows;
+    }
+
+    function init() {
+      const ucRow = document.getElementById("ucRow");
+      USE_CASES.forEach((uc) => {
+        const btn = document.createElement("button");
+        btn.className = "uc-btn";
+        btn.textContent = uc.label;
+        btn.dataset.id = uc.id;
+        btn.onclick = () => toggleUC(uc.id);
+        ucRow.appendChild(btn);
+      });
+
+      const container = document.getElementById("sectionsContainer");
+      SECTIONS.forEach((sec) => {
+        const section = document.createElement("div");
+        section.className = "section";
+        section.id = "sec-" + sec.id;
+
+        const hdr = document.createElement("div");
+        hdr.className = "section-hdr open";
+        hdr.innerHTML = "<span class='arrow'>&#9654;</span><h2>" + sec.title + "</h2><span class='badge' id='badge-" + sec.id + "'>0/" + sec.items.length + "</span>";
+        hdr.onclick = () => toggleSection(sec.id, hdr);
+
+        const items = document.createElement("div");
+        items.className = "items open";
+        items.id = "items-" + sec.id;
+
+        sec.items.forEach((item, idx) => {
+          const key = itemKey(sec.id, idx);
+          const row = document.createElement("div");
+          row.className = "item";
+          row.id = "row-" + key;
+          row.dataset.search = [sec.title, item.name, item.desc, item.path, item.source, item.priority, item.acquisition, item.tags.join(" ")].join(" ").toLowerCase();
+          row.dataset.priority = item.priority;
+          row.onclick = () => toggleItem(key, sec);
+
+          const useCaseTags = item.tags.map((tag) => {
+            const found = USE_CASES.find((u) => u.id === tag);
+            return found ? "<span class='tag'>" + found.label + "</span>" : "";
+          }).join("");
+
+          row.innerHTML =
+            "<div class='cb' id='cb-" + key + "'><svg width='10' height='8' viewBox='0 0 10 8' fill='none'><path d='M1 4L4 7L9 1' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/></svg></div>" +
+            "<div class='item-text'>" +
+            "<div class='item-name'>" + item.name + "</div>" +
+            "<div class='item-desc'>" + item.desc + "</div>" +
+            "<div class='meta-line'>" +
+              "<span class='tag'>Priority: " + item.priority + "</span>" +
+              "<span class='tag'>Source: " + item.source + "</span>" +
+              "<span class='tag'>Acq: " + item.acquisition + "</span>" +
+              "<span class='tag'>Path: " + item.path + "</span>" +
+            "</div>" +
+            "<div class='meta-line' style='margin-top:4px'>" + useCaseTags + "</div>" +
+            "</div>";
+
+          items.appendChild(row);
+        });
+
+        section.appendChild(hdr);
+        section.appendChild(items);
+        container.appendChild(section);
+      });
+
+      updateStats();
+      applyTextFilter();
+    }
+
+    function toggleSection(id, hdr) {
+      const items = document.getElementById("items-" + id);
+      const open = items.classList.toggle("open");
+      hdr.classList.toggle("open", open);
+    }
+
+    function toggleItem(key, sec) {
+      checked[key] = !checked[key];
+      const cb = document.getElementById("cb-" + key);
+      if (cb) cb.classList.toggle("checked", checked[key]);
+      updateBadge(sec);
+      updateStats();
+    }
+
+    function applySelectionPredicate(predicate) {
+      SECTIONS.forEach((sec) => {
+        sec.items.forEach((item, idx) => {
+          const key = itemKey(sec.id, idx);
+          checked[key] = predicate(item);
+          const cb = document.getElementById("cb-" + key);
+          if (cb) cb.classList.toggle("checked", checked[key]);
+        });
+        updateBadge(sec);
+      });
+      updateStats();
+    }
+
+    function selectAllItems() {
+      applySelectionPredicate(() => true);
+    }
+
+    function selectCorporateBaseline() {
+      applySelectionPredicate((item) => item.priority === "Critical" || item.priority === "High");
+    }
+
+    function selectHighValue() {
+      applySelectionPredicate((item) => item.priority === "Critical");
+    }
+
+    function resetAll() {
+      checked = {};
+      activeUC = null;
+      document.getElementById("searchInput").value = "";
+      document.getElementById("priorityFilter").value = "all";
+      document.querySelectorAll(".uc-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".cb").forEach((cb) => cb.classList.remove("checked"));
+      SECTIONS.forEach((sec) => updateBadge(sec));
+      applyTextFilter();
+      updateStats();
+    }
+
+    function toggleUC(id) {
+      activeUC = activeUC === id ? null : id;
+      document.querySelectorAll(".uc-btn").forEach((b) => b.classList.toggle("active", b.dataset.id === activeUC));
+      applyTextFilter();
+    }
+
+    function applyTextFilter() {
+      const q = document.getElementById("searchInput").value.trim().toLowerCase();
+      const p = document.getElementById("priorityFilter").value;
+      let visibleCount = 0;
+
+      SECTIONS.forEach((sec) => {
+        let sectionVisible = 0;
+        sec.items.forEach((item, idx) => {
+          const key = itemKey(sec.id, idx);
+          const row = document.getElementById("row-" + key);
+          if (!row) return;
+
+          const matchesText = q.length === 0 || row.dataset.search.includes(q);
+          const matchesPriority = p === "all" || item.priority === p;
+          const matchesUseCase = !activeUC || item.tags.includes(activeUC);
+          const show = matchesText && matchesPriority && matchesUseCase;
+
+          row.classList.toggle("hidden", !show);
+          if (show) {
+            visibleCount += 1;
+            sectionVisible += 1;
+          }
+        });
+
+        const section = document.getElementById("sec-" + sec.id);
+        if (section) section.style.display = sectionVisible ? "block" : "none";
+      });
+
+      document.getElementById("stVisible").textContent = String(visibleCount);
+    }
+
+    function updateBadge(sec) {
+      const count = sec.items.filter((_, idx) => checked[itemKey(sec.id, idx)]).length;
+      const badge = document.getElementById("badge-" + sec.id);
+      if (badge) badge.textContent = count + "/" + sec.items.length;
+    }
+
+    function selectedRows() {
+      const out = [];
+      SECTIONS.forEach((sec) => {
+        sec.items.forEach((item, idx) => {
+          const key = itemKey(sec.id, idx);
+          if (checked[key]) {
+            out.push({
+              category: sec.title,
+              artefact: item.name,
+              description: item.desc,
+              path: item.path,
+              source: item.source,
+              priority: item.priority,
+              acquisition: item.acquisition,
+              useCases: item.tags.map((tag) => {
+                const match = USE_CASES.find((u) => u.id === tag);
+                return match ? match.label : tag;
+              }).join(" | ")
+            });
+          }
+        });
+      });
+      return out;
+    }
+
+    function updateStats() {
+      const total = allItems().length;
+      const selected = Object.values(checked).filter(Boolean).length;
+      const categories = SECTIONS.filter((sec) => sec.items.some((_, idx) => checked[itemKey(sec.id, idx)])).length;
+      const pct = total ? Math.round((selected / total) * 100) : 0;
+
+      document.getElementById("stTotal").textContent = String(selected);
+      document.getElementById("stSections").textContent = String(categories);
+      document.getElementById("stPct").textContent = pct + "%";
+
+      const btn = document.getElementById("submitBtn");
+      btn.disabled = selected === 0;
+      btn.style.opacity = selected === 0 ? "0.55" : "1";
+      btn.style.cursor = selected === 0 ? "not-allowed" : "pointer";
+
+      const status = document.getElementById("statusBox");
+      status.textContent = selected === 0
+        ? "No artefacts selected yet."
+        : selected + " artefact(s) selected. Click Submit to export CSV.";
+    }
+
+    function csvEscape(val) {
+      const s = String(val === undefined || val === null ? "" : val);
+      return "\"" + s.replace(/\"/g, "\"\"") + "\"";
+    }
+
+    function exportSelectedCsv() {
+      const selected = selectedRows();
+      if (!selected.length) {
+        document.getElementById("statusBox").textContent = "Select at least one artefact before submitting.";
+        return;
+      }
+
+      const meta = {
+        company: document.getElementById("metaCompany").value.trim(),
+        caseId: document.getElementById("metaCaseId").value.trim(),
+        investigator: document.getElementById("metaInvestigator").value.trim(),
+        businessUnit: document.getElementById("metaUnit").value.trim(),
+        endpoint: document.getElementById("metaHost").value.trim(),
+        evidenceId: document.getElementById("metaEvidence").value.trim(),
+        scope: document.getElementById("metaScope").value
+      };
+
+      const headers = [
+        "Company", "Case ID", "Investigator", "Business Unit", "Endpoint Hostname", "Evidence ID", "Scope",
+        "Category", "Artefact", "Description", "Path", "Source", "Priority", "Acquisition", "Use Cases"
+      ];
+
+      const lines = [headers.map(csvEscape).join(",")];
+      selected.forEach((row) => {
+        lines.push([
+          csvEscape(meta.company),
+          csvEscape(meta.caseId),
+          csvEscape(meta.investigator),
+          csvEscape(meta.businessUnit),
+          csvEscape(meta.endpoint),
+          csvEscape(meta.evidenceId),
+          csvEscape(meta.scope),
+          csvEscape(row.category),
+          csvEscape(row.artefact),
+          csvEscape(row.description),
+          csvEscape(row.path),
+          csvEscape(row.source),
+          csvEscape(row.priority),
+          csvEscape(row.acquisition),
+          csvEscape(row.useCases)
+        ].join(","));
+      });
+
+      const now = new Date();
+      const stamp = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+        "_",
+        String(now.getHours()).padStart(2, "0"),
+        String(now.getMinutes()).padStart(2, "0"),
+        String(now.getSeconds()).padStart(2, "0")
+      ].join("");
+
+      const filename = "company_forensic_acquisition_" + stamp + ".csv";
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      document.getElementById("statusBox").textContent = "Saved " + selected.length + " artefact(s) to " + filename;
+    }
+
+    init();
+  </script>
+</body>
+</html>

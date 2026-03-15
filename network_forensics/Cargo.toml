@@ -1,0 +1,40 @@
+[package]
+name = "netforens"
+version = "1.0.0"
+edition = "2024"
+author = "KaliHeker"
+description = "Windows Network Forensics Analysis Tool"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# SQLite (SRUM, browser history)
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# CSV output
+csv = "1"
+
+# Regex
+regex = "1"
+
+# Error handling
+anyhow = "1"
+thiserror = "1"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# UUID for report identification
+uuid = { version = "1", features = ["v4"] }
+
+# Glob for file discovery
+glob = "0.3"
