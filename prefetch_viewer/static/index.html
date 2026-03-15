@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prefetch Viewer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- Drop overlay -->
+<div id="drop-overlay" class="drop-overlay hidden">
+  <div class="drop-inner">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p>Drop PECmd JSON output file</p>
+  </div>
+</div>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sb-header">
+      <span class="sb-brand">⟁ Prefetch</span>
+      <label class="btn-upload" title="Select files or folder">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        </svg>
+        Upload
+        <input type="file" id="file-input" accept=".json" style="display:none">
+      </label>
+    </div>
+
+    <!-- Drop zone shown when no files -->
+    <div id="upload-zone" class="upload-zone">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".3">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      <p class="uz-title">Drop <code>PECmd_Output.json</code></p>
+      <p class="uz-hint">or click Upload · accepts PECmd JSON</p>
+    </div>
+
+    <!-- Grouped list shown when files present -->
+    <div id="sidebar-list" class="sb-list hidden">
+      <div class="sb-list-header">
+        <span id="sb-count" class="sb-count-label">0 executables</span>
+        <button id="btn-clear" class="btn-clear" onclick="clearAll()">Clear</button>
+      </div>
+      <div id="exe-groups"></div>
+    </div>
+  </aside>
+
+  <!-- ── Main ─────────────────────────────────────────────────────── -->
+  <main class="main-area">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span id="tb-title" class="tb-title">All Prefetch Files</span>
+        <span id="tb-sub" class="tb-sub"></span>
+      </div>
+      <button id="btn-report" class="btn-report" onclick="openReport()" disabled>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        Forensic Report
+      </button>
+    </header>
+
+    <!-- Stats strip (hidden until data loaded) -->
+    <div id="stats-strip" class="stats-strip hidden">
+      <div class="stat-card"><div class="stat-val" id="st-events">0</div><div class="stat-lbl">Total events</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-exes">0</div><div class="stat-lbl">Unique executables</div></div>
+      <div class="stat-card"><div class="stat-val" id="st-files">0</div><div class="stat-lbl">Prefetch files</div></div>
+      <div class="stat-card"><div class="stat-val amber" id="st-span">–</div><div class="stat-lbl">Time span</div></div>
+      <div class="stat-card">
+        <div class="stat-val red" id="st-flagged">0</div>
+        <div class="stat-lbl">Flagged files</div>
+        <div class="sev-chips" id="st-sev-chips"></div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state">
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.8" opacity=".15">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+      </svg>
+      <p>Upload a <strong>PECmd JSON</strong> output file to start analysis</p>
+      <p class="es-hint">Drag &amp; drop or click Upload in the sidebar</p>
+    </div>
+
+    <!-- Timeline area (shown after upload) -->
+    <div id="timeline-area" class="tl-area hidden">
+
+      <!-- Controls row -->
+      <div class="tl-controls">
+        <div class="filter-group">
+          <button class="fbtn active" onclick="setFilter('all',this)">All</button>
+          <button class="fbtn" onclick="setFilter('system',this)">System</button>
+          <button class="fbtn" onclick="setFilter('user',this)">User-space</button>
+          <button class="fbtn flagged-btn" onclick="setFilter('flagged',this)">Flagged</button>
+        </div>
+        <input id="tl-search" class="tl-search" placeholder="Filter by name…" oninput="setSearch(this.value)">
+        <div class="zoom-group">
+          <span class="zoom-lbl">Zoom</span>
+          <input type="range" id="zoom-slider" min="1" max="5" step="1" value="1"
+                 class="zoom-slider" oninput="setZoom(+this.value)">
+          <span class="zoom-lbl" id="zoom-val">1×</span>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="tl-legend">
+        <span class="leg-item"><span class="leg-dot" style="background:#c084fc"></span>Credential access</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#fb923c"></span>Execution</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#38bdf8"></span>Reconnaissance</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#34d399"></span>Network / tunnel</span>
+        <span class="leg-item"><span class="leg-dot" style="background:#94a3b8"></span>System / normal</span>
+        <span class="leg-item"><span class="leg-sq" style="background:#E24B4A"></span>Flagged (diamond)</span>
+        <span class="leg-item"><span class="leg-burst"></span>Burst activity</span>
+      </div>
+
+      <!-- Canvas with swim lanes -->
+      <div class="tl-canvas-wrap">
+        <div class="tl-col-header">
+          <div class="lane-col-label">Lane</div>
+          <div class="tl-axis" id="tl-axis"></div>
+        </div>
+        <div id="tl-body"></div>
+      </div>
+
+      <!-- Detail panel -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="dp-header">
+          <span class="dp-title" id="dp-title">Select an event to inspect</span>
+          <div id="dp-badges" class="dp-badges"></div>
+        </div>
+        <div class="dp-body" id="dp-body">
+          <p class="dp-placeholder">Click any dot on the timeline to see full prefetch details, file references, and triggered detection rules.</p>
+        </div>
+      </div>
+
+    </div><!-- /timeline-area -->
+
+  </main>
+</div><!-- /app-layout -->
+
+<!-- Toast notification -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- Tooltip (positioned via JS) -->
+<div id="evt-tooltip" class="evt-tooltip"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
