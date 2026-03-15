@@ -51,6 +51,11 @@ pub enum EventType {
     DriverLoaded,
     InjectionDetected,
     SuspiciousActivity,
+    DllLoaded,
+    MftCreated,
+    MftModified,
+    UserAssistExecution,
+    ScheduledTask,
 }
 
 impl std::fmt::Display for EventType {
@@ -68,6 +73,11 @@ impl std::fmt::Display for EventType {
             EventType::DriverLoaded => write!(f, "Driver Loaded"),
             EventType::InjectionDetected => write!(f, "Injection Detected"),
             EventType::SuspiciousActivity => write!(f, "Suspicious Activity"),
+            EventType::DllLoaded => write!(f, "DLL Loaded"),
+            EventType::MftCreated => write!(f, "MFT File Created"),
+            EventType::MftModified => write!(f, "MFT File Modified"),
+            EventType::UserAssistExecution => write!(f, "Program Executed"),
+            EventType::ScheduledTask => write!(f, "Scheduled Task"),
         }
     }
 }

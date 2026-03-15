@@ -47,6 +47,9 @@ base64 = "0.22"
 # Directory walking
 walkdir = "2.5"
 
+# Graph data structure for artifact correlation
+petgraph = "0.7"
+
 # HTTP client for threat intelligence APIs
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 

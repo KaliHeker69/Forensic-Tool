@@ -62,6 +62,18 @@ struct Args {
     /// SHA256 hash of the memory image (for chain of custody)
     #[arg(long)]
     memory_hash: Option<String>,
+
+    /// Export timeline as CSV (Plaso super timeline format)
+    #[arg(long)]
+    timeline_csv: Option<PathBuf>,
+
+    /// Export timeline as JSON (with temporal intelligence)
+    #[arg(long)]
+    timeline_json: Option<PathBuf>,
+
+    /// Case name for timeline exports
+    #[arg(long, default_value = "vol3-correlate")]
+    case_name: String,
 }
 
 fn main() {
@@ -174,10 +186,58 @@ fn run(args: Args) -> vol3_correlate::Result<()> {
     let timeline = engine.build_timeline();
     println!("   Timeline: {} events", timeline.len());
 
+    // Run temporal intelligence analysis
+    println!("   ⏱ Running temporal intelligence...");
+    let temporal = vol3_correlate::correlation::analyze_temporal(&timeline);
+    println!(
+        "   Temporal: {} burst clusters, {} hourly buckets",
+        temporal.clusters.len(),
+        temporal.hourly_buckets.len()
+    );
+    if !temporal.clusters.is_empty() {
+        let top = &temporal.clusters[0];
+        println!(
+            "   🔥 Top hotspot: {} events in {:.1}s (score: {}, type: {})",
+            top.event_count,
+            (top.end - top.start).num_milliseconds() as f64 / 1000.0,
+            top.hotspot_score,
+            top.dominant_type
+        );
+    }
+
     // Extract forensic metadata
     let system_profile = vol3_correlate::correlation::extract_system_profile(&data);
     let user_activity = vol3_correlate::correlation::extract_user_activity(&data);
     let quick_view = vol3_correlate::correlation::extract_analyst_quickview(&data);
+
+    // Build unified artifact graph
+    println!("   🕸️ Building artifact graph...");
+    let artifact_graph = vol3_correlate::correlation::ArtifactGraph::build(&data);
+    let graph_stats = artifact_graph.stats();
+    println!(
+        "   Graph: {} nodes, {} edges, {} clusters",
+        graph_stats.total_nodes, graph_stats.total_edges, graph_stats.connected_clusters
+    );
+    let graph_json = artifact_graph.to_d3_json();
+
+    // Extract IOCs from parsed data + findings
+    println!("   🔍 Extracting IOCs...");
+    let ioc_report = vol3_correlate::correlation::extract_iocs(&data, &findings);
+    println!(
+        "   IOCs: {} total ({} high-confidence)",
+        ioc_report.summary.total, ioc_report.summary.high_confidence
+    );
+
+    // Kill chain & attack progression analysis
+    println!("   ⚔️ Mapping kill chain stages...");
+    let kill_chain = vol3_correlate::correlation::analyze_kill_chain(&findings);
+    println!(
+        "   Kill Chain: progression {}/100 — max stage: {} — {} techniques across {} tactics",
+        kill_chain.progression_score,
+        kill_chain.max_stage_reached,
+        kill_chain.unique_techniques,
+        kill_chain.unique_tactics,
+    );
     
     // Create results with forensic metadata
     let mut chain_of_custody = vol3_correlate::models::ChainOfCustody::default();
@@ -197,7 +257,11 @@ fn run(args: Args) -> vol3_correlate::Result<()> {
         vol3_correlate::models::VolatilityInfo::new(),
         user_activity,
         quick_view,
-    ).with_parsed_data(data);
+    ).with_parsed_data(data)
+     .with_artifact_graph(graph_json)
+     .with_ioc_report(ioc_report)
+     .with_temporal_analysis(temporal.clone())
+     .with_kill_chain(kill_chain);
 
     // Parse output format
     let output_format: OutputFormat = args
@@ -230,6 +294,34 @@ fn run(args: Args) -> vol3_correlate::Result<()> {
             JsonOutput::new(&output_dir.join("analysis.json")).output(&results)?;
             HtmlOutput::new(&output_dir.join("report.html")).output(&results)?;
         }
+    }
+
+    // Timeline exports (CSV / JSON)
+    if let Some(csv_path) = &args.timeline_csv {
+        if let Some(parent) = csv_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut file = std::fs::File::create(csv_path)?;
+        vol3_correlate::output::timeline_export::export_csv(
+            &mut file,
+            &results.timeline,
+            &args.case_name,
+        )?;
+        println!("   📄 Timeline CSV: {}", csv_path.display());
+    }
+
+    if let Some(json_path) = &args.timeline_json {
+        if let Some(parent) = json_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let mut file = std::fs::File::create(json_path)?;
+        vol3_correlate::output::timeline_export::export_json(
+            &mut file,
+            &results.timeline,
+            &temporal,
+            &args.case_name,
+        )?;
+        println!("   📄 Timeline JSON: {}", json_path.display());
     }
 
     println!();

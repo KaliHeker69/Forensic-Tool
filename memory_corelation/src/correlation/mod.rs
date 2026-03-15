@@ -1,6 +1,9 @@
 //! Correlation engine for linking artifacts across plugins
 
+pub mod artifact_graph;
 pub mod forensic_extractor;
+pub mod ioc_extractor;
+pub mod kill_chain;
 pub mod linkers;
 pub mod timeline;
 
@@ -16,7 +19,10 @@ pub use forensic_extractor::{extract_analyst_quickview, extract_system_profile, 
 pub use linkers::{
     DownloadFileLink, FileProcessLink, NetworkProcessLink, ProcessChain,
 };
-pub use timeline::TimelineBuilder;
+pub use timeline::{TimelineBuilder, analyze_temporal, TemporalAnalysis, TemporalCluster, TimeBucket};
+pub use artifact_graph::ArtifactGraph;
+pub use ioc_extractor::{extract_iocs, IocReport, IocType, ExtractedIoc};
+pub use kill_chain::{analyze_kill_chain, KillChainAnalysis, KillChainStage, MitreTactic};
 
 /// Main correlation engine for linking artifacts
 pub struct CorrelationEngine<'a> {
