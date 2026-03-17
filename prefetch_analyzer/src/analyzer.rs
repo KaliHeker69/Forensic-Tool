@@ -6,7 +6,7 @@ use crate::models::{AnalysisReport, Finding, FindingCategory, PrefetchEntry, Rep
 use crate::rules::RulesConfig;
 use chrono::{NaiveDateTime, Utc};
 use rayon::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Main analyzer that processes prefetch entries
 pub struct Analyzer {
@@ -90,6 +90,39 @@ impl Analyzer {
         findings
     }
 
+    fn is_likely_benign_path_context(&self, path: &str) -> bool {
+        let upper = path.to_uppercase();
+
+        self.rules.is_path_whitelisted(path)
+            || upper.contains("\\WINDOWS\\SOFTWAREDISTRIBUTION\\")
+            || upper.contains("\\WINDOWS\\UUS\\PACKAGES\\")
+            || upper.contains("\\PROGRAMDATA\\MICROSOFT\\WINDOWS DEFENDER\\")
+            || upper.contains("\\PROGRAMDATA\\PACKAGE CACHE\\")
+            || upper.contains("\\WINDOWS\\WINSXS\\")
+            || upper.contains("\\WINDOWS\\SERVICING\\")
+            || upper.contains("\\APPDATA\\LOCAL\\TEMP\\SQUIRRELTEMP\\")
+    }
+
+    fn is_likely_benign_entry_context(&self, entry: &PrefetchEntry, path: Option<&str>) -> bool {
+        if entry.parsing_error {
+            return true;
+        }
+
+        if self.rules.is_executable_whitelisted(&entry.executable_name)
+            || self.rules.is_installer(&entry.executable_name)
+        {
+            return true;
+        }
+
+        if let Some(p) = path {
+            if self.is_likely_benign_path_context(p) || entry.is_vcredist_temp_path() {
+                return true;
+            }
+        }
+
+        false
+    }
+
     /// Check for malicious tool execution
     fn check_malicious_tools(&self, entry: &PrefetchEntry) -> Vec<Finding> {
         let mut findings = Vec::new();
@@ -128,10 +161,18 @@ impl Analyzer {
 
         for rule in &self.rules.lolbins {
             if rule.matches(&entry.executable_name) {
-                // Skip whitelisted system paths for low-severity LOLBins
+                // Suppress common benign LOLBin noise from known-good locations.
                 if let Some(path) = entry.get_executable_path() {
-                    if self.rules.is_path_whitelisted(&path) 
-                        && rule.get_severity() <= Severity::Medium {
+                    if self.is_likely_benign_entry_context(entry, Some(&path))
+                        && rule.get_severity() <= Severity::High
+                    {
+                        continue;
+                    }
+
+                    if self.rules.is_path_whitelisted(&path)
+                        && entry.run_count() > 3
+                        && rule.get_severity() <= Severity::Medium
+                    {
                         continue;
                     }
                 }
@@ -189,8 +230,21 @@ impl Analyzer {
         let mut findings = Vec::new();
 
         if let Some(exe_path) = entry.get_executable_path() {
+            if self.is_likely_benign_entry_context(entry, Some(&exe_path)) {
+                return findings;
+            }
+
             for rule in &self.rules.suspicious_paths {
                 if rule.matches(&exe_path) {
+                    // Suppress very broad matches that are frequently benign in enterprise systems.
+                    let upper = exe_path.to_uppercase();
+                    if upper.contains("\\PROGRAMDATA\\MICROSOFT\\")
+                        || upper.contains("\\WINDOWS\\SOFTWAREDISTRIBUTION\\")
+                        || upper.contains("\\WINDOWS\\UUS\\PACKAGES\\")
+                    {
+                        continue;
+                    }
+
                     let mut finding = Finding::new(
                         FindingCategory::SuspiciousPath,
                         rule.get_severity(),
@@ -250,6 +304,10 @@ impl Analyzer {
 
             for rule in &self.rules.suspicious_dlls {
                 if rule.matches(file) {
+                    if self.is_likely_benign_path_context(file) {
+                        continue;
+                    }
+
                     // Extract just the DLL filename for the description
                     let dll_name = std::path::Path::new(file.as_str())
                         .file_name()
@@ -337,6 +395,10 @@ impl Analyzer {
 
             // Check if executed from suspicious location
             if let Some(path) = entry.get_executable_path() {
+                if self.is_likely_benign_entry_context(entry, Some(&path)) {
+                    return findings;
+                }
+
                 let is_suspicious_path = self.rules.suspicious_paths.iter()
                     .any(|r| r.matches(&path));
 
@@ -443,7 +505,27 @@ impl Analyzer {
         }
 
         for (exe_name, hash_entries) in &exe_hashes {
-            if hash_entries.len() < 2 {
+            let unique_hash_count = hash_entries
+                .iter()
+                .map(|(h, _, _)| h)
+                .collect::<HashSet<_>>()
+                .len();
+
+            if unique_hash_count < 2 {
+                continue;
+            }
+
+            if self.rules.is_executable_whitelisted(exe_name) || self.rules.is_installer(exe_name) {
+                continue;
+            }
+
+            let suspicious_path_count = hash_entries
+                .iter()
+                .filter_map(|(_, _, p)| p.as_ref())
+                .filter(|p| !self.is_likely_benign_path_context(p))
+                .count();
+
+            if unique_hash_count < 3 && suspicious_path_count == 0 {
                 continue;
             }
 
@@ -468,13 +550,13 @@ impl Analyzer {
                  Each prefetch hash is derived from the full execution path — \
                  multiple hashes = multiple run directories. Paths: [{}]",
                 exe_name,
-                hash_entries.len(),
-                hash_entries.len(),
+                unique_hash_count,
+                unique_hash_count,
                 path_summary.join(" | ")
             );
 
-            let severity = if self.rules.is_executable_whitelisted(exe_name) {
-                Severity::Info
+            let severity = if suspicious_path_count > 0 {
+                Severity::High
             } else {
                 Severity::Medium
             };
@@ -501,6 +583,12 @@ impl Analyzer {
         let mut executions: Vec<(NaiveDateTime, &str)> = Vec::new();
         
         for entry in entries {
+            if self.rules.is_executable_whitelisted(&entry.executable_name)
+                || self.rules.is_installer(&entry.executable_name)
+            {
+                continue;
+            }
+
             for time in entry.get_run_times() {
                 executions.push((time, &entry.executable_name));
             }
@@ -509,9 +597,9 @@ impl Analyzer {
         // Sort by time
         executions.sort_by_key(|(time, _)| *time);
 
-        // Look for bursts of activity (5+ executions within 5 minutes)
+        // Look for bursts of suspicious activity (8+ executions within 5 minutes)
         let window_seconds = 300; // 5 minutes
-        let min_burst = 5;
+        let min_burst = 8;
 
         for i in 0..executions.len() {
             let start_time = executions[i].0;
@@ -526,6 +614,16 @@ impl Analyzer {
                         .iter()
                         .map(|(_, exe)| *exe)
                         .collect();
+
+                    let unique_exes = burst_exes
+                        .iter()
+                        .map(|e| e.to_uppercase())
+                        .collect::<HashSet<_>>()
+                        .len();
+
+                    if unique_exes < 4 {
+                        continue;
+                    }
 
                     let finding = Finding::new(
                         FindingCategory::TimelineAnomaly,

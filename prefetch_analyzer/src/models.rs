@@ -4,49 +4,89 @@
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// Represents a single prefetch entry from PECmd JSON output
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PrefetchEntry {
     /// Source prefetch file path
+    #[serde(rename = "SourceFilename")]
     pub filename: String,
 
+    #[serde(rename = "SourceCreated")]
+    pub source_created: String,
+
+    #[serde(rename = "SourceModified")]
+    pub source_modified: String,
+
+    #[serde(rename = "SourceAccessed")]
+    pub source_accessed: String,
+
     /// Name of the executed program
+    #[serde(rename = "ExecutableName")]
     pub executable_name: String,
 
-    /// Run times dictionary ("Run 1" -> timestamp)
-    #[serde(default)]
-    pub run_times: HashMap<String, String>,
+    #[serde(rename = "Hash")]
+    pub hash: String,
 
-    /// Number of files loaded
-    #[serde(default)]
-    pub num_files: u32,
+    #[serde(rename = "Size")]
+    pub size: String,
 
-    /// Files loaded dictionary ("File 1" -> path)
-    #[serde(default)]
-    pub files: HashMap<String, String>,
+    #[serde(rename = "RunCount")]
+    pub run_count_raw: String,
 
-    /// Number of volumes
-    #[serde(default)]
-    pub num_volumes: u32,
+    #[serde(rename = "LastRun")]
+    pub last_run_raw: String,
 
-    /// Volume information
-    #[serde(default)]
-    pub volume_information: HashMap<String, String>,
+    #[serde(rename = "Volume0Name")]
+    pub volume0_name: String,
+
+    #[serde(rename = "Volume0Serial")]
+    pub volume0_serial: String,
+
+    #[serde(rename = "Volume0Created")]
+    pub volume0_created: String,
+
+    #[serde(rename = "Directories")]
+    pub directories: String,
+
+    #[serde(rename = "FilesLoaded")]
+    pub files_loaded: String,
+
+    #[serde(rename = "ParsingError")]
+    pub parsing_error: bool,
+
+    /// Captures optional fields such as PreviousRun0..N from PECmd.
+    #[serde(flatten)]
+    pub extra: HashMap<String, Value>,
 }
 
 impl PrefetchEntry {
+    fn parse_dt(ts: &str) -> Option<NaiveDateTime> {
+        NaiveDateTime::parse_from_str(ts, "%Y-%m-%d %H:%M:%S")
+            .or_else(|_| NaiveDateTime::parse_from_str(ts, "%Y-%m-%d %H:%M:%S%.f"))
+            .ok()
+    }
+
     /// Get all run times as sorted DateTime values
     pub fn get_run_times(&self) -> Vec<NaiveDateTime> {
-        let mut times: Vec<NaiveDateTime> = self
-            .run_times
-            .values()
-            .filter_map(|ts| {
-                // Format: "2023-03-08 11:04:34.692143"
-                NaiveDateTime::parse_from_str(ts, "%Y-%m-%d %H:%M:%S%.f").ok()
-            })
-            .collect();
+        let mut times: Vec<NaiveDateTime> = Vec::new();
+
+        if let Some(ts) = Self::parse_dt(&self.last_run_raw) {
+            times.push(ts);
+        }
+
+        for (k, v) in &self.extra {
+            if k.starts_with("PreviousRun") {
+                if let Some(raw) = v.as_str() {
+                    if let Some(ts) = Self::parse_dt(raw) {
+                        times.push(ts);
+                    }
+                }
+            }
+        }
+
         times.sort();
         times
     }
@@ -63,25 +103,49 @@ impl PrefetchEntry {
 
     /// Get run count
     pub fn run_count(&self) -> usize {
-        self.run_times.len()
+        self.run_count_raw
+            .parse::<usize>()
+            .ok()
+            .filter(|v| *v > 0)
+            .unwrap_or_else(|| self.get_run_times().len())
     }
 
-    /// Get all loaded files as a sorted vector
+    /// Get all loaded files as an ordered vector.
     pub fn get_files(&self) -> Vec<&String> {
-        let mut files: Vec<(&String, &String)> = self.files.iter().collect();
-        files.sort_by_key(|(k, _)| {
-            k.replace("File ", "")
-                .parse::<u32>()
-                .unwrap_or(0)
-        });
-        files.into_iter().map(|(_, v)| v).collect()
+        // Kept for compatibility with existing report/analyzer calls.
+        // This returns references to internal temporary strings by leaking boxed
+        // strings, which is acceptable for one-shot CLI report generation.
+        self.files_loaded
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| Box::leak(Box::new(s.to_string())) as &String)
+            .collect()
     }
 
     /// Extract the executable path from files loaded (usually the 2nd entry)
     pub fn get_executable_path(&self) -> Option<String> {
-        for file in self.get_files() {
+        let files: Vec<String> = self
+            .files_loaded
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        let exe_base = self.executable_name.trim_end_matches('.').to_uppercase();
+
+        for file in &files {
             let upper = file.to_uppercase();
-            if upper.ends_with(&format!("\\{}", self.executable_name.to_uppercase())) {
+            let leaf = upper.rsplit('\\').next().unwrap_or(&upper);
+            if leaf == exe_base || leaf == format!("{}.EXE", exe_base) || leaf.starts_with(&exe_base) {
+                return Some(file.clone());
+            }
+        }
+
+        for file in &files {
+            let upper = file.to_uppercase();
+            if upper.ends_with(".EXE") {
                 return Some(file.clone());
             }
         }
@@ -90,6 +154,10 @@ impl PrefetchEntry {
     /// Extract the 8-character hex hash from the prefetch filename.
     /// e.g. "DWM.EXE-314E93C5.pf" → "314E93C5"
     pub fn extract_prefetch_hash(&self) -> Option<String> {
+        if self.hash.len() == 8 && self.hash.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Some(self.hash.to_uppercase());
+        }
+
         let basename = std::path::Path::new(&self.filename)
             .file_name()
             .and_then(|n| n.to_str())?;
@@ -416,9 +484,8 @@ mod tests {
 
     #[test]
     fn test_parse_run_time() {
-        let ts = "2023-03-08 11:04:34.692143";
-        let dt = NaiveDateTime::parse_from_str(ts, "%Y-%m-%d %H:%M:%S%.f");
-        assert!(dt.is_ok());
+        assert!(PrefetchEntry::parse_dt("2023-03-08 11:04:34").is_some());
+        assert!(PrefetchEntry::parse_dt("2023-03-08 11:04:34.692143").is_some());
     }
 
     #[test]

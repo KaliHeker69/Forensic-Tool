@@ -9,7 +9,16 @@ use std::path::Path;
 
 /// Generate a JSON report
 pub fn generate_json_report(report: &AnalysisReport) -> Result<String> {
-    Ok(serde_json::to_string_pretty(report)?)
+    let payload = serde_json::json!({
+        "generated_at": report.generated_at,
+        "total_entries": report.total_entries,
+        "unique_executables": report.unique_executables,
+        "date_range": report.date_range,
+        "summary": report.summary,
+        "findings": report.findings,
+        "entries": report.raw_entries,
+    });
+    Ok(serde_json::to_string_pretty(&payload)?)
 }
 
 /// Generate a Markdown report
@@ -166,7 +175,14 @@ fn format_finding_md(finding: &Finding) -> String {
 
 /// Generate HTML report with styled output (KaliHeker theme)
 pub fn generate_html_report(report: &AnalysisReport) -> String {
+    use std::collections::HashMap;
+
     let mut html = String::new();
+    let entry_by_filename: HashMap<&str, &PrefetchEntry> = report
+        .raw_entries
+        .iter()
+        .map(|e| (e.filename.as_str(), e))
+        .collect();
 
     html.push_str(r#"<!DOCTYPE html>
 <html lang="en">
@@ -442,6 +458,7 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
         </div>
         <div class="section-nav">
             <a href="#section-charts">📊 Analytics</a>
+            <a href="#section-ts-coverage">🕒 Timestamp Coverage</a>
             <a href="#section-findings">🚨 Findings</a>
             <a href="#section-all-findings">📋 All Findings</a>
             <a href="#section-entry-table">🗂️ Prefetch Entries</a>
@@ -452,6 +469,7 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
 
     // ── Visual Analytics Charts ────────────────────────────────────────────
     html.push_str(&generate_charts_html(&report.raw_entries, &report.findings));
+    html.push_str(&generate_timestamp_coverage_html(&report.raw_entries));
 
     // Critical & High Findings
     let critical_high: Vec<_> = report.findings.iter()
@@ -557,6 +575,19 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
             
             if finding.run_count > 0 {
                 html.push_str(&format!(r#"<div class="meta-tag">Run Count: <strong>{}</strong></div>"#, finding.run_count));
+            }
+
+            if let Some(last) = finding.last_run {
+                html.push_str(&format!(
+                    r#"<div class="meta-tag">Last Run: <strong>{}</strong></div>"#,
+                    last.format("%Y-%m-%d %H:%M:%S")
+                ));
+            }
+
+            if let Some(entry) = entry_by_filename.get(finding.source_file.as_str()) {
+                html.push_str(&format!(r#"<div class="meta-tag">Source Created: <strong>{}</strong></div>"#, html_escape(&entry.source_created)));
+                html.push_str(&format!(r#"<div class="meta-tag">Source Modified: <strong>{}</strong></div>"#, html_escape(&entry.source_modified)));
+                html.push_str(&format!(r#"<div class="meta-tag">Source Accessed: <strong>{}</strong></div>"#, html_escape(&entry.source_accessed)));
             }
             
             html.push_str(r#"</div>
@@ -669,6 +700,19 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
             if finding.run_count > 0 {
                 html.push_str(&format!(r#"<div class="meta-tag">Run Count: <strong>{}</strong></div>"#, finding.run_count));
             }
+
+            if let Some(last) = finding.last_run {
+                html.push_str(&format!(
+                    r#"<div class="meta-tag">Last Run: <strong>{}</strong></div>"#,
+                    last.format("%Y-%m-%d %H:%M:%S")
+                ));
+            }
+
+            if let Some(entry) = entry_by_filename.get(finding.source_file.as_str()) {
+                html.push_str(&format!(r#"<div class="meta-tag">Source Created: <strong>{}</strong></div>"#, html_escape(&entry.source_created)));
+                html.push_str(&format!(r#"<div class="meta-tag">Source Modified: <strong>{}</strong></div>"#, html_escape(&entry.source_modified)));
+                html.push_str(&format!(r#"<div class="meta-tag">Source Accessed: <strong>{}</strong></div>"#, html_escape(&entry.source_accessed)));
+            }
             html.push_str(r#"</div>
             </div>
         </div>
@@ -693,6 +737,8 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
                         <th>Severity</th>
                         <th>Executable</th>
                         <th>Category</th>
+                        <th>Last Run</th>
+                        <th>Source Accessed</th>
                         <th>Description</th>
                         <th>MITRE ATT&CK</th>
                     </tr>
@@ -716,12 +762,22 @@ pub fn generate_html_report(report: &AnalysisReport) -> String {
                         <td>{}</td>
                         <td>{}</td>
                         <td>{}</td>
+                        <td>{}</td>
+                        <td>{}</td>
                     </tr>
 "#,
             severity_class,
             finding.severity,
             finding.executable,
             finding.category,
+            finding
+                .last_run
+                .map(|t| t.format("%Y-%m-%d %H:%M:%S").to_string())
+                .unwrap_or_else(|| "-".to_string()),
+            entry_by_filename
+                .get(finding.source_file.as_str())
+                .map(|e| html_escape(&e.source_accessed))
+                .unwrap_or_else(|| "-".to_string()),
             truncate(&finding.description, 60),
             finding.mitre_attack.as_ref().map(|m| 
                 format!(r#"<a class="mitre-link" href="https://attack.mitre.org/techniques/{}" target="_blank">{}</a>"#, 
@@ -887,10 +943,9 @@ pub fn save_report<P: AsRef<Path>>(path: P, content: &str) -> Result<()> {
 /// Build the full charts section: HTML containers + embedded JSON data +
 /// pure-SVG/Canvas JavaScript renderers (no external dependencies).
 pub fn generate_charts_html(entries: &[PrefetchEntry], findings: &[crate::models::Finding]) -> String {
-    use std::collections::{HashMap, HashSet};
-    use crate::models::{Severity, FindingCategory};
+    use crate::models::Severity;
+    use std::collections::HashMap;
 
-    // ── Severity helper ──────────────────────────────────────────────────
     let sev_num = |s: &Severity| -> u8 {
         match s {
             Severity::Critical => 5,
@@ -901,934 +956,210 @@ pub fn generate_charts_html(entries: &[PrefetchEntry], findings: &[crate::models
         }
     };
 
-    // exe_name(upper) → max severity numeric across all findings
     let mut exe_sev: HashMap<String, u8> = HashMap::new();
     for f in findings {
         let n = sev_num(&f.severity);
         let e = exe_sev.entry(f.executable.to_uppercase()).or_insert(0);
-        if n > *e { *e = n; }
-    }
-
-    // ── Chart 1: Run-Count Histogram ─────────────────────────────────────
-    let (mut b1, mut b2, mut b6, mut b11): (Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<serde_json::Value>) =
-        (vec![], vec![], vec![], vec![]);
-
-    for entry in entries {
-        let runs = entry.run_count().max(1);
-        let sev = *exe_sev.get(&entry.executable_name.to_uppercase()).unwrap_or(&0);
-        let v = serde_json::json!({"n": entry.executable_name, "r": runs, "s": sev});
-        match runs {
-            1 => b1.push(v),
-            2..=5 => b2.push(v),
-            6..=10 => b6.push(v),
-            _ => b11.push(v),
+        if n > *e {
+            *e = n;
         }
     }
 
-    // ── Chart 2: Timeline events ─────────────────────────────────────────
+    let mut single = 0u64;
+    let mut low = 0u64;
+    let mut medium = 0u64;
+    let mut high = 0u64;
+    for e in entries {
+        match e.run_count() {
+            1 => single += 1,
+            2..=5 => low += 1,
+            6..=10 => medium += 1,
+            _ => high += 1,
+        }
+    }
+
+    let histogram = serde_json::json!([
+        {"bucket":"1 run","count":single},
+        {"bucket":"2-5 runs","count":low},
+        {"bucket":"6-10 runs","count":medium},
+        {"bucket":"11+ runs","count":high}
+    ]);
+
     let mut timeline: Vec<serde_json::Value> = Vec::new();
-    for entry in entries {
-        let sev = *exe_sev.get(&entry.executable_name.to_uppercase()).unwrap_or(&0);
-        let hash = entry.extract_prefetch_hash().unwrap_or_default();
-        for ts in entry.get_run_times() {
-            let ms = ts.and_utc().timestamp_millis();
+    for e in entries {
+        let s = *exe_sev.get(&e.executable_name.to_uppercase()).unwrap_or(&0);
+        for ts in e.get_run_times() {
             timeline.push(serde_json::json!({
-                "t": ms,
-                "ts": ts.format("%Y-%m-%d %H:%M:%S").to_string(),
-                "e": &entry.executable_name,
-                "s": sev,
-                "h": &hash,
+                "t": ts.and_utc().timestamp_millis(),
+                "label": ts.format("%Y-%m-%d %H:%M:%S").to_string(),
+                "exe": e.executable_name,
+                "sev": s,
             }));
         }
     }
     timeline.sort_by_key(|v| v["t"].as_i64().unwrap_or(0));
 
-    // ── Chart 3: Burst scatter (rolling 60-second unique-process window) ─
-    let raw_events: Vec<(i64, &str)> = timeline.iter()
-        .filter_map(|v| Some((v["t"].as_i64()?, v["e"].as_str()?)))
-        .collect();
-
-    let window_ms: i64 = 60_000;
-    let mut burst: Vec<serde_json::Value> = Vec::new();
-    for (i, &(t, _)) in raw_events.iter().enumerate() {
-        let w_start = t - window_ms;
-        let count = raw_events.iter()
-            .filter(|(ts, _)| *ts >= w_start && *ts <= t)
-            .map(|(_, e)| *e)
-            .collect::<HashSet<_>>()
-            .len();
-        let ts_str = timeline[i]["ts"].as_str().unwrap_or("").to_string();
-        burst.push(serde_json::json!({"t": t, "ts": ts_str, "c": count}));
+    let mut by_path: HashMap<String, (u64, u8)> = HashMap::new();
+    for e in entries {
+        let path = e
+            .get_executable_path()
+            .unwrap_or_else(|| format!("\\UNKNOWN\\{}", e.executable_name));
+        let sev = *exe_sev.get(&e.executable_name.to_uppercase()).unwrap_or(&0);
+        let slot = by_path.entry(path).or_insert((0, 0));
+        slot.0 += e.run_count() as u64;
+        if sev > slot.1 {
+            slot.1 = sev;
+        }
     }
 
-    // ── Chart 4: File-Path Treemap ────────────────────────────────────────
-    let susp_patterns = [
-        "\\TEMP\\", "\\PUBLIC\\", "\\DOWNLOADS\\", "\\APPDATA\\ROAMING\\",
-        "$RECYCLE", "\\PERFLOGS\\", "\\DEBUG\\", "\\MUSIC\\", "\\VIDEOS\\", "\\PICTURES\\",
-    ];
-
-    let mut dir_map: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
-    for entry in entries {
-        let exe_path = entry.get_executable_path()
-            .unwrap_or_else(|| format!("\\UNKNOWN\\{}", &entry.executable_name));
-        let up = exe_path.to_uppercase();
-
-        // Strip volume prefix, keep directory portion
-        let dir = if let Some(rb) = up.find('}') {
-            let after = &up[rb + 1..];
-            if let Some(sep) = after.rfind('\\') { after[..sep + 1].to_string() }
-            else { after.to_string() }
-        } else if let Some(sep) = up.rfind('\\') {
-            up[..sep + 1].to_string()
-        } else {
-            "\\UNKNOWN\\".to_string()
-        };
-
-        let sev = *exe_sev.get(&entry.executable_name.to_uppercase()).unwrap_or(&0);
-        let susp = susp_patterns.iter().any(|p| up.contains(p));
-        let runs = entry.run_count().max(1) as u64;
-
-        dir_map.entry(dir.clone()).or_default().push(serde_json::json!({
-            "n": &entry.executable_name, "r": runs, "s": sev, "p": exe_path, "susp": susp
-        }));
-    }
-
-    let mut treemap: Vec<serde_json::Value> = dir_map.into_iter().map(|(dir, children)| {
-        let tot: u64 = children.iter().filter_map(|c| c["r"].as_u64()).sum();
-        let max_s: u8 = children.iter().filter_map(|c| c["s"].as_u64().map(|v| v as u8)).max().unwrap_or(0);
-        let susp = susp_patterns.iter().any(|p| dir.to_uppercase().contains(p));
-        serde_json::json!({"n": dir, "r": tot, "s": max_s, "susp": susp, "c": children})
-    }).collect();
-    treemap.sort_by(|a, b| b["r"].as_u64().cmp(&a["r"].as_u64()));
-
-    // ── Chart 5: DLL Radial graphs ────────────────────────────────────────
-    let flagged_exes: HashSet<String> = findings.iter()
-        .filter(|f| f.severity >= Severity::High
-            || matches!(f.category, FindingCategory::SuspiciousDll))
-        .map(|f| f.executable.to_uppercase())
+    let mut top_paths: Vec<serde_json::Value> = by_path
+        .into_iter()
+        .map(|(path, (runs, sev))| serde_json::json!({"path": path, "runs": runs, "sev": sev}))
         .collect();
+    top_paths.sort_by(|a, b| b["runs"].as_u64().cmp(&a["runs"].as_u64()));
+    top_paths.truncate(12);
 
-    let susp_dll_paths: HashSet<String> = findings.iter()
-        .filter(|f| matches!(f.category, FindingCategory::SuspiciousDll))
-        .filter_map(|f| f.path.as_ref().map(|p| p.to_uppercase()))
-        .collect();
-
-    let sys_prefixes = ["\\WINDOWS\\SYSTEM32\\", "\\WINDOWS\\SYSWOW64\\",
-                        "\\WINDOWS\\WINSXS\\", "\\WINDOWS\\MICROSOFT.NET\\"];
-
-    let dll_graphs: Vec<serde_json::Value> = entries.iter()
-        .filter(|e| flagged_exes.contains(&e.executable_name.to_uppercase()))
-        .map(|entry| {
-            let sev = *exe_sev.get(&entry.executable_name.to_uppercase()).unwrap_or(&0);
-            let dlls: Vec<serde_json::Value> = entry.get_files().iter()
-                .filter(|f| { let u = f.to_uppercase(); u.ends_with(".DLL") || u.ends_with(".SYS") })
-                .take(60)
-                .map(|f| {
-                    let u = f.to_uppercase();
-                    let is_sys = sys_prefixes.iter().any(|p| u.contains(p));
-                    let is_susp = susp_dll_paths.iter().any(|p| u == *p);
-                    let name = std::path::Path::new(f.as_str())
-                        .file_name().and_then(|n| n.to_str()).unwrap_or(f.as_str()).to_string();
-                    serde_json::json!({"n": name, "p": f, "sys": is_sys, "susp": is_susp})
-                })
-                .collect();
-            serde_json::json!({"exe": &entry.executable_name, "sev": sev, "dlls": dlls})
-        })
-        .collect();
-
-    // ── Serialize all chart data to JSON ─────────────────────────────────
-    let chart_json = serde_json::to_string(&serde_json::json!({
-        "hist": {"b1": b1, "b2": b2, "b6": b6, "b11": b11},
+    let chart_data = serde_json::json!({
+        "histogram": histogram,
         "timeline": timeline,
-        "burst": burst,
-        "treemap": treemap,
-        "dlls": dll_graphs,
-    })).unwrap_or_default();
+        "topPaths": top_paths,
+    });
 
-    // ── Assemble HTML ─────────────────────────────────────────────────────
+    let chart_json = serde_json::to_string(&chart_data).unwrap_or_else(|_| "{}".to_string());
+
     let mut html = String::new();
-
-    // Section header
-    html.push_str(r#"
+    html.push_str(
+        r#"
         <div class="category-header" id="section-charts" style="border-left-color: #58a6ff;">
             <span class="icon"></span>
-            <h3>📊 Visual Analytics</h3>
-            <span class="category-count">5 interactive charts</span>
+            <h3>📊 Visual Analytics (D3.js)</h3>
+            <span class="category-count">3 D3 charts</span>
         </div>
         <div class="charts-outer">
-"#);
-
-    // Embed data as JSON
-    html.push_str("<script>\nconst CHART_DATA = ");
+            <div class="charts-row-2">
+                <div class="chart-card">
+                    <div class="chart-title">Run Count Distribution</div>
+                    <div class="chart-sub">Executables grouped by execution frequency</div>
+                    <div id="d3-hist"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Top Execution Paths</div>
+                    <div class="chart-sub">Most active execution paths by run count</div>
+                    <div id="d3-paths"></div>
+                </div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Execution Timeline</div>
+                <div class="chart-sub">Time-distributed execution points colored by severity</div>
+                <div id="d3-timeline"></div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+        <script>
+        (function() {
+            const data = "#,
+    );
     html.push_str(&chart_json);
-    html.push_str(";\n</script>\n");
-
-    // Chart containers
-    html.push_str(r#"
-        <!-- Row 1: Histogram + Burst -->
-        <div class="charts-row-2">
-            <div class="chart-card" id="c-hist">
-                <div class="chart-title">Run Count Distribution</div>
-                <div class="chart-sub">Executables bucketed by total run count — single-execution binaries (leftmost) are strongest indicators</div>
-                <canvas id="canvas-hist" class="chart-canvas" height="280"></canvas>
-                <div id="hist-tooltip" class="chart-tooltip"></div>
-            </div>
-            <div class="chart-card" id="c-burst">
-                <div class="chart-title">Execution Burst Scatter</div>
-                <div class="chart-sub">Unique processes in rolling 60-second window — spikes indicate scripted attack waves</div>
-                <canvas id="canvas-burst" class="chart-canvas" height="280"></canvas>
-                <div id="burst-tooltip" class="chart-tooltip"></div>
-            </div>
-        </div>
-
-        <!-- Row 2: Execution Timeline (full width) -->
-        <div class="chart-card" id="c-timeline">
-            <div class="chart-title">Execution Timeline</div>
-            <div class="chart-sub">Every execution event plotted in time — color-coded by severity · scroll horizontally · hover for details</div>
-            <canvas id="canvas-timeline" class="chart-canvas" height="340"></canvas>
-            <div id="timeline-tooltip" class="chart-tooltip"></div>
-        </div>
-
-        <!-- Row 3: File Path Treemap (full width) -->
-        <div class="chart-card" id="c-treemap">
-            <div class="chart-title">File Path Treemap</div>
-            <div class="chart-sub">Execution directories sized by total run count — orange/red boxes indicate suspicious paths · hover for details</div>
-            <canvas id="canvas-treemap" class="chart-canvas" height="420"></canvas>
-            <div id="treemap-tooltip" class="chart-tooltip"></div>
-        </div>
-
-        <!-- Row 4: DLL Radial graphs -->
-        <div class="chart-card" id="c-dll">
-            <div class="chart-title">DLL Load Graph — Flagged Executables</div>
-            <div class="chart-sub">Radial spoke layout · grey = system DLL · red = suspicious · yellow = non-system · hover node for full path</div>
-            <div id="dll-radial-container" class="dll-radial-wrap"></div>
-        </div>
-        </div>
-"#);
-
-    // The chart rendering JavaScript (no format placeholders — pure static JS)
-    html.push_str(r#"
-<script>
-(function() {
-'use strict';
-
-// ─── Palette ────────────────────────────────────────────────────────────────
-const SEV_COLOR  = ['#58a6ff','#56d364','#d29922','#fd8c00','#da3633','#ff0062'];
-const SEV_LABEL  = ['none','INFO','LOW','MEDIUM','HIGH','CRITICAL'];
-const C = {
-    bg:   '#0d1117', bg2: '#161b22', bg3: '#1f2428',
-    bdr:  '#30363d', txt: '#c9d1d9', dim: '#8b949e',
-    acc:  '#2ea043', red: '#da3633', ora: '#fd8c00',
-    yel:  '#d29922', blu: '#58a6ff', grn: '#56d364',
-    susp: '#fd8c00',
-};
-
-function sevColor(s) { return SEV_COLOR[Math.min(s, 5)] || C.blu; }
-function px(v) { return Math.round(v); }
-
-// ─── DPI-aware canvas setup ──────────────────────────────────────────────────
-function setupCanvas(id) {
-    const cv = document.getElementById(id);
-    if (!cv) return null;
-    const dpr = window.devicePixelRatio || 1;
-    const card = cv.parentElement;
-    const w    = card.clientWidth - 32;
-    const h    = parseInt(cv.getAttribute('height')) || 280;
-    cv.width  = w * dpr;
-    cv.height = h * dpr;
-    cv.style.width  = w + 'px';
-    cv.style.height = h + 'px';
-    const ctx = cv.getContext('2d');
-    ctx.scale(dpr, dpr);
-    return {cv, ctx, w, h, dpr};
-}
-
-// ─── Tooltip helper ─────────────────────────────────────────────────────────
-function showTip(tipEl, cv, x, y, html) {
-    const r = cv.getBoundingClientRect();
-    tipEl.innerHTML = html;
-    tipEl.style.display = 'block';
-    tipEl.style.left = (x + 12) + 'px';
-    tipEl.style.top  = (y + 12) + 'px';
-}
-function hideTip(tipEl) { tipEl.style.display = 'none'; }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART 1 — Run Count Histogram
-// ─────────────────────────────────────────────────────────────────────────────
-function renderHistogram() {
-    const S = setupCanvas('canvas-hist');
-    if (!S) return;
-    const {cv, ctx, w, h} = S;
-    const tip = document.getElementById('hist-tooltip');
-
-    const buckets = [
-        { label:'1× (Single)', key:'b1', items: CHART_DATA.hist.b1 },
-        { label:'2–5×',        key:'b2', items: CHART_DATA.hist.b2 },
-        { label:'6–10×',       key:'b6', items: CHART_DATA.hist.b6 },
-        { label:'11× +',       key:'b11',items: CHART_DATA.hist.b11 },
-    ];
-
-    const PAD = {t:20, r:20, b:52, l:50};
-    const cw = w - PAD.l - PAD.r;
-    const ch = h - PAD.t - PAD.b;
-    const maxLen = Math.max(...buckets.map(b => b.items.length), 1);
-
-    // Background
-    ctx.fillStyle = C.bg2;
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid lines + Y labels
-    ctx.strokeStyle = C.bdr;
-    ctx.lineWidth = 1;
-    ctx.fillStyle = C.dim;
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'right';
-    const ySteps = 5;
-    for (let i = 0; i <= ySteps; i++) {
-        const val = Math.round(maxLen * i / ySteps);
-        const yy  = PAD.t + ch - (i / ySteps) * ch;
-        ctx.fillText(val, PAD.l - 6, yy + 4);
-        ctx.beginPath(); ctx.moveTo(PAD.l, yy); ctx.lineTo(PAD.l + cw, yy);
-        ctx.stroke();
-    }
-
-    // Bars
-    const barW = (cw / buckets.length) * 0.65;
-    const gap  = cw / buckets.length;
-    const hitAreas = [];
-
-    buckets.forEach((b, i) => {
-        const maxSev = b.items.reduce((m, item) => Math.max(m, item.s || 0), 0);
-        const color  = maxSev > 0 ? sevColor(maxSev) : C.acc;
-        const bh     = (b.items.length / maxLen) * ch;
-        const bx     = PAD.l + i * gap + (gap - barW) / 2;
-        const by     = PAD.t + ch - bh;
-
-        // Bar body
-        ctx.fillStyle = color + '33';
-        ctx.fillRect(px(bx), px(by), px(barW), px(bh));
-        ctx.fillStyle = color;
-        ctx.fillRect(px(bx), px(by), px(barW), 3);
-
-        // Count label
-        ctx.fillStyle = C.txt;
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(b.items.length, px(bx + barW / 2), px(by - 6));
-
-        // Bucket label
-        ctx.fillStyle = C.dim;
-        ctx.font = '11px sans-serif';
-        ctx.fillText(b.label, px(bx + barW / 2), h - PAD.b + 18);
-
-        // Suspicious count label
-        const suspCount = b.items.filter(x => x.s >= 3).length;
-        if (suspCount > 0) {
-            ctx.fillStyle = C.red;
-            ctx.font = '10px sans-serif';
-            ctx.fillText(`${suspCount} flagged`, px(bx + barW / 2), h - PAD.b + 32);
-        }
-
-        hitAreas.push({x: bx, y: by, w: barW, h: bh, bucket: b});
-    });
-
-    // Axis label
-    ctx.fillStyle = C.dim;
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.save(); ctx.translate(12, PAD.t + ch / 2); ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center'; ctx.fillText('# of executables', 0, 0); ctx.restore();
-
-    // Interaction
-    cv.onmousemove = function(e) {
-        const r = cv.getBoundingClientRect();
-        const mx = e.clientX - r.left, my = e.clientY - r.top;
-        let hit = null;
-        for (const h of hitAreas) {
-            if (mx >= h.x && mx <= h.x + h.w && my >= h.y && my <= h.y + h.h) { hit = h; break; }
-        }
-        if (hit) {
-            const topN = hit.bucket.items
-                .sort((a,b) => (b.s||0) - (a.s||0))
-                .slice(0, 12)
-                .map(x => `<div style="color:${sevColor(x.s||0)}">${x.n} (${x.r}×)</div>`)
-                .join('');
-            showTip(tip, cv, mx, my,
-                `<strong>${hit.bucket.label}</strong> — ${hit.bucket.items.length} executables<br>${topN}` +
-                (hit.bucket.items.length > 12 ? `<div style="color:${C.dim}">…and ${hit.bucket.items.length-12} more</div>` : ''));
-        } else { hideTip(tip); }
-    };
-    cv.onmouseleave = () => hideTip(tip);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART 2 — Execution Timeline (dot-per-event, per-exe lanes)
-// ─────────────────────────────────────────────────────────────────────────────
-function renderTimeline() {
-    const S = setupCanvas('canvas-timeline');
-    if (!S) return;
-    const {cv, ctx, w, h} = S;
-    const tip = document.getElementById('timeline-tooltip');
-
-    const events = CHART_DATA.timeline;
-    if (!events || events.length === 0) { drawEmpty(ctx, w, h, 'No execution events'); return; }
-
-    // Build sorted unique exe list (by first occurrence)
-    const exeOrder = [];
-    const exeSeen = new Set();
-    events.forEach(ev => { if (!exeSeen.has(ev.e)) { exeSeen.add(ev.e); exeOrder.push(ev.e); } });
-
-    const exeIdx = {};
-    exeOrder.forEach((e, i) => { exeIdx[e] = i; });
-
-    const nExe = exeOrder.length;
-    const tMin = events[0].t;
-    const tMax = events[events.length - 1].t || tMin + 1;
-    const tRange = tMax - tMin || 1;
-
-    const PAD = {t:10, r:20, b:38, l:8};
-    const laneH = Math.max(3, Math.min(14, (h - PAD.t - PAD.b) / nExe));
-    const chartH = nExe * laneH;
-    const cvH = chartH + PAD.t + PAD.b;
-
-    // Resize canvas to fit all lanes
-    const dpr = window.devicePixelRatio || 1;
-    cv.width  = (w) * dpr;
-    cv.height = cvH * dpr;
-    cv.style.width  = w + 'px';
-    cv.style.height = cvH + 'px';
-    ctx.scale(dpr, dpr);
-
-    // Background
-    ctx.fillStyle = C.bg2;
-    ctx.fillRect(0, 0, w, cvH);
-
-    // Alternating lane backgrounds
-    exeOrder.forEach((_, i) => {
-        const ly = PAD.t + i * laneH;
-        ctx.fillStyle = i % 2 === 0 ? '#ffffff08' : '#00000000';
-        ctx.fillRect(0, ly, w, laneH);
-    });
-
-    // Time axis ticks
-    const tickCount = Math.min(8, Math.floor(w / 90));
-    ctx.strokeStyle = C.bdr; ctx.lineWidth = 1; ctx.fillStyle = C.dim; ctx.font = '10px sans-serif';
-    ctx.textAlign = 'center';
-    for (let i = 0; i <= tickCount; i++) {
-        const t = tMin + (tRange * i / tickCount);
-        const x = PAD.l + ((t - tMin) / tRange) * (w - PAD.l - PAD.r);
-        ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, PAD.t + chartH); ctx.stroke();
-        const d = new Date(t);
-        const label = d.toISOString().replace('T', ' ').slice(0, 16);
-        ctx.fillText(label, x, cvH - 8);
-    }
-
-    // Dot radius
-    const R = Math.max(2, Math.min(4, laneH * 0.35));
-
-    // Plot dots
-    const hitDots = [];
-    events.forEach(ev => {
-        const x = PAD.l + ((ev.t - tMin) / tRange) * (w - PAD.l - PAD.r);
-        const y = PAD.t + exeIdx[ev.e] * laneH + laneH / 2;
-        const col = ev.s > 0 ? sevColor(ev.s) : C.acc;
-        ctx.beginPath();
-        ctx.arc(px(x), px(y), R, 0, Math.PI * 2);
-        ctx.fillStyle = col + 'cc';
-        ctx.fill();
-        hitDots.push({x, y, ev, R: R + 4});
-    });
-
-    cv.onmousemove = function(e) {
-        const r = cv.getBoundingClientRect();
-        const mx = e.clientX - r.left, my = e.clientY - r.top;
-        let best = null, bestD = 99999;
-        for (const d of hitDots) {
-            const dist = Math.hypot(mx - d.x, my - d.y);
-            if (dist < d.R && dist < bestD) { bestD = dist; best = d; }
-        }
-        if (best) {
-            const col = sevColor(best.ev.s);
-            showTip(tip, cv, mx, my,
-                `<strong style="color:${col}">${best.ev.e}</strong><br>` +
-                `${best.ev.ts}<br>` +
-                (best.ev.s > 0 ? `<span style="color:${col}">${SEV_LABEL[best.ev.s]}</span><br>` : '') +
-                `Hash: <code>${best.ev.h}</code>`);
-        } else { hideTip(tip); }
-    };
-    cv.onmouseleave = () => hideTip(tip);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART 3 — Execution Burst area chart
-// ─────────────────────────────────────────────────────────────────────────────
-function renderBurst() {
-    const S = setupCanvas('canvas-burst');
-    if (!S) return;
-    const {cv, ctx, w, h} = S;
-    const tip = document.getElementById('burst-tooltip');
-
-    const pts = CHART_DATA.burst;
-    if (!pts || pts.length < 2) { drawEmpty(ctx, w, h, 'Insufficient data'); return; }
-
-    const PAD = {t:20, r:20, b:50, l:46};
-    const cw = w - PAD.l - PAD.r;
-    const ch = h - PAD.t - PAD.b;
-
-    const tMin  = pts[0].t;
-    const tMax  = pts[pts.length-1].t || tMin + 1;
-    const tRng  = tMax - tMin || 1;
-    const maxC  = Math.max(...pts.map(p => p.c), 1);
-    const ALERT = 5; // burst threshold
-
-    ctx.fillStyle = C.bg2; ctx.fillRect(0, 0, w, h);
-
-    // Grid + Y labels
-    const ySteps = 5;
-    ctx.strokeStyle = C.bdr; ctx.lineWidth = 1;
-    ctx.fillStyle = C.dim; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-    for (let i = 0; i <= ySteps; i++) {
-        const val = Math.round(maxC * i / ySteps);
-        const yy  = PAD.t + ch - (i / ySteps) * ch;
-        ctx.fillText(val, PAD.l - 6, yy + 4);
-        ctx.beginPath(); ctx.moveTo(PAD.l, yy); ctx.lineTo(PAD.l + cw, yy); ctx.stroke();
-    }
-
-    // Alert threshold line
-    if (ALERT <= maxC) {
-        const yAlert = PAD.t + ch - (ALERT / maxC) * ch;
-        ctx.strokeStyle = C.red + '88'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
-        ctx.beginPath(); ctx.moveTo(PAD.l, yAlert); ctx.lineTo(PAD.l + cw, yAlert); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = C.red; ctx.font = '10px sans-serif'; ctx.textAlign = 'left';
-        ctx.fillText('alert threshold (5)', PAD.l + 4, yAlert - 3);
-    }
-
-    // X ticks
-    const tickN = Math.min(6, Math.floor(cw / 80));
-    ctx.fillStyle = C.dim; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-    for (let i = 0; i <= tickN; i++) {
-        const t = tMin + (tRng * i / tickN);
-        const x = PAD.l + ((t - tMin) / tRng) * cw;
-        const d = new Date(t);
-        const lb = d.toISOString().slice(0, 16).replace('T', '\n');
-        lb.split('\n').forEach((line, li) => ctx.fillText(line, x, h - PAD.b + 14 + li * 12));
-    }
-
-    // Compute polygon points
-    const pxPts = pts.map(p => ({
-        x: PAD.l + ((p.t - tMin) / tRng) * cw,
-        y: PAD.t + ch - (p.c / maxC) * ch,
-        p,
-    }));
-
-    // Area fill — split into alert (above threshold) / normal
-    const alertY = ALERT > maxC ? PAD.t : (PAD.t + ch - (ALERT / maxC) * ch);
-
-    // Normal area (below alert)
-    ctx.beginPath();
-    ctx.moveTo(pxPts[0].x, PAD.t + ch);
-    pxPts.forEach(({x, y}) => ctx.lineTo(x, y));
-    ctx.lineTo(pxPts[pxPts.length-1].x, PAD.t + ch);
-    ctx.closePath();
-    ctx.fillStyle = C.blu + '22';
-    ctx.fill();
-
-    // Alert area (above threshold)
-    ctx.beginPath();
-    pxPts.forEach(({x, y}, i) => {
-        const clippedY = Math.min(y, alertY);
-        if (i === 0) ctx.moveTo(x, PAD.t + ch);
-        ctx.lineTo(x, clippedY);
-    });
-    ctx.lineTo(pxPts[pxPts.length-1].x, PAD.t + ch);
-    ctx.closePath();
-    ctx.fillStyle = C.red + '22';
-    ctx.fill();
-
-    // Line on top
-    ctx.beginPath();
-    pxPts.forEach(({x, y}, i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
-    ctx.strokeStyle = C.blu; ctx.lineWidth = 2; ctx.stroke();
-
-    // Dots at burst peaks
-    pxPts.forEach(({x, y, p}) => {
-        if (p.c >= ALERT) {
-            ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI*2);
-            ctx.fillStyle = C.red; ctx.fill();
-        }
-    });
-
-    // Interaction
-    cv.onmousemove = function(e) {
-        const r  = cv.getBoundingClientRect();
-        const mx = e.clientX - r.left;
-        // Find nearest point
-        let best = pxPts[0], bestD = Infinity;
-        pxPts.forEach(p => { const d = Math.abs(p.x - mx); if (d < bestD) { bestD = d; best = p; } });
-        if (bestD < 30) {
-            const col = best.p.c >= ALERT ? C.red : C.blu;
-            showTip(tip, cv, mx, best.y,
-                `<span style="color:${col}"><strong>${best.p.c} unique processes</strong></span><br>${best.p.ts}<br>` +
-                (best.p.c >= ALERT ? `<span style="color:${C.red}">⚠ Burst detected</span>` : ''));
-        } else { hideTip(tip); }
-    };
-    cv.onmouseleave = () => hideTip(tip);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART 4 — File Path Treemap
-// ─────────────────────────────────────────────────────────────────────────────
-function renderTreemap() {
-    const S = setupCanvas('canvas-treemap');
-    if (!S) return;
-    const {cv, ctx, w, h} = S;
-    const tip = document.getElementById('treemap-tooltip');
-
-    const nodes = CHART_DATA.treemap;
-    if (!nodes || nodes.length === 0) { drawEmpty(ctx, w, h, 'No data'); return; }
-
-    ctx.fillStyle = C.bg2; ctx.fillRect(0, 0, w, h);
-
-    const PAD = {t:4, r:4, b:4, l:4};
-    const cw = w - PAD.l - PAD.r;
-    const ch = h - PAD.t - PAD.b;
-
-    const totalRuns = nodes.reduce((s, n) => s + (n.r || 0), 0) || 1;
-
-    // Simple slice-and-dice treemap layout
-    function layout(items, x, y, bw, bh) {
-        const total = items.reduce((s, n) => s + (n.r || 0), 0) || 1;
-        const boxes = [];
-        let cx = x, cy = y;
-        const horizontal = bw >= bh;
-        items.forEach(item => {
-            const frac = (item.r || 0) / total;
-            let rx, ry, rw, rh;
-            if (horizontal) {
-                rw = frac * bw;
-                rh = bh;
-                rx = cx; ry = cy;
-                cx += rw;
-            } else {
-                rw = bw;
-                rh = frac * bh;
-                rx = cx; ry = cy;
-                cy += rh;
-            }
-            boxes.push({item, rx, ry, rw, rh});
-        });
-        return boxes;
-    }
-
-    const boxes = layout(nodes, PAD.l, PAD.t, cw, ch);
-
-    boxes.forEach(({item, rx, ry, rw, rh}) => {
-        if (rw < 2 || rh < 2) return;
-
-        const isSupp = item.susp;
-        const fillC  = isSupp ? (item.s >= 4 ? C.red : C.susp) :
-                        item.s >= 4 ? C.red + '66' :
-                        item.s >= 3 ? C.yel + '44' :
-                        C.acc + '22';
-        const brdC   = isSupp ? (item.s >= 4 ? C.red : C.susp) :
-                        item.s >= 3 ? C.yel :
-                        C.bdr;
-
-        ctx.fillStyle = fillC;
-        ctx.fillRect(px(rx)+1, px(ry)+1, px(rw)-2, px(rh)-2);
-        ctx.strokeStyle = brdC;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(px(rx)+1, px(ry)+1, px(rw)-2, px(rh)-2);
-
-        // Label if big enough
-        if (rw > 60 && rh > 20) {
-            ctx.fillStyle = isSupp ? '#fff' : C.txt;
-            ctx.font = rh > 40 ? 'bold 11px sans-serif' : '10px sans-serif';
-            ctx.textAlign = 'left';
-            // Extract last meaningful dir segment
-            const parts = item.n.split('\\').filter(Boolean);
-            const label = parts.slice(-2).join('\\') || item.n;
-            const maxChars = Math.floor(rw / 6.5);
-            const t = label.length > maxChars ? label.slice(0, maxChars - 2) + '…' : label;
-            ctx.fillText(t, px(rx)+5, px(ry)+14);
-            if (rh > 32) {
-                ctx.fillStyle = C.dim;
-                ctx.font = '10px sans-serif';
-                ctx.fillText(`${item.r} runs · ${(item.c||[]).length} exes`, px(rx)+5, px(ry)+26);
-            }
-        }
-    });
-
-    // Legend
-    const legendItems = [
-        [C.acc + '22', C.bdr, 'Normal system path'],
-        [C.yel + '44', C.yel, 'Medium/flagged (system path)'],
-        [C.susp, C.susp, 'Suspicious path'],
-        [C.red, C.red, 'Critical/High suspicious'],
-    ];
-    let lx = PAD.l + 4;
-    const ly = h - 2;
-    ctx.font = '10px sans-serif';
-    legendItems.forEach(([fill, brd, label]) => {
-        ctx.fillStyle = fill; ctx.strokeStyle = brd; ctx.lineWidth = 1;
-        ctx.fillRect(lx, ly - 10, 14, 10); ctx.strokeRect(lx, ly - 10, 14, 10);
-        ctx.fillStyle = C.dim; ctx.textAlign = 'left';
-        ctx.fillText(label, lx + 18, ly - 1);
-        lx += ctx.measureText(label).width + 40;
-    });
-
-    // Interaction
-    cv.onmousemove = function(e) {
-        const r  = cv.getBoundingClientRect();
-        const mx = e.clientX - r.left, my = e.clientY - r.top;
-        for (const {item, rx, ry, rw, rh} of boxes) {
-            if (mx >= rx && mx <= rx + rw && my >= ry && my <= ry + rh) {
-                const topExes = (item.c || [])
-                    .sort((a, b) => (b.r || 0) - (a.r || 0))
-                    .slice(0, 8)
-                    .map(x => `<div><span style="color:${sevColor(x.s||0)}">${x.n}</span> — ${x.r}× </div>`)
-                    .join('');
-                showTip(tip, cv, mx, my,
-                    `<strong>${item.n}</strong><br>${item.r} total runs · ${(item.c||[]).length} executables` +
-                    (item.susp ? `<br><span style="color:${C.susp}">⚠ Suspicious path</span>` : '') +
-                    (topExes ? '<hr>' + topExes : ''));
-                return;
-            }
-        }
-        hideTip(tip);
-    };
-    cv.onmouseleave = () => hideTip(tip);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHART 5 — DLL Radial graphs
-// ─────────────────────────────────────────────────────────────────────────────
-function renderDllRadial() {
-    const container = document.getElementById('dll-radial-container');
-    if (!container) return;
-    const graphs = CHART_DATA.dlls;
-
-    if (!graphs || graphs.length === 0) {
-        container.innerHTML = '<div style="color:#8b949e;padding:20px;text-align:center;">No flagged executables with DLL data found.</div>';
-        return;
-    }
-
-    graphs.forEach(graph => {
-        const wrap = document.createElement('div');
-        wrap.className = 'dll-svg-wrap';
-
-        const title = document.createElement('div');
-        title.className = 'dll-title';
-        title.style.color = sevColor(graph.sev || 0);
-        title.textContent = graph.exe;
-        wrap.appendChild(title);
-
-        const SVG_W = 380, SVG_H = 380;
-        const cx = SVG_W / 2, cy = SVG_H / 2;
-        const R_center = 32, R_dll = 11;
-        const R_inner = 60, R_outer = 155;
-
-        const dlls = graph.dlls || [];
-        const sysDlls  = dlls.filter(d => d.sys && !d.susp);
-        const suspDlls = dlls.filter(d => d.susp);
-        const otherDlls = dlls.filter(d => !d.sys && !d.susp);
-
-        // Build display sets: non-system first, suspicious highlighted
-        const displayOrder = [...suspDlls, ...otherDlls, ...sysDlls].slice(0, 52);
-        const nDlls = displayOrder.length;
-
-        const ns = 'http://www.w3.org/2000/svg';
-        const svg = document.createElementNS(ns, 'svg');
-        svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
-        svg.setAttribute('width', SVG_W);
-        svg.setAttribute('height', SVG_H);
-        svg.style.background = C.bg2;
-        svg.style.borderRadius = '6px';
-        svg.style.border = `1px solid ${C.bdr}`;
-
-        // Defs: glow filters
-        const defs = document.createElementNS(ns, 'defs');
-        const filter = document.createElementNS(ns, 'filter');
-        filter.id = 'glow-' + graph.exe.replace(/\W/g,'');
-        const feBlur = document.createElementNS(ns, 'feGaussianBlur');
-        feBlur.setAttribute('stdDeviation', '2'); feBlur.setAttribute('result', 'blur');
-        const feMerge = document.createElementNS(ns, 'feMerge');
-        [document.createElementNS(ns, 'feMergeNode'), document.createElementNS(ns, 'feMergeNode')]
-            .forEach((n, i) => { if (i===1) n.setAttribute('in', 'SourceGraphic'); feMerge.appendChild(n); });
-        filter.appendChild(feBlur); filter.appendChild(feMerge);
-        defs.appendChild(filter);
-        svg.appendChild(defs);
-
-        // Concentric ring decorations
-        [R_inner - 10, R_outer + 18].forEach(r => {
-            const circle = document.createElementNS(ns, 'circle');
-            circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
-            circle.setAttribute('r', r);
-            circle.setAttribute('fill', 'none');
-            circle.setAttribute('stroke', C.bdr);
-            circle.setAttribute('stroke-width', '1');
-            svg.appendChild(circle);
-        });
-
-        // DLL spokes
-        const tooltip = document.createElement('div');
-        tooltip.className = 'chart-tooltip';
-        tooltip.style.position = 'fixed';
-        document.body.appendChild(tooltip);
-
-        displayOrder.forEach((dll, i) => {
-            const angle = (i / nDlls) * 2 * Math.PI - Math.PI / 2;
-            // Use two rings: inner for non-sys, outer for sys
-            const ringR = dll.sys && !dll.susp ? R_outer : R_inner + (R_outer - R_inner) * 0.4;
-
-            const nx = cx + ringR * Math.cos(angle);
-            const ny = cy + ringR * Math.sin(angle);
-
-            const color = dll.susp ? C.red : dll.sys ? C.dim : '#eac54f';
-
-            // Spoke line
-            const line = document.createElementNS(ns, 'line');
-            line.setAttribute('x1', cx); line.setAttribute('y1', cy);
-            line.setAttribute('x2', nx); line.setAttribute('y2', ny);
-            line.setAttribute('stroke', color + '55'); line.setAttribute('stroke-width', '1');
-            svg.appendChild(line);
-
-            // DLL node circle
-            const circle = document.createElementNS(ns, 'circle');
-            circle.setAttribute('cx', nx); circle.setAttribute('cy', ny);
-            circle.setAttribute('r', dll.susp ? R_dll + 3 : R_dll);
-            circle.setAttribute('fill', color + (dll.susp ? 'cc' : '44'));
-            circle.setAttribute('stroke', color);
-            circle.setAttribute('stroke-width', dll.susp ? '2' : '1');
-            circle.style.cursor = 'pointer';
-            if (dll.susp) circle.setAttribute('filter', `url(#glow-${graph.exe.replace(/\W/g,'')})`);
-
-            // DLL label (only for non-system / suspicious)
-            if (!dll.sys || dll.susp) {
-                const text = document.createElementNS(ns, 'text');
-                const shortName = dll.n.replace(/(\.DLL|\.SYS)$/i, '').slice(0, 12);
-                const textAngle = (angle * 180 / Math.PI) + 90;
-                text.setAttribute('x', nx); text.setAttribute('y', ny - R_dll - 3);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('font-size', '8');
-                text.setAttribute('fill', color);
-                text.setAttribute('transform', `rotate(${textAngle},${nx},${ny})`);
-                text.textContent = shortName;
-                svg.appendChild(text);
+    html.push_str(
+        r#";
+            if (!window.d3) { return; }
+
+            const sevColor = (s) => ({1:'#58a6ff',2:'#56d364',3:'#d29922',4:'#fd8c00',5:'#da3633'}[s] || '#8b949e');
+
+            function makeSvg(container, w, h) {
+                d3.select(container).html('');
+                return d3.select(container).append('svg').attr('width', w).attr('height', h);
             }
 
-            circle.addEventListener('mouseenter', function(e) {
-                tooltip.innerHTML =
-                    `<strong style="color:${color}">${dll.n}</strong><br>` +
-                    `<span style="font-size:11px;word-break:break-all">${dll.p}</span><br>` +
-                    (dll.susp ? `<span style="color:${C.red}">⚠ Suspicious DLL</span>`: '') +
-                    (dll.sys  ? `<span style="color:${C.dim}">System DLL</span>` : '') +
-                    (!dll.sys && !dll.susp ? `<span style="color:#eac54f">Non-system DLL</span>` : '');
-                tooltip.style.display = 'block';
-                tooltip.style.left = (e.clientX + 14) + 'px';
-                tooltip.style.top  = (e.clientY + 14) + 'px';
-            });
-            circle.addEventListener('mouseleave', function() { tooltip.style.display = 'none'; });
-            svg.appendChild(circle);
-        });
+            (function renderHistogram() {
+                const w = 520, h = 280, m = {t:20,r:16,b:50,l:52};
+                const svg = makeSvg('#d3-hist', w, h);
+                const x = d3.scaleBand().domain(data.histogram.map(d => d.bucket)).range([m.l, w - m.r]).padding(0.2);
+                const y = d3.scaleLinear().domain([0, d3.max(data.histogram, d => d.count) || 1]).nice().range([h - m.b, m.t]);
 
-        // Center: executable name
-        const cBg = document.createElementNS(ns, 'circle');
-        cBg.setAttribute('cx', cx); cBg.setAttribute('cy', cy);
-        cBg.setAttribute('r', R_center);
-        cBg.setAttribute('fill', sevColor(graph.sev || 0) + '33');
-        cBg.setAttribute('stroke', sevColor(graph.sev || 0));
-        cBg.setAttribute('stroke-width', '2');
-        svg.appendChild(cBg);
+                svg.append('g').attr('transform', `translate(0,${h - m.b})`).call(d3.axisBottom(x));
+                svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5));
 
-        const cText = document.createElementNS(ns, 'text');
-        cText.setAttribute('x', cx); cText.setAttribute('y', cy + 4);
-        cText.setAttribute('text-anchor', 'middle');
-        cText.setAttribute('font-size', '9');
-        cText.setAttribute('font-weight', 'bold');
-        cText.setAttribute('fill', sevColor(graph.sev || 0));
-        cText.textContent = graph.exe.replace(/(\.EXE|\.DLL)$/i, '');
-        svg.appendChild(cText);
+                svg.selectAll('rect.bar')
+                    .data(data.histogram)
+                    .enter()
+                    .append('rect')
+                    .attr('class', 'bar')
+                    .attr('x', d => x(d.bucket))
+                    .attr('y', d => y(d.count))
+                    .attr('width', x.bandwidth())
+                    .attr('height', d => y(0) - y(d.count))
+                    .attr('fill', '#2ea043');
 
-        // Legend inside SVG
-        const legendY = SVG_H - 16;
-        [
-            [C.red, 'Suspicious'],
-            ['#eac54f', 'Non-system'],
-            [C.dim, 'System'],
-        ].forEach(([col, label], i) => {
-            const lx = 10 + i * 110;
-            const lc = document.createElementNS(ns, 'circle');
-            lc.setAttribute('cx', lx + 5); lc.setAttribute('cy', legendY);
-            lc.setAttribute('r', '5'); lc.setAttribute('fill', col + '88');
-            lc.setAttribute('stroke', col); lc.setAttribute('stroke-width','1');
-            svg.appendChild(lc);
-            const lt = document.createElementNS(ns, 'text');
-            lt.setAttribute('x', lx + 14); lt.setAttribute('y', legendY + 4);
-            lt.setAttribute('font-size', '9'); lt.setAttribute('fill', col);
-            lt.textContent = label;
-            svg.appendChild(lt);
-        });
+                svg.selectAll('text.val')
+                    .data(data.histogram)
+                    .enter()
+                    .append('text')
+                    .attr('x', d => x(d.bucket) + x.bandwidth()/2)
+                    .attr('y', d => y(d.count) - 6)
+                    .attr('text-anchor', 'middle')
+                    .attr('fill', '#c9d1d9')
+                    .attr('font-size', 12)
+                    .text(d => d.count);
+            })();
 
-        // DLL count badge
-        const badge = document.createElementNS(ns, 'text');
-        badge.setAttribute('x', cx);
-        badge.setAttribute('y', SVG_H - 16);
-        badge.setAttribute('text-anchor', 'middle');
-        badge.setAttribute('font-size', '9');
-        badge.setAttribute('fill', C.dim);
-        badge.textContent = `${dlls.length} files loaded (showing ${Math.min(52, dlls.length)})`;
-        svg.appendChild(badge);
+            (function renderTopPaths() {
+                const w = 520, h = 320, m = {t:20,r:16,b:24,l:220};
+                const top = data.topPaths.slice(0, 10).reverse();
+                const svg = makeSvg('#d3-paths', w, h);
+                const x = d3.scaleLinear().domain([0, d3.max(top, d => d.runs) || 1]).nice().range([m.l, w - m.r]);
+                const y = d3.scaleBand().domain(top.map(d => d.path)).range([h - m.b, m.t]).padding(0.18);
 
-        wrap.appendChild(svg);
-        container.appendChild(wrap);
-    });
-}
+                svg.append('g').attr('transform', `translate(0,${h - m.b})`).call(d3.axisBottom(x).ticks(5));
+                svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).tickFormat(v => v.length > 34 ? v.slice(0,34) + '...' : v));
 
-// ─── Utility: draw "empty state" ────────────────────────────────────────────
-function drawEmpty(ctx, w, h, msg) {
-    ctx.fillStyle = '#1f2428'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = '#8b949e'; ctx.font = '13px sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText(msg, w/2, h/2);
-}
+                svg.selectAll('rect.path')
+                    .data(top)
+                    .enter()
+                    .append('rect')
+                    .attr('x', m.l)
+                    .attr('y', d => y(d.path))
+                    .attr('width', d => x(d.runs) - m.l)
+                    .attr('height', y.bandwidth())
+                    .attr('fill', d => sevColor(d.sev));
+            })();
 
-// ─── Boot ────────────────────────────────────────────────────────────────────
-function renderAll() {
-    renderHistogram();
-    renderTimeline();
-    renderBurst();
-    renderTreemap();
-    renderDllRadial();
-}
+            (function renderTimeline() {
+                const events = data.timeline;
+                const w = 1060, h = 320, m = {t:20,r:16,b:50,l:60};
+                const svg = makeSvg('#d3-timeline', w, h);
+                if (!events.length) {
+                    svg.append('text').attr('x', w/2).attr('y', h/2).attr('text-anchor', 'middle').attr('fill', '#8b949e').text('No timeline data');
+                    return;
+                }
+                const x = d3.scaleTime()
+                    .domain(d3.extent(events, d => new Date(d.t)))
+                    .range([m.l, w - m.r]);
+                const y = d3.scaleLinear()
+                    .domain([1, 5])
+                    .range([h - m.b, m.t]);
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', renderAll);
-} else {
-    renderAll();
-}
+                svg.append('g').attr('transform', `translate(0,${h - m.b})`).call(d3.axisBottom(x));
+                svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d => ['','Info','Low','Med','High','Crit'][d] || ''));
 
-window.addEventListener('resize', function() {
-    clearTimeout(window._chartResizeTimer);
-    window._chartResizeTimer = setTimeout(renderAll, 180);
-});
-
-})(); // end IIFE
-</script>
-"#);
+                svg.selectAll('circle.ev')
+                    .data(events)
+                    .enter()
+                    .append('circle')
+                    .attr('cx', d => x(new Date(d.t)))
+                    .attr('cy', d => y(d.sev || 1))
+                    .attr('r', 4)
+                    .attr('fill', d => sevColor(d.sev))
+                    .append('title')
+                    .text(d => `${d.label} | ${d.exe}`);
+            })();
+        })();
+        </script>
+"#,
+    );
 
     html
 }
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  New report-section helpers (HTML)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Renders the **Complete Prefetch Entry Table** section.
-/// Includes every parsed prefetch entry with its 8-char hash, run count,
-/// first/last execution timestamp, file-load count, and resolved exe path.
 pub fn generate_complete_entry_table_html(entries: &[PrefetchEntry]) -> String {
     let mut html = String::new();
 
@@ -1855,6 +1186,10 @@ pub fn generate_complete_entry_table_html(entries: &[PrefetchEntry]) -> String {
                     <th>Prefetch File</th>
                     <th>Hash</th>
                     <th>Executable</th>
+                    <th>Source Created</th>
+                    <th>Source Modified</th>
+                    <th>Source Accessed</th>
+                    <th>Volume0 Created</th>
                     <th>Run Count</th>
                     <th>First Run</th>
                     <th>Last Run</th>
@@ -1887,6 +1222,10 @@ pub fn generate_complete_entry_table_html(entries: &[PrefetchEntry]) -> String {
                     <td><code style="font-size:11px;">{}</code></td>
                     <td><code style="color:#58a6ff;">{}</code></td>
                     <td><code>{}</code></td>
+                    <td style="font-size:12px;">{}</td>
+                    <td style="font-size:12px;">{}</td>
+                    <td style="font-size:12px;">{}</td>
+                    <td style="font-size:12px;">{}</td>
                     <td style="text-align:center;">{}</td>
                     <td style="font-size:12px;">{}</td>
                     <td style="font-size:12px;">{}</td>
@@ -1897,10 +1236,19 @@ pub fn generate_complete_entry_table_html(entries: &[PrefetchEntry]) -> String {
             html_escape(pf_base),
             html_escape(&hash),
             html_escape(&entry.executable_name),
+            html_escape(&entry.source_created),
+            html_escape(&entry.source_modified),
+            html_escape(&entry.source_accessed),
+            html_escape(&entry.volume0_created),
             entry.run_count(),
             html_escape(&first),
             html_escape(&last),
-            entry.num_files,
+            entry
+                .files_loaded
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .count(),
             html_escape(&exe_path),
         ));
     }
@@ -2051,5 +1399,81 @@ fn truncate(s: &str, max_len: usize) -> String {
         s.to_string()
     } else {
         format!("{}...", &s[..max_len-3])
+    }
+}
+
+fn generate_timestamp_coverage_html(entries: &[PrefetchEntry]) -> String {
+    let mut html = String::new();
+
+    let mut source_created = 0usize;
+    let mut source_modified = 0usize;
+    let mut source_accessed = 0usize;
+    let mut volume_created = 0usize;
+    let mut last_run = 0usize;
+
+    for e in entries {
+        if !e.source_created.trim().is_empty() {
+            source_created += 1;
+        }
+        if !e.source_modified.trim().is_empty() {
+            source_modified += 1;
+        }
+        if !e.source_accessed.trim().is_empty() {
+            source_accessed += 1;
+        }
+        if !e.volume0_created.trim().is_empty() {
+            volume_created += 1;
+        }
+        if !e.last_run_raw.trim().is_empty() {
+            last_run += 1;
+        }
+    }
+
+    html.push_str(&format!(r#"
+        <div class="category-header" id="section-ts-coverage" style="border-left-color: #1f6feb;">
+            <span class="icon"></span>
+            <h3>🕒 Timestamp Coverage</h3>
+            <span class="category-count">{} entries evaluated</span>
+        </div>
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:8px;overflow:hidden;margin-bottom:24px;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp Field</th>
+                    <th>Present Count</th>
+                    <th>Coverage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>SourceCreated</td><td>{}</td><td>{:.2}%</td></tr>
+                <tr><td>SourceModified</td><td>{}</td><td>{:.2}%</td></tr>
+                <tr><td>SourceAccessed</td><td>{}</td><td>{:.2}%</td></tr>
+                <tr><td>Volume0Created</td><td>{}</td><td>{:.2}%</td></tr>
+                <tr><td>LastRun</td><td>{}</td><td>{:.2}%</td></tr>
+            </tbody>
+        </table>
+        </div>
+"#,
+        entries.len(),
+        source_created,
+        percentage(source_created, entries.len()),
+        source_modified,
+        percentage(source_modified, entries.len()),
+        source_accessed,
+        percentage(source_accessed, entries.len()),
+        volume_created,
+        percentage(volume_created, entries.len()),
+        last_run,
+        percentage(last_run, entries.len()),
+    ));
+
+    html
+}
+
+fn percentage(n: usize, total: usize) -> f64 {
+    if total == 0 {
+        0.0
+    } else {
+        (n as f64 / total as f64) * 100.0
     }
 }
