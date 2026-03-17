@@ -1,0 +1,6 @@
+﻿    
+Ethernet:
+Node IpAddress: [192.168.180.138] Scope Id: []
+
+    No names in cache
+

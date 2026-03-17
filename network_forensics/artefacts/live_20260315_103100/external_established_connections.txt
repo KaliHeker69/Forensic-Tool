@@ -1,0 +1,4 @@
+﻿StartMenuExperienceHost [8336] -> 52.110.16.163:443
+StartMenuExperienceHost [8336] -> 52.110.16.163:443
+svchost [2496] -> 4.213.25.240:443
+

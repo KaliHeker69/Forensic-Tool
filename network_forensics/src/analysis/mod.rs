@@ -2,6 +2,7 @@ pub mod timeline;
 pub mod process_network;
 pub mod lateral_movement;
 pub mod beaconing;
+pub mod correlation;
 pub mod persistence;
 pub mod exfiltration;
 pub mod infrastructure;
@@ -41,13 +42,16 @@ pub fn run_analysis(
     // 7. Exfiltration Indicators
     exfiltration::detect(&mut events, rules);
 
-    // 8. Infrastructure Profiler
+    // 8. Multi-signal correlation (cross-module behavior chains)
+    correlation::detect(&mut events, rules);
+
+    // 9. Infrastructure Profiler
     let infrastructure = infrastructure::profile(&events, ioc);
 
-    // 9. IOC match entries
+    // 10. IOC match entries
     let ioc_matches = build_ioc_match_entries(&events);
 
-    // 10. Anomaly Scorer (runs last, after all tags are set)
+    // 11. Anomaly Scorer (runs last, after all tags are set)
     scorer::score_all(&mut events, rules);
 
     // Build summary

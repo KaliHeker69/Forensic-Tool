@@ -1,6 +1,11 @@
 use crate::models::*;
 use crate::rules::RuleSet;
 
+fn weight(rules: &RuleSet, rule: &str, fallback: u8) -> u8 {
+    let configured = rules.score_weight(rule);
+    if configured == 0 { fallback } else { configured }
+}
+
 /// Assign a risk score (0–100) to every event based on its tags and rule weights.
 pub fn score_all(events: &mut [NetEvent], rules: &RuleSet) {
     for ev in events.iter_mut() {
@@ -24,11 +29,20 @@ pub fn score_all(events: &mut [NetEvent], rules: &RuleSet) {
                 Tag::DataExfiltration => rules.score_weight("high_bytes_sent_ratio"),
                 Tag::HighBytesSent => 0, // already counted via DataExfiltration
                 Tag::NetworkToolExecution => rules.score_weight("network_tool_execution"),
-                Tag::C2Indicator => 0, // tagged alongside more specific indicators
+                Tag::C2Indicator => weight(rules, "c2_indicator_chain", 12),
                 Tag::UnsignedProcess => rules.score_weight("suspicious_process_outbound"),
                 Tag::IocMatch(_) => rules.score_weight("ioc_match"),
                 Tag::Custom(s) if s.starts_with("firewall_") => {
                     rules.score_weight("firewall_rule_change")
+                }
+                Tag::Custom(s) if s == "correlation_process_chain" => {
+                    weight(rules, "correlation_process_chain", 14)
+                }
+                Tag::Custom(s) if s == "correlation_shared_external_ip" => {
+                    weight(rules, "correlation_shared_external_ip", 8)
+                }
+                Tag::Custom(s) if s == "correlation_lateral_chain" => {
+                    weight(rules, "correlation_lateral_chain", 16)
                 }
                 Tag::Custom(_) => 0,
             };
@@ -68,7 +82,7 @@ pub fn score_all(events: &mut [NetEvent], rules: &RuleSet) {
             if !ev.tags.contains(&Tag::C2Indicator) {
                 // already scored
             } else {
-                score += rules.score_weight("powershell_network_activity") as u32;
+                score += weight(rules, "powershell_network_activity", 10) as u32;
             }
         }
 

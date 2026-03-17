@@ -1,0 +1,11 @@
+﻿
+Interface: 192.168.180.138 --- 0xc
+  Internet Address      Physical Address      Type
+  192.168.180.2         00-50-56-f9-77-b4     dynamic   
+  192.168.180.254       00-50-56-e8-04-47     dynamic   
+  192.168.180.255       ff-ff-ff-ff-ff-ff     static    
+  224.0.0.22            01-00-5e-00-00-16     static    
+  224.0.0.252           01-00-5e-00-00-fc     static    
+  239.255.255.250       01-00-5e-7f-ff-fa     static    
+  255.255.255.255       ff-ff-ff-ff-ff-ff     static    
+

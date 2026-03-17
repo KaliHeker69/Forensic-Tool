@@ -1,0 +1,27 @@
+﻿
+  TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       1032
+  TCP    0.0.0.0:445            0.0.0.0:0              LISTENING       4
+  TCP    0.0.0.0:5040           0.0.0.0:0              LISTENING       6656
+  TCP    0.0.0.0:7680           0.0.0.0:0              LISTENING       7084
+  TCP    0.0.0.0:49664          0.0.0.0:0              LISTENING       900
+  TCP    0.0.0.0:49665          0.0.0.0:0              LISTENING       728
+  TCP    0.0.0.0:49666          0.0.0.0:0              LISTENING       1560
+  TCP    0.0.0.0:49667          0.0.0.0:0              LISTENING       1092
+  TCP    0.0.0.0:49668          0.0.0.0:0              LISTENING       2684
+  TCP    0.0.0.0:49672          0.0.0.0:0              LISTENING       880
+  TCP    0.0.0.0:49673          0.0.0.0:0              LISTENING       2884
+  TCP    192.168.180.138:139    0.0.0.0:0              LISTENING       4
+  TCP    [::]:135               [::]:0                 LISTENING       1032
+  TCP    [::]:445               [::]:0                 LISTENING       4
+  TCP    [::]:7680              [::]:0                 LISTENING       7084
+  TCP    [::]:49664             [::]:0                 LISTENING       900
+  TCP    [::]:49665             [::]:0                 LISTENING       728
+  TCP    [::]:49666             [::]:0                 LISTENING       1560
+  TCP    [::]:49667             [::]:0                 LISTENING       1092
+  TCP    [::]:49668             [::]:0                 LISTENING       2684
+  TCP    [::]:49672             [::]:0                 LISTENING       880
+  TCP    [::]:49673             [::]:0                 LISTENING       2884
+  TCP    [::1]:42050            [::]:0                 LISTENING       4024
+
+
+

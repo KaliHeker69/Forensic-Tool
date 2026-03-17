@@ -1,0 +1,1 @@
+cargo run --release -- --live-json artefacts/live_20260315_103100 --out-format all --out-dir output/live_ps_all_v1

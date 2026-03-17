@@ -1,0 +1,30 @@
+﻿
+Windows IP Configuration
+
+   Host Name . . . . . . . . . . . . : kali
+   Primary Dns Suffix  . . . . . . . : 
+   Node Type . . . . . . . . . . . . : Hybrid
+   IP Routing Enabled. . . . . . . . : No
+   WINS Proxy Enabled. . . . . . . . : No
+   DNS Suffix Search List. . . . . . : localdomain
+
+Ethernet adapter Ethernet:
+
+   Connection-specific DNS Suffix  . : localdomain
+   Description . . . . . . . . . . . : vmxnet3 Ethernet Adapter
+   Physical Address. . . . . . . . . : 00-0C-29-3C-59-5C
+   DHCP Enabled. . . . . . . . . . . : Yes
+   Autoconfiguration Enabled . . . . : Yes
+   Link-local IPv6 Address . . . . . : fe80::ddda:7be7:ca51:e7a%12(Preferred) 
+   IPv4 Address. . . . . . . . . . . : 192.168.180.138(Preferred) 
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Lease Obtained. . . . . . . . . . : Thursday, February 6, 1890 4:10:41 PM
+   Lease Expires . . . . . . . . . . : Sunday, March 15, 2026 10:53:58 AM
+   Default Gateway . . . . . . . . . : 192.168.180.2
+   DHCP Server . . . . . . . . . . . : 192.168.180.254
+   DHCPv6 IAID . . . . . . . . . . . : 83889193
+   DHCPv6 Client DUID. . . . . . . . : 00-01-00-01-30-36-C5-00-00-0C-29-3C-59-5C
+   DNS Servers . . . . . . . . . . . : 192.168.180.2
+   Primary WINS Server . . . . . . . : 192.168.180.2
+   NetBIOS over Tcpip. . . . . . . . : Enabled
+
