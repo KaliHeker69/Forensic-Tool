@@ -84,8 +84,8 @@ flowchart LR
 ## 2.1 Hardware
 
 - CPU: 16+ vCPU recommended (Volatility and Rust analytics benefit heavily)
-- RAM: 64 GB minimum, 128 GB preferred for parallel memory analysis
-- Storage: NVMe SSD, at least 2 TB for active cases
+- RAM: 16 GB minimum, 64 GB preferred for parallel memory analysis
+- Storage: NVMe SSD, at least 512 GB for active cases
 - Optional separate disk for long-term case archive
 
 ## 2.2 Create dedicated user and directories
