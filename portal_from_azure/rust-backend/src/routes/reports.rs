@@ -6,11 +6,7 @@
 ///
 /// If the file is missing or a report key is absent, the request returns 404.
 use axum::{
-    extract::Path as AxPath,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
+    Json, Router, extract::Path as AxPath, http::StatusCode, response::IntoResponse, routing::get,
 };
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -44,10 +40,7 @@ fn load_report_paths() -> HashMap<String, (String, String)> {
     let contents = match std::fs::read_to_string(&config_path) {
         Ok(s) => s,
         Err(e) => {
-            tracing::warn!(
-                "Could not read report paths file {:?}: {e}",
-                config_path
-            );
+            tracing::warn!("Could not read report paths file {:?}: {e}", config_path);
             return HashMap::new();
         }
     };
@@ -81,7 +74,7 @@ async fn serve_report(AxPath(report_id): AxPath<String>) -> impl IntoResponse {
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({"detail": "Report not found"})),
             )
-                .into_response()
+                .into_response();
         }
     };
 
@@ -101,7 +94,7 @@ async fn serve_report(AxPath(report_id): AxPath<String>) -> impl IntoResponse {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(serde_json::json!({"detail": e.to_string()})),
             )
-                .into_response()
+                .into_response();
         }
     };
 

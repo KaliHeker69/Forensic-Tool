@@ -1,10 +1,10 @@
 /// Admin routes – mirrors app/routers/admin.py
 use axum::{
+    Json, Router,
     extract::{Form, Path as AxPath, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect, Response},
     routing::{delete, get, patch, post},
-    Json, Router,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -20,12 +20,21 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/admin/panel/add-user", post(add_user_web))
         .route("/admin/panel/delete-user/{username}", post(delete_user_web))
         .route("/admin/panel/make-admin/{username}", post(make_admin_web))
-        .route("/admin/panel/revoke-admin/{username}", post(revoke_admin_web))
+        .route(
+            "/admin/panel/revoke-admin/{username}",
+            post(revoke_admin_web),
+        )
         // API
         .route("/admin/users", get(list_users_api).post(create_user_api))
-        .route("/admin/users/{username}", delete(delete_user_api).patch(update_user_api))
+        .route(
+            "/admin/users/{username}",
+            delete(delete_user_api).patch(update_user_api),
+        )
         .route("/admin/users/{username}/make-admin", post(grant_admin_api))
-        .route("/admin/users/{username}/revoke-admin", post(revoke_admin_api))
+        .route(
+            "/admin/users/{username}/revoke-admin",
+            post(revoke_admin_api),
+        )
 }
 
 fn user_json(u: &crate::database::User) -> serde_json::Value {
@@ -51,10 +60,18 @@ async fn admin_panel(
     AdminUser(admin): AdminUser,
     axum::extract::Query(q): axum::extract::Query<PanelQuery>,
 ) -> Html<String> {
-    let users: Vec<serde_json::Value> = state.db.get_all_users().iter().map(|u| user_json(u)).collect();
+    let users: Vec<serde_json::Value> = state
+        .db
+        .get_all_users()
+        .iter()
+        .map(|u| user_json(u))
+        .collect();
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user_json(&admin));
-    ctx.insert("avatar_letter", &template_utils::avatar_letter(&admin.username));
+    ctx.insert(
+        "avatar_letter",
+        &template_utils::avatar_letter(&admin.username),
+    );
     ctx.insert("users", &users);
     ctx.insert("success", &q.success);
     ctx.insert("error", &q.error);
@@ -98,7 +115,7 @@ async fn add_user_web(
                 "/admin/panel?success=User '{}' created successfully",
                 form.username
             ))
-        },
+        }
         Err(e) => Redirect::to(&format!("/admin/panel?error=Failed to create user: {}", e)),
     }
 }
@@ -187,7 +204,14 @@ async fn list_users_api(
     State(state): State<Arc<AppState>>,
     AdminUser(_admin): AdminUser,
 ) -> Json<Vec<serde_json::Value>> {
-    Json(state.db.get_all_users().iter().map(|u| user_json(u)).collect())
+    Json(
+        state
+            .db
+            .get_all_users()
+            .iter()
+            .map(|u| user_json(u))
+            .collect(),
+    )
 }
 
 // ── API: create user ────────────────────────────────────────
@@ -224,7 +248,7 @@ async fn create_user_api(
         Ok(u) => {
             tracing::info!(admin = %admin.username, target_user = %body.username, is_admin = body.is_admin.unwrap_or(false), event = "admin.user_created", "user created via API");
             (StatusCode::CREATED, Json(user_json(&u))).into_response()
-        },
+        }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({"detail": e.to_string()})),
@@ -248,13 +272,21 @@ async fn delete_user_api(
             .into_response();
     }
     if !state.db.user_exists(&username) {
-        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"detail": format!("User '{}' not found", username)}))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"detail": format!("User '{}' not found", username)})),
+        )
+            .into_response();
     }
     if state.db.delete_user(&username) {
         tracing::info!(admin = %admin.username, target_user = %username, event = "admin.user_deleted", "user deleted via API");
         StatusCode::NO_CONTENT.into_response()
     } else {
-        (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"detail":"Failed to delete user"}))).into_response()
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"detail":"Failed to delete user"})),
+        )
+            .into_response()
     }
 }
 
@@ -275,7 +307,11 @@ async fn update_user_api(
     Json(body): Json<UpdateUserJson>,
 ) -> Response {
     if !state.db.user_exists(&username) {
-        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"detail": format!("User '{}' not found", username)}))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"detail": format!("User '{}' not found", username)})),
+        )
+            .into_response();
     }
     match state.db.update_user(
         &username,
@@ -285,7 +321,11 @@ async fn update_user_api(
         body.is_admin,
     ) {
         Some(u) => Json(user_json(&u)).into_response(),
-        None => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"detail":"Failed to update user"}))).into_response(),
+        None => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"detail":"Failed to update user"})),
+        )
+            .into_response(),
     }
 }
 
@@ -297,10 +337,18 @@ async fn grant_admin_api(
     AxPath(username): AxPath<String>,
 ) -> Response {
     if !state.db.user_exists(&username) {
-        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"detail": format!("User '{}' not found", username)}))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"detail": format!("User '{}' not found", username)})),
+        )
+            .into_response();
     }
     if !state.db.update_admin_status(&username, true) {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"detail":"Failed to grant admin access"}))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"detail":"Failed to grant admin access"})),
+        )
+            .into_response();
     }
     tracing::info!(admin = %admin.username, target_user = %username, event = "admin.admin_granted", "admin privileges granted via API");
     let u = state.db.get_user(&username).unwrap();
@@ -313,13 +361,25 @@ async fn revoke_admin_api(
     AxPath(username): AxPath<String>,
 ) -> Response {
     if username == admin.username {
-        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"detail":"Cannot revoke your own admin access"}))).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"detail":"Cannot revoke your own admin access"})),
+        )
+            .into_response();
     }
     if !state.db.user_exists(&username) {
-        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"detail": format!("User '{}' not found", username)}))).into_response();
+        return (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"detail": format!("User '{}' not found", username)})),
+        )
+            .into_response();
     }
     if !state.db.update_admin_status(&username, false) {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"detail":"Failed to revoke admin access"}))).into_response();
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"detail":"Failed to revoke admin access"})),
+        )
+            .into_response();
     }
     tracing::info!(admin = %admin.username, target_user = %username, event = "admin.admin_revoked", "admin privileges revoked via API");
     let u = state.db.get_user(&username).unwrap();

@@ -1,18 +1,18 @@
 /// Auth routes – mirrors app/auth/router.py
 use axum::{
+    Router,
     extract::{Form, State},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
-    Router,
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar};
 use serde::Deserialize;
 use std::sync::Arc;
 
 use crate::auth::middleware::{AppState, AuthUser, MaybeUser};
-use crate::template_utils;
 use crate::auth::security::{create_access_token, hash_password, verify_password};
 use crate::config::ACCESS_TOKEN_EXPIRE_MINUTES;
+use crate::template_utils;
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -27,10 +27,7 @@ pub fn router() -> Router<Arc<AppState>> {
 
 // ── Login page ──────────────────────────────────────────────
 
-async fn login_page(
-    State(state): State<Arc<AppState>>,
-    maybe: MaybeUser,
-) -> Response {
+async fn login_page(State(state): State<Arc<AppState>>, maybe: MaybeUser) -> Response {
     if maybe.0.is_some() {
         return Redirect::to("/dashboard").into_response();
     }
@@ -87,10 +84,7 @@ pub struct TokenForm {
     grant_type: Option<String>,
 }
 
-async fn login_token(
-    State(state): State<Arc<AppState>>,
-    Form(form): Form<TokenForm>,
-) -> Response {
+async fn login_token(State(state): State<Arc<AppState>>, Form(form): Form<TokenForm>) -> Response {
     let user = state.db.get_user(&form.username);
     let valid = user
         .as_ref()
@@ -139,11 +133,14 @@ async fn change_password_page(
     AuthUser(user): AuthUser,
 ) -> Html<String> {
     let mut ctx = tera::Context::new();
-    ctx.insert("user", &serde_json::json!({
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-    }));
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }),
+    );
     ctx.insert("error", &tera::Value::Null);
     ctx.insert("success", &tera::Value::Null);
     template_utils::render(&state.templates, "change_password.html", &ctx)
@@ -164,11 +161,14 @@ async fn change_password_submit(
     Form(form): Form<ChangePasswordForm>,
 ) -> Html<String> {
     let mut ctx = tera::Context::new();
-    ctx.insert("user", &serde_json::json!({
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-    }));
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }),
+    );
 
     // Validate current password
     if !verify_password(&form.current_password, &user.hashed_password) {

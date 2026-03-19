@@ -1,7 +1,7 @@
 /// Auth middleware / extractors – mirrors app/dependencies.py
 use axum::{
     extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
     response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::CookieJar;
@@ -42,8 +42,8 @@ impl FromRequestParts<Arc<AppState>> for AuthUser {
             return Err(Redirect::to("/auth/login").into_response());
         }
 
-        let username = decode_token(token)
-            .ok_or_else(|| Redirect::to("/auth/login").into_response())?;
+        let username =
+            decode_token(token).ok_or_else(|| Redirect::to("/auth/login").into_response())?;
 
         let user = state
             .db

@@ -1,11 +1,5 @@
 /// Resources API – mirrors app/routers/resources.py
-use axum::{
-    extract::Path,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Json, Router,
-};
+use axum::{Json, Router, extract::Path, http::StatusCode, response::IntoResponse, routing::get};
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -23,24 +17,151 @@ struct Resource {
 
 fn resources_db() -> Vec<Resource> {
     vec![
-        Resource { id: "timeline-explorer".into(), name: "Timeline Explorer".into(), description: "View csv exported forensic outputs".into(), category: "forensics".into(), url: Some("/tools/timeline".into()), status: "active".into() },
-        Resource { id: "registry".into(), name: "Registry".into(), description: "Windows Registry analysis and investigation tool".into(), category: "forensics".into(), url: Some("/tools/registry".into()), status: "active".into() },
-        Resource { id: "ntfs-data".into(), name: "NTFS Data".into(), description: "NTFS file system and metadata analysis".into(), category: "forensics".into(), url: Some("/tools/ntfs".into()), status: "active".into() },
-        Resource { id: "memory-analysis".into(), name: "Memory Analysis".into(), description: "Volatile memory capture & analysis".into(), category: "forensics".into(), url: Some("/tools/memory".into()), status: "active".into() },
-        Resource { id: "memory-report".into(), name: "Memory Report".into(), description: "Open the latest memory analysis report".into(), category: "reports".into(), url: Some("/reports/memory".into()), status: "active".into() },
-        Resource { id: "windows-event".into(), name: "Windows Event".into(), description: "Windows Event Log viewer and analyzer".into(), category: "forensics".into(), url: Some("/tools/windows-event".into()), status: "active".into() },
-        Resource { id: "shimcache-amcache-report".into(), name: "Shimcache Amcache Report".into(), description: "Open the latest shimcache/amcache report".into(), category: "reports".into(), url: Some("/reports/shimcache-amcache".into()), status: "active".into() },
-        Resource { id: "prefetch-report".into(), name: "Prefetch Report".into(), description: "Open the latest prefetch analysis report".into(), category: "reports".into(), url: Some("/reports/prefetch".into()), status: "active".into() },
-        Resource { id: "timesketch".into(), name: "Timesketch".into(), description: "Collaborative forensic timeline analysis".into(), category: "forensics".into(), url: Some("/tools/timesketch/".into()), status: "active".into() },
-        Resource { id: "ioc-scan".into(), name: "IOC Scan".into(), description: "Scan results for indicators of compromise".into(), category: "reports".into(), url: Some("/reports/ioc-scan".into()), status: "active".into() },
-        Resource { id: "ioc-hash-scan".into(), name: "IOC/Hash Scan".into(), description: "Cross-check IOCs and file hashes against known indicators".into(), category: "reports".into(), url: Some("/reports/ioc-scan".into()), status: "active".into() },
-        Resource { id: "network-forensics".into(), name: "Network Forensics".into(), description: "Investigate network artifacts, flows, and communication patterns".into(), category: "reports".into(), url: Some("/reports/network-forensics".into()), status: "active".into() },
-        Resource { id: "data-theft".into(), name: "Data Theft".into(), description: "Review exfiltration indicators and data theft investigation findings".into(), category: "reports".into(), url: Some("/reports/data-theft".into()), status: "active".into() },
-        Resource { id: "pe-entropy".into(), name: "PE Entropy".into(), description: "Run entropy malware analysis for selected PE files".into(), category: "forensics".into(), url: Some("/fetched-files?tool=pe-entropy".into()), status: "active".into() },
-        Resource { id: "windows-event".into(), name: "Windows Event".into(), description: "Windows Event Log viewer and analyzer".into(), category: "forensics".into(), url: Some("/reports/windows-event".into()), status: "active".into() },
-        Resource { id: "browser-forensics".into(), name: "Browser Forensics".into(), description: "Browser history, downloads, cookies & session analysis".into(), category: "forensics".into(), url: Some("/reports/browser-forensics".into()), status: "active".into() },
-        Resource { id: "iocs".into(), name: "IOCs".into(), description: "Indicators of Compromise tracker and analyzer".into(), category: "intelligence".into(), url: Some("/tools/iocs".into()), status: "active".into() },
-        Resource { id: "server-terminal".into(), name: "Server Terminal".into(), description: "Interactive shell access to the analysis server".into(), category: "forensics".into(), url: Some("/tools/terminal".into()), status: "active".into() },
+        Resource {
+            id: "timeline-explorer".into(),
+            name: "Timeline Explorer".into(),
+            description: "View csv exported forensic outputs".into(),
+            category: "forensics".into(),
+            url: Some("/tools/timeline".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "registry".into(),
+            name: "Registry".into(),
+            description: "Windows Registry analysis and investigation tool".into(),
+            category: "forensics".into(),
+            url: Some("/tools/registry".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "ntfs-data".into(),
+            name: "NTFS Data".into(),
+            description: "NTFS file system and metadata analysis".into(),
+            category: "forensics".into(),
+            url: Some("/tools/ntfs".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "memory-analysis".into(),
+            name: "Memory Analysis".into(),
+            description: "Volatile memory capture & analysis".into(),
+            category: "forensics".into(),
+            url: Some("/tools/memory".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "memory-report".into(),
+            name: "Memory Report".into(),
+            description: "Open the latest memory analysis report".into(),
+            category: "reports".into(),
+            url: Some("/reports/memory".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "windows-event".into(),
+            name: "Windows Event".into(),
+            description: "Windows Event Log viewer and analyzer".into(),
+            category: "forensics".into(),
+            url: Some("/tools/windows-event".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "shimcache-amcache-report".into(),
+            name: "Shimcache Amcache Report".into(),
+            description: "Open the latest shimcache/amcache report".into(),
+            category: "reports".into(),
+            url: Some("/reports/shimcache-amcache".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "prefetch-report".into(),
+            name: "Prefetch Report".into(),
+            description: "Open the latest prefetch analysis report".into(),
+            category: "reports".into(),
+            url: Some("/reports/prefetch".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "timesketch".into(),
+            name: "Timesketch".into(),
+            description: "Collaborative forensic timeline analysis".into(),
+            category: "forensics".into(),
+            url: Some("/tools/timesketch/".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "ioc-scan".into(),
+            name: "IOC Scan".into(),
+            description: "Scan results for indicators of compromise".into(),
+            category: "reports".into(),
+            url: Some("/reports/ioc-scan".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "ioc-hash-scan".into(),
+            name: "IOC/Hash Scan".into(),
+            description: "Cross-check IOCs and file hashes against known indicators".into(),
+            category: "reports".into(),
+            url: Some("/reports/ioc-scan".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "network-forensics".into(),
+            name: "Network Forensics".into(),
+            description: "Investigate network artifacts, flows, and communication patterns".into(),
+            category: "reports".into(),
+            url: Some("/reports/network-forensics".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "data-theft".into(),
+            name: "Data Theft".into(),
+            description: "Review exfiltration indicators and data theft investigation findings"
+                .into(),
+            category: "reports".into(),
+            url: Some("/reports/data-theft".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "pe-entropy".into(),
+            name: "PE Entropy".into(),
+            description: "Run entropy malware analysis for selected PE files".into(),
+            category: "forensics".into(),
+            url: Some("/fetched-files?tool=pe-entropy".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "windows-event".into(),
+            name: "Windows Event".into(),
+            description: "Windows Event Log viewer and analyzer".into(),
+            category: "forensics".into(),
+            url: Some("/reports/windows-event".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "browser-forensics".into(),
+            name: "Browser Forensics".into(),
+            description: "Browser history, downloads, cookies & session analysis".into(),
+            category: "forensics".into(),
+            url: Some("/reports/browser-forensics".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "iocs".into(),
+            name: "IOCs".into(),
+            description: "Indicators of Compromise tracker and analyzer".into(),
+            category: "intelligence".into(),
+            url: Some("/tools/iocs".into()),
+            status: "active".into(),
+        },
+        Resource {
+            id: "server-terminal".into(),
+            name: "Server Terminal".into(),
+            description: "Interactive shell access to the analysis server".into(),
+            category: "forensics".into(),
+            url: Some("/tools/terminal".into()),
+            status: "active".into(),
+        },
     ]
 }
 
@@ -71,7 +192,11 @@ async fn get_resource(Path(resource_id): Path<String>) -> impl IntoResponse {
     let all = resources_db();
     match all.into_iter().find(|r| r.id == resource_id) {
         Some(r) => Json(r).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(serde_json::json!({"detail":"Resource not found"}))).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"detail":"Resource not found"})),
+        )
+            .into_response(),
     }
 }
 

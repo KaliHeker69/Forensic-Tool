@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>High-Priority Alert Triage | OBSIDIAN LENS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#e4ecf8",
+                        "surface": "#0a0e14",
+                        "tertiary-fixed": "#eaf1fe",
+                        "error": "#ff7351",
+                        "inverse-primary": "#006f24",
+                        "secondary": "#dde3ec",
+                        "secondary-fixed-dim": "#cfd5de",
+                        "secondary-fixed": "#dde3ec",
+                        "on-surface-variant": "#a8abb3",
+                        "on-secondary-fixed-variant": "#565c64",
+                        "on-tertiary-container": "#4f5762",
+                        "on-primary": "#005f1e",
+                        "background": "#0a0e14",
+                        "on-secondary-fixed": "#3a4047",
+                        "on-error-container": "#ffd2c8",
+                        "surface-container": "#151a21",
+                        "on-secondary": "#4c525a",
+                        "secondary-container": "#41474f",
+                        "surface-dim": "#0a0e14",
+                        "surface-container-highest": "#20262f",
+                        "surface-container-high": "#1b2028",
+                        "on-error": "#450900",
+                        "primary-fixed-dim": "#7dec84",
+                        "primary-container": "#47b656",
+                        "error-container": "#b92902",
+                        "on-primary-fixed-variant": "#006b22",
+                        "outline": "#72757d",
+                        "surface-container-lowest": "#000000",
+                        "tertiary-fixed-dim": "#dbe3ef",
+                        "on-background": "#f1f3fc",
+                        "surface-container-low": "#0f141a",
+                        "surface-tint": "#8bfb91",
+                        "inverse-surface": "#f8f9ff",
+                        "error-dim": "#d53d18",
+                        "on-surface": "#f1f3fc",
+                        "primary-dim": "#7dec84",
+                        "primary": "#8bfb91",
+                        "on-secondary-container": "#cbd1da",
+                        "inverse-on-surface": "#51555c",
+                        "tertiary": "#f8f9ff",
+                        "surface-variant": "#20262f",
+                        "on-primary-fixed": "#004a15",
+                        "secondary-dim": "#cfd5de",
+                        "surface-bright": "#262c36",
+                        "primary-fixed": "#8bfb91",
+                        "on-tertiary-fixed": "#414952",
+                        "tertiary-dim": "#dbe3ef",
+                        "on-tertiary-fixed-variant": "#5d656f",
+                        "on-tertiary": "#58606a",
+                        "outline-variant": "#44484f",
+                        "on-primary-container": "#002a08"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hex-grid {
+            background-image: radial-gradient(circle, rgba(68, 72, 79, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .tonal-stack-1 { background-color: #0a0e14; }
+        .tonal-stack-2 { background-color: #151a21; }
+        .tonal-stack-3 { background-color: #1b2028; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-container overflow-hidden">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 z-50 flex justify-between items-center w-full px-6 py-3 bg-[#0a0e14] border-b border-[#20262f]/15 font-['Space_Grotesk'] tracking-tight">
+<div class="text-xl font-bold text-[#2ea043] uppercase tracking-widest">OBSIDIAN LENS</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden md:block">
+<span class="absolute inset-y-0 left-3 flex items-center text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">search</span>
+</span>
+<input class="bg-surface-container-lowest border-none text-xs py-1.5 pl-10 pr-4 w-64 focus:ring-1 focus:ring-primary rounded-sm text-on-surface" placeholder="QUERY DATABASE..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#f1f3fc]/60 hover:text-white cursor-pointer transition-colors">notifications</span>
+<span class="material-symbols-outlined text-[#f1f3fc]/60 hover:text-white cursor-pointer transition-colors">settings</span>
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center overflow-hidden">
+<img alt="Investigator Profile" data-alt="Cybersecurity investigator avatar icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeoVQ5Yf8fROa6mx_6ALVFzdf-YMfa1PnF62wVfIC7iiL1f__-uym_y3HhT9SgBs-CTQsfF5ixATXvkmzuPvXfvk76mlU4SWls_3J9O8s6j_lCWM_9C6N_aEfgQ7_FoHQPESu_pXkDFeLzAYxL8p3phZLJ_wxcvdNfts3MHm_NL1MJwalwv-hiGgn7FeKML15xS5lgFx6rG5_Q_Flzw5W6W7uiofIokx94Bsf_1B9RxSsI2WYciSawOEfJJUsVYxRqcnpDiQz9Qr81"/>
+</div>
+</div>
+</div>
+</nav>
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-[#0a0e14] border-r border-[#20262f]/15 w-20 pt-16">
+<div class="flex flex-col items-center justify-center gap-1 text-[#f1f3fc]/40 py-4 hover:text-[#2ea043] hover:bg-[#1b2028] transition-all cursor-pointer">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Dashboard</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-1 text-[#2ea043] border-l-2 border-[#2ea043] bg-[#151a21] py-4 transition-all cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Alerts</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-1 text-[#f1f3fc]/40 py-4 hover:text-[#2ea043] hover:bg-[#1b2028] transition-all cursor-pointer">
+<span class="material-symbols-outlined">folder_shared</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Cases</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-1 text-[#f1f3fc]/40 py-4 hover:text-[#2ea043] hover:bg-[#1b2028] transition-all cursor-pointer">
+<span class="material-symbols-outlined">magnification_small</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Evidence</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-1 text-[#f1f3fc]/40 py-4 hover:text-[#2ea043] hover:bg-[#1b2028] transition-all cursor-pointer">
+<span class="material-symbols-outlined">build</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Tools</span>
+</div>
+<div class="mt-auto flex flex-col items-center justify-center gap-1 text-[#f1f3fc]/40 py-4 hover:text-white transition-all cursor-pointer">
+<span class="material-symbols-outlined">help</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-tighter">Support</span>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-20 mt-14 mb-8 p-6 grid grid-cols-12 gap-6 h-[calc(100vh-5.5rem)] overflow-y-auto hex-grid">
+<!-- Header & Filters -->
+<header class="col-span-12 flex flex-col gap-4">
+<div class="flex justify-between items-end border-b border-outline-variant/10 pb-4">
+<div>
+<h1 class="font-headline text-3xl font-bold tracking-tighter uppercase text-on-background flex items-center gap-3">
+                        Triage Queue
+                        <span class="bg-primary-container/20 text-primary text-xs font-mono px-2 py-0.5 rounded-sm border border-primary/30">142 ACTIVE NODES</span>
+</h1>
+<p class="text-on-surface-variant text-sm mt-1 font-mono uppercase tracking-widest">Filter and prioritize inbound digital evidence</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-xs font-mono hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined text-sm">refresh</span> REFRESH STREAM
+                    </button>
+<button class="flex items-center gap-2 px-3 py-1.5 bg-primary text-on-primary-container text-xs font-bold font-mono rounded-sm shadow-[0_0_15px_rgba(139,251,145,0.2)]">
+<span class="material-symbols-outlined text-sm">file_download</span> EXPORT REPORT
+                    </button>
+</div>
+</div>
+<!-- Advanced Filter Bar -->
+<div class="grid grid-cols-4 gap-4 bg-surface-container/50 p-3 backdrop-blur-md rounded-sm border border-outline-variant/10">
+<div class="flex flex-col gap-1.5">
+<label class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Source Type</label>
+<div class="flex gap-1 overflow-x-auto pb-1">
+<button class="px-2 py-1 bg-primary/10 border border-primary/40 text-primary text-[10px] font-mono whitespace-nowrap">ALL</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-mono whitespace-nowrap border border-transparent hover:border-outline-variant/30">MEMORY</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-mono whitespace-nowrap border border-transparent hover:border-outline-variant/30">WINDOWS LOGS</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-mono whitespace-nowrap border border-transparent hover:border-outline-variant/30">NETWORK</button>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 border-l border-outline-variant/10 pl-4">
+<label class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Severity Level</label>
+<div class="flex gap-1">
+<button class="px-2 py-1 bg-error/10 border border-error/40 text-error text-[10px] font-mono">CRITICAL</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-mono border border-transparent">HIGH</button>
+<button class="px-2 py-1 bg-surface-container-highest text-on-surface-variant text-[10px] font-mono border border-transparent">MEDIUM</button>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 border-l border-outline-variant/10 pl-4">
+<label class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Status</label>
+<select class="bg-surface-container-lowest border border-outline-variant/20 text-[11px] font-mono text-on-surface py-1 rounded-sm focus:ring-primary focus:border-primary">
+<option>UNASSIGNED (42)</option>
+<option>INVESTIGATING (12)</option>
+<option>RESOLVED (88)</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 border-l border-outline-variant/10 pl-4">
+<label class="text-[10px] font-mono text-on-surface-variant uppercase tracking-tighter">Time Range</label>
+<div class="flex items-center gap-2 text-[11px] font-mono text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                        LAST 24 HOURS
+                        <span class="material-symbols-outlined text-sm ml-auto cursor-pointer">expand_more</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Alert Feed Grid -->
+<section class="col-span-12 lg:col-span-9 flex flex-col gap-4">
+<!-- Alert Card 1: Critical Network -->
+<div class="group relative flex bg-surface-container hover:bg-surface-container-high border-l-4 border-error transition-all duration-200">
+<div class="absolute -left-1 top-0 h-full w-1 bg-error blur-[4px] opacity-50 group-hover:opacity-100"></div>
+<div class="p-4 flex flex-col gap-3 w-full">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-error/10 border border-error/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-2xl">router</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Inbound Connection from Known Malicious IP</h3>
+<div class="flex items-center gap-4 mt-1">
+<span class="text-[10px] font-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">schedule</span> 2023-10-27 14:22:01.042
+                                    </span>
+<span class="text-[10px] font-mono text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">terminal</span> SID: 482201
+                                    </span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] font-bold text-error bg-error/10 px-2 py-0.5 rounded-sm uppercase tracking-tighter">Critical Risk</span>
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">SRC: 185.22.14.12</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-sm border border-outline-variant/10 font-mono text-xs text-on-surface-variant">
+<p class="mb-1 text-on-surface"><span class="text-primary-dim">SUMMARY:</span> Repeated TCP SYN flood detected targeting <span class="text-error">domain_controller_01</span>. IP matches known C2 infrastructure linked to <span class="bg-error/20 text-error px-1">APT-41</span>.</p>
+<code class="text-[10px] opacity-70">PAYLOAD_SNIPPET: 47 45 54 20 2f 63 67 69 2d 62 69 6e 2f 70 68 70 3f 2d 64...</code>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant/10 pt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">NETWORK</span>
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">BRUTE_FORCE</span>
+</div>
+<div class="flex gap-3">
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">visibility_off</span> Mark False Positive
+                            </button>
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">person_add</span> Assign
+                            </button>
+<button class="text-[10px] font-bold font-mono text-primary flex items-center gap-1 uppercase bg-primary/10 px-3 py-1 border border-primary/30 hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">analytics</span> Analyze Artifact
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Alert Card 2: High Memory -->
+<div class="group relative flex bg-surface-container hover:bg-surface-container-high border-l-4 border-primary transition-all duration-200">
+<div class="absolute -left-1 top-0 h-full w-1 bg-primary blur-[4px] opacity-50 group-hover:opacity-100"></div>
+<div class="p-4 flex flex-col gap-3 w-full">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">memory</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Suspicious Process in LSASS.exe</h3>
+<div class="flex items-center gap-4 mt-1">
+<span class="text-[10px] font-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">schedule</span> 2023-10-27 14:18:45.921
+                                    </span>
+<span class="text-[10px] font-mono text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">memory</span> PID: 884
+                                    </span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-sm uppercase tracking-tighter">High Priority</span>
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">HOST: WORKSTATION-EF2</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-sm border border-outline-variant/10 font-mono text-xs text-on-surface-variant">
+<p class="mb-1 text-on-surface"><span class="text-primary-dim">SUMMARY:</span> Memory scan identified reflective DLL injection in <span class="bg-primary/20 text-primary px-1">lsass.exe</span>. Potential credential harvesting attempt detected (Mimikatz signatures found).</p>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant/10 pt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">MEMORY</span>
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">CREDENTIAL_THEFT</span>
+</div>
+<div class="flex gap-3">
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">visibility_off</span> Mark False Positive
+                            </button>
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">person_add</span> Assign
+                            </button>
+<button class="text-[10px] font-bold font-mono text-primary flex items-center gap-1 uppercase bg-primary/10 px-3 py-1 border border-primary/30 hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">analytics</span> Analyze Artifact
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Alert Card 3: Medium Browser -->
+<div class="group relative flex bg-surface-container hover:bg-surface-container-high border-l-4 border-on-surface-variant/30 transition-all duration-200">
+<div class="p-4 flex flex-col gap-3 w-full">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-highest border border-outline-variant/20 flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-2xl">public</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg leading-tight group-hover:text-primary transition-colors">Unauthorized Browser Extension Installed</h3>
+<div class="flex items-center gap-4 mt-1">
+<span class="text-[10px] font-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">schedule</span> 2023-10-27 13:55:12.110
+                                    </span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-[10px] font-bold text-on-surface-variant bg-surface-container-highest px-2 py-0.5 rounded-sm uppercase tracking-tighter">Medium Priority</span>
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">USER: J.DOE</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest/50 p-3 rounded-sm border border-outline-variant/10 font-mono text-xs text-on-surface-variant">
+<p class="mb-1 text-on-surface"><span class="text-primary-dim">SUMMARY:</span> Extension "Dark Mode Ultra" (ID: <code class="bg-surface-container-highest px-1">ab82...f92</code>) was sideloaded. Extension has permissions to read all site data.</p>
+</div>
+<div class="flex items-center justify-between border-t border-outline-variant/10 pt-3">
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">BROWSER</span>
+<span class="px-2 py-0.5 bg-surface-container-highest text-[10px] font-mono text-on-surface-variant border border-outline-variant/20">POLICY_VIOLATION</span>
+</div>
+<div class="flex gap-3">
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">visibility_off</span> Mark False Positive
+                            </button>
+<button class="text-[10px] font-bold font-mono text-on-surface-variant hover:text-white flex items-center gap-1 uppercase transition-colors">
+<span class="material-symbols-outlined text-sm">person_add</span> Assign
+                            </button>
+<button class="text-[10px] font-bold font-mono text-primary flex items-center gap-1 uppercase bg-primary/10 px-3 py-1 border border-primary/30 hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">analytics</span> Analyze Artifact
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Statistics Sidebar -->
+<aside class="col-span-12 lg:col-span-3 flex flex-col gap-6">
+<div class="bg-surface-container p-5 rounded-sm border border-outline-variant/10 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h2 class="font-headline font-bold text-sm uppercase tracking-widest text-primary">Volume (24H)</h2>
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(139,251,145,1)]"></span>
+</div>
+<!-- Simple Graph Placeholder -->
+<div class="h-32 flex items-end justify-between gap-1 px-1">
+<div class="w-full bg-primary/10 border-t border-primary/30 h-[40%]"></div>
+<div class="w-full bg-primary/20 border-t border-primary/40 h-[65%]"></div>
+<div class="w-full bg-primary/10 border-t border-primary/30 h-[45%]"></div>
+<div class="w-full bg-primary/30 border-t border-primary/50 h-[90%] shadow-[0_0_10px_rgba(139,251,145,0.1)]"></div>
+<div class="w-full bg-error/20 border-t border-error/50 h-[80%]"></div>
+<div class="w-full bg-primary/10 border-t border-primary/30 h-[30%]"></div>
+<div class="w-full bg-primary/10 border-t border-primary/30 h-[20%]"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col">
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">Total Hits</span>
+<span class="text-2xl font-headline font-bold text-on-background tracking-tighter">1,242</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">Criticals</span>
+<span class="text-2xl font-headline font-bold text-error tracking-tighter">08</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">MTTR</span>
+<span class="text-2xl font-headline font-bold text-on-background tracking-tighter">1.4h</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-mono text-on-surface-variant uppercase">Nodes Active</span>
+<span class="text-2xl font-headline font-bold text-primary tracking-tighter">84</span>
+</div>
+</div>
+</div>
+<!-- Heatmap / Severity Distribution -->
+<div class="bg-surface-container p-5 rounded-sm border border-outline-variant/10 flex flex-col gap-4">
+<h2 class="font-headline font-bold text-sm uppercase tracking-widest text-on-surface">Source Distribution</h2>
+<div class="space-y-3">
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-mono uppercase">
+<span>Network Traffic</span>
+<span>42%</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[42%]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-mono uppercase">
+<span>Memory Dumps</span>
+<span>28%</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[28%]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-[10px] font-mono uppercase">
+<span>Event Logs</span>
+<span>15%</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[15%]"></div>
+</div>
+</div>
+<div class="space-y-1 text-on-surface-variant">
+<div class="flex justify-between text-[10px] font-mono uppercase">
+<span>Other</span>
+<span>15%</span>
+</div>
+<div class="h-1 bg-surface-container-highest w-full rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant w-[15%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Investigator Load -->
+<div class="bg-surface-container p-5 rounded-sm border border-outline-variant/10 flex flex-col gap-4">
+<h2 class="font-headline font-bold text-sm uppercase tracking-widest text-on-surface">Active Investigators</h2>
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center font-mono text-xs">A.C</div>
+<div class="flex-1">
+<div class="text-[11px] font-bold">ALICE_CHEN</div>
+<div class="text-[9px] font-mono text-primary uppercase">8 CASES ACTIVE</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-sm bg-surface-container-highest flex items-center justify-center font-mono text-xs">M.S</div>
+<div class="flex-1">
+<div class="text-[11px] font-bold">MARC_STEVENS</div>
+<div class="text-[9px] font-mono text-on-surface-variant uppercase">3 CASES ACTIVE</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- Footer Health Bar -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex items-center justify-between px-6 bg-[#151a21] border-t border-[#20262f]/30 h-8 font-['Inter'] text-[10px] font-mono tracking-widest uppercase">
+<div class="flex items-center gap-4 text-[#2ea043]">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_5px_#2ea043]"></span>
+                SYSTEM HEALTH: OPTIMAL
+            </span>
+<span class="text-on-surface-variant/50">|</span>
+<span>ACTIVE NODES: 1,242</span>
+</div>
+<div class="flex items-center gap-6 text-[#f1f3fc]/50">
+<a class="hover:text-white transition-colors" href="#">Network Status</a>
+<a class="hover:text-white transition-colors" href="#">Node Map</a>
+<span class="text-[#2ea043]">Latency: 14ms</span>
+</div>
+</footer>
+</body></html>

@@ -1,18 +1,18 @@
 /// IOC routes – ipsum threat intelligence feed browser and IP lookup
 use axum::{
+    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::auth::middleware::{AdminUser, AppState, AuthUser};
-use crate::template_utils;
-use crate::ioc;
 use crate::config::INACTIVITY_TIMEOUT_MINUTES;
+use crate::ioc;
+use crate::template_utils;
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -29,19 +29,22 @@ fn err(status: StatusCode, msg: &str) -> Response {
 
 // ── Page ────────────────────────────────────────────────────
 
-async fn iocs_page(
-    State(state): State<Arc<AppState>>,
-    AuthUser(user): AuthUser,
-) -> Html<String> {
+async fn iocs_page(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser) -> Html<String> {
     let ipsum = state.ipsum.read().await;
     let mut ctx = tera::Context::new();
-    ctx.insert("user", &serde_json::json!({
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-        "is_admin": user.is_admin,
-    }));
-    ctx.insert("avatar_letter", &template_utils::avatar_letter(&user.username));
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_admin": user.is_admin,
+        }),
+    );
+    ctx.insert(
+        "avatar_letter",
+        &template_utils::avatar_letter(&user.username),
+    );
     ctx.insert("inactivity_timeout", &INACTIVITY_TIMEOUT_MINUTES);
     ctx.insert("ipsum_total", &ipsum.total);
     ctx.insert("ipsum_high", &ipsum.count_above(5));
@@ -175,10 +178,7 @@ async fn list(
     let filtered: Vec<&(String, u8)> = ipsum
         .sorted
         .iter()
-        .filter(|(ip, score)| {
-            *score >= min_score
-                && (search.is_empty() || ip.contains(&search))
-        })
+        .filter(|(ip, score)| *score >= min_score && (search.is_empty() || ip.contains(&search)))
         .collect();
 
     let total_filtered = filtered.len();
@@ -208,11 +208,11 @@ async fn list(
 
 // ── API: refresh (admin only) ────────────────────────────────
 
-async fn refresh(
-    AdminUser(_admin): AdminUser,
-    State(state): State<Arc<AppState>>,
-) -> Response {
-    tracing::info!(event = "ioc.refresh_started", "IPsum feed refresh triggered");
+async fn refresh(AdminUser(_admin): AdminUser, State(state): State<Arc<AppState>>) -> Response {
+    tracing::info!(
+        event = "ioc.refresh_started",
+        "IPsum feed refresh triggered"
+    );
 
     match ioc::download_ipsum().await {
         Ok(msg) => {
@@ -220,7 +220,11 @@ async fn refresh(
             let new_data = ioc::IpsumData::load_from_file(&ioc::ipsum_path());
             let total = new_data.total;
             *state.ipsum.write().await = new_data;
-            tracing::info!(total, event = "ioc.refresh_complete", "IPsum feed refreshed");
+            tracing::info!(
+                total,
+                event = "ioc.refresh_complete",
+                "IPsum feed refreshed"
+            );
             Json(serde_json::json!({
                 "ok": true,
                 "message": msg,

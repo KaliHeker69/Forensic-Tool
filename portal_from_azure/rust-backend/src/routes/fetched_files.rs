@@ -1,10 +1,10 @@
 /// Fetched files + PE entropy – mirrors app/routers/fetched_files.py
 use axum::{
+    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -14,8 +14,8 @@ use std::sync::Arc;
 use std::time::UNIX_EPOCH;
 
 use crate::auth::middleware::{AppState, AuthUser};
-use crate::template_utils;
 use crate::config::INACTIVITY_TIMEOUT_MINUTES;
+use crate::template_utils;
 
 const FETCHED_FILES_DIR: &str = "/srv/forensics/fetched_files";
 const PE_ENTROPY_SCRIPT: &str = "/home/kali_arch/tools/pe_entropy/pe_entropy.py";
@@ -109,7 +109,11 @@ fn build_file_list(base: &Path, search: &str) -> Vec<FileEntry> {
         if !is_safe(path) {
             continue;
         }
-        let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
         if !search_lower.is_empty() && !name.to_lowercase().contains(&search_lower) {
             continue;
         }
@@ -156,13 +160,19 @@ async fn fetched_files_page(
 ) -> Html<String> {
     let pe_mode = q.tool.as_deref() == Some("pe-entropy");
     let mut ctx = tera::Context::new();
-    ctx.insert("user", &serde_json::json!({
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-        "is_admin": user.is_admin,
-    }));
-    ctx.insert("avatar_letter", &template_utils::avatar_letter(&user.username));
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_admin": user.is_admin,
+        }),
+    );
+    ctx.insert(
+        "avatar_letter",
+        &template_utils::avatar_letter(&user.username),
+    );
     ctx.insert("fetched_dir", FETCHED_FILES_DIR);
     ctx.insert("pe_entropy_mode", &pe_mode);
     ctx.insert("inactivity_timeout", &INACTIVITY_TIMEOUT_MINUTES);
@@ -196,10 +206,7 @@ struct DownloadQuery {
     path: String,
 }
 
-async fn download_file(
-    AuthUser(_user): AuthUser,
-    Query(q): Query<DownloadQuery>,
-) -> Response {
+async fn download_file(AuthUser(_user): AuthUser, Query(q): Query<DownloadQuery>) -> Response {
     let base = base_dir();
     let file_path = base.join(&q.path);
     if !is_safe(&file_path) {
@@ -238,10 +245,7 @@ async fn download_file(
 
 // ── API: download ZIP ───────────────────────────────────────
 
-async fn download_zip(
-    AuthUser(_user): AuthUser,
-    Json(paths): Json<Vec<String>>,
-) -> Response {
+async fn download_zip(AuthUser(_user): AuthUser, Json(paths): Json<Vec<String>>) -> Response {
     if paths.is_empty() {
         return err(StatusCode::BAD_REQUEST, "No files requested");
     }
@@ -254,7 +258,10 @@ async fn download_zip(
     for rel in &paths {
         let candidate = base.join(rel);
         if !is_safe(&candidate) || !candidate.is_file() {
-            return err(StatusCode::NOT_FOUND, &format!("Invalid or missing file: {}", rel));
+            return err(
+                StatusCode::NOT_FOUND,
+                &format!("Invalid or missing file: {}", rel),
+            );
         }
         resolved.push((candidate, rel.clone()));
     }
@@ -267,7 +274,8 @@ async fn download_zip(
     {
         let file = std::fs::File::create(&tmp_path).unwrap();
         let mut zip = zip::ZipWriter::new(file);
-        let options = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
         for (full, arcname) in &resolved {
             zip.start_file(arcname, options).ok();
             let data = std::fs::read(full).unwrap_or_default();
@@ -285,7 +293,10 @@ async fn download_zip(
     let ts = chrono::Local::now().format("%Y%m%d_%H%M%S");
     (
         [
-            (axum::http::header::CONTENT_TYPE, "application/zip".to_string()),
+            (
+                axum::http::header::CONTENT_TYPE,
+                "application/zip".to_string(),
+            ),
             (
                 axum::http::header::CONTENT_DISPOSITION,
                 format!("attachment; filename=\"fetched_files_{}.zip\"", ts),
@@ -303,13 +314,13 @@ struct PeRequest {
     path: String,
 }
 
-async fn run_pe_entropy(
-    AuthUser(_user): AuthUser,
-    Json(req): Json<PeRequest>,
-) -> Response {
+async fn run_pe_entropy(AuthUser(_user): AuthUser, Json(req): Json<PeRequest>) -> Response {
     let script = PathBuf::from(PE_ENTROPY_SCRIPT);
     if !script.exists() {
-        return err(StatusCode::INTERNAL_SERVER_ERROR, &format!("PE Entropy script not found: {}", PE_ENTROPY_SCRIPT));
+        return err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("PE Entropy script not found: {}", PE_ENTROPY_SCRIPT),
+        );
     }
 
     let base = base_dir();
@@ -326,7 +337,10 @@ async fn run_pe_entropy(
         .map(|e| format!(".{}", e.to_string_lossy().to_lowercase()))
         .unwrap_or_default();
     if !PE_ALLOWED_EXT.contains(&ext.as_str()) {
-        return err(StatusCode::BAD_REQUEST, "Selected file is not a supported PE type");
+        return err(
+            StatusCode::BAD_REQUEST,
+            "Selected file is not a supported PE type",
+        );
     }
 
     let report_dir = script.parent().unwrap();
@@ -348,7 +362,12 @@ async fn run_pe_entropy(
 
     let output = match result {
         Ok(o) => o,
-        Err(e) => return err(StatusCode::INTERNAL_SERVER_ERROR, &format!("Failed to execute PE entropy script: {}", e)),
+        Err(e) => {
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("Failed to execute PE entropy script: {}", e),
+            );
+        }
     };
 
     // The script writes JSON to stdout before attempting chart rendering.
@@ -370,7 +389,10 @@ async fn run_pe_entropy(
         } else {
             stderr.trim().to_string()
         };
-        return err(StatusCode::INTERNAL_SERVER_ERROR, &format!("PE entropy execution failed: {}", msg));
+        return err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("PE entropy execution failed: {}", msg),
+        );
     };
 
     // Log any stderr warnings (e.g. chart generation issues) without failing the request
@@ -389,7 +411,10 @@ async fn run_pe_entropy(
     if html_ok {
         resp["report_name"] = serde_json::json!(report_name);
         resp["report_path"] = serde_json::json!(report_path.to_string_lossy());
-        resp["report_url"] = serde_json::json!(format!("/api/fetched-files/pe-entropy-report?name={}", report_name));
+        resp["report_url"] = serde_json::json!(format!(
+            "/api/fetched-files/pe-entropy-report?name={}",
+            report_name
+        ));
     }
     Json(resp).into_response()
 }
@@ -401,10 +426,7 @@ struct ReportQuery {
     name: String,
 }
 
-async fn get_pe_report(
-    AuthUser(_user): AuthUser,
-    Query(q): Query<ReportQuery>,
-) -> Response {
+async fn get_pe_report(AuthUser(_user): AuthUser, Query(q): Query<ReportQuery>) -> Response {
     let safe_name = Path::new(&q.name)
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())

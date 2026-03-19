@@ -1,213 +1,597 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Resource Portal{% endblock %}
+{% block title %}Operations Dashboard - Resource Portal{% endblock %}
 
 {% block body_class %}dashboard-page{% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar" role="navigation" aria-label="Main navigation">
-        <div class="sidebar-header">
-            <div class="logo">
-                <i class="fa-solid fa-lock logo-icon" aria-hidden="true"></i>
-                <span class="logo-text">Portal</span>
-            </div>
+<div class="dashboard-shell">
+    <aside class="sidebar side-rail" role="navigation" aria-label="Primary navigation">
+        <div class="rail-header">
+            <div class="rail-brand">OBSIDIAN</div>
+            <div class="rail-sub">Unit {{ user.username | upper }}</div>
         </div>
 
-        <div class="user-profile">
-            <div class="avatar">
-                <span>{{ avatar_letter }}</span>
-            </div>
-            <div class="user-info">
-                <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
-                <span class="user-role">{% if user.is_admin %}Administrator{% else %}User{% endif %}</span>
-            </div>
-        </div>
-
-        <nav class="sidebar-nav">
-            <ul>
-                <li class="nav-item active">
-                    <a href="/dashboard">
-                        <i class="fa-solid fa-chart-line nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#resources">
-                        <i class="fa-solid fa-toolbox nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">Resources</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#analytics">
-                        <i class="fa-solid fa-chart-bar nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">Analytics</span>
-                    </a>
-                </li>
-                {% if user.is_admin %}
-                <li class="nav-item">
-                    <a href="/admin/panel">
-                        <i class="fa-solid fa-users-gear nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">User Management</span>
-                    </a>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a href="#settings">
-                        <i class="fa-solid fa-gear nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">Settings</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="/auth/change-password">
-                        <i class="fa-solid fa-key nav-icon" aria-hidden="true"></i>
-                        <span class="nav-text">Change Password</span>
-                    </a>
-                </li>
-            </ul>
+        <nav class="rail-nav">
+            <a href="/dashboard" class="rail-link active" aria-current="page">
+                <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#ntfs-section" class="rail-link">
+                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                <span>NTFS</span>
+            </a>
+            <a href="#network-section" class="rail-link">
+                <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
+                <span>Network</span>
+            </a>
+            <a href="#execution-section" class="rail-link">
+                <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                <span>Execution</span>
+            </a>
+            <a href="#process-tree-section" class="rail-link">
+                <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                <span>ProcTree</span>
+            </a>
+            <a href="#browser-section" class="rail-link">
+                <i class="fa-solid fa-globe" aria-hidden="true"></i>
+                <span>Browser</span>
+            </a>
+            <a href="#memory-section" class="rail-link">
+                <i class="fa-solid fa-memory" aria-hidden="true"></i>
+                <span>Memory</span>
+            </a>
+            <a href="#windows-event-section" class="rail-link">
+                <i class="fa-solid fa-scroll" aria-hidden="true"></i>
+                <span>WinEvent</span>
+            </a>
+            <a href="/tools/reporting" class="rail-link">
+                <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                <span>Reports</span>
+            </a>
+            <a href="/tools/terminal" class="rail-link">
+                <i class="fa-solid fa-terminal" aria-hidden="true"></i>
+                <span>Tools</span>
+            </a>
+            {% if user.is_admin %}
+            <a href="/admin/panel" class="rail-link">
+                <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+                <span>Admin</span>
+            </a>
+            {% endif %}
         </nav>
 
-        <div class="sidebar-footer">
-            <a href="/auth/logout" class="btn-logout">
-                <i class="fa-solid fa-right-from-bracket logout-icon" aria-hidden="true"></i>
+        <div class="rail-footer">
+            <a href="/auth/change-password" class="rail-link">
+                <i class="fa-solid fa-key" aria-hidden="true"></i>
+                <span>Auth</span>
+            </a>
+            <a href="/auth/logout" class="rail-link rail-link-danger">
+                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
                 <span>Sign Out</span>
             </a>
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="content-header">
-            <div class="header-left">
-                <button class="menu-toggle" aria-label="Toggle menu">
+    <div class="dashboard-content-wrap">
+        <header class="top-appbar" role="banner">
+            <div class="appbar-left">
+                <button class="menu-toggle" aria-label="Toggle navigation menu">
                     <i class="fa-solid fa-bars" aria-hidden="true"></i>
                 </button>
-                <h1>Dashboard</h1>
+                <div class="appbar-title-wrap">
+                    <span class="appbar-kicker">Forensic Intelligence</span>
+                    <h1>Operational Dashboard</h1>
+                </div>
             </div>
-            <div class="header-right">
+
+            <div class="appbar-search" role="search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="globalSearch" type="text" autocomplete="off" placeholder="Search cases, hosts, indicators, artifacts...">
+            </div>
+
+            <div class="appbar-right">
+                <div class="uplink-pill">
+                    <span class="uplink-dot" aria-hidden="true"></span>
+                    <span>Live Uplink</span>
+                </div>
                 <div class="session-timer" id="sessionTimer" title="Session timeout">
                     <i class="fa-solid fa-stopwatch timer-icon" aria-hidden="true"></i>
                     <span class="timer-text">{{ inactivity_timeout }}:00</span>
                 </div>
-                <a href="/auth/logout" class="btn-header-logout">
-                    Sign Out
-                </a>
+                <div class="investigator-chip" title="Signed in investigator">
+                    <div class="avatar"><span>{{ avatar_letter }}</span></div>
+                    <div class="investigator-meta">
+                        <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+                        <span class="user-role">{% if user.is_admin %}Administrator{% else %}Investigator{% endif %}</span>
+                    </div>
+                </div>
             </div>
         </header>
 
-        <!-- Security Metrics -->
-        <section class="metrics-grid" aria-label="Security metrics">
-            <div class="metric-card">
-                <div class="metric-icon security-score"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-                </div>
-                <div class="metric-content">
-                    <span class="metric-value">{{ metrics.security_score }}%</span>
-                    <span class="metric-label">Security Score</span>
-                </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-icon sessions"><i class="fa-solid fa-user" aria-hidden="true"></i></div>
-                <div class="metric-content">
-                    <span class="metric-value">{{ metrics.active_sessions }}</span>
-                    <span class="metric-label">Active Sessions</span>
-                </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-icon alerts"><i class="fa-solid fa-bell" aria-hidden="true"></i></div>
-                <div class="metric-content">
-                    <span class="metric-value">{{ metrics.alerts }}</span>
-                    <span class="metric-label">Active Alerts</span>
-                </div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-icon last-login"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
-                <div class="metric-content">
-                    <span class="metric-value">{{ metrics.last_login }}</span>
-                    <span class="metric-label">Last Login</span>
-                </div>
-            </div>
-        </section>
+        <main class="dashboard-main-content">
+            <section class="forensic-cards" aria-label="Operational metrics">
+                <article class="forensic-card actionable" onclick="location.href='/tools/reporting'">
+                    <span class="card-label">Security Score</span>
+                    <span class="card-value">{{ metrics.security_score }}%</span>
+                    <span class="card-foot positive">Readiness nominal</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">Active Connections</span>
+                    <span class="card-value">{{ network_quickview.external_established_connections }}</span>
+                    <span class="card-foot muted">External established</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">Memory Risk</span>
+                    <span class="card-value card-value-small">{{ memory_quickview.risk_level }}</span>
+                    <span class="card-foot warning">Score {{ memory_quickview.risk_score }}</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">NTFS Entries</span>
+                    <span class="card-value">{{ ntfs_quickview.total_entries }}</span>
+                    <span class="card-foot muted">{{ ntfs_quickview.files }} files / {{ ntfs_quickview.directories }} dirs</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">Browser Sessions</span>
+                    <span class="card-value">{{ browser_quickview.total_sessions }}</span>
+                    <span class="card-foot muted">{{ browser_quickview.total_history_entries }} history events</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">PowerShell Events</span>
+                    <span class="card-value">{{ execution_quickview.powershell_events }}</span>
+                    <span class="card-foot {% if execution_quickview.powershell_events > 0 %}warning{% else %}muted{% endif %}">Recent execution traces</span>
+                </article>
+                <article class="forensic-card">
+                    <span class="card-label">IOC Total</span>
+                    <span class="card-value">{% if ioc_total %}{{ ioc_total }}{% else %}0{% endif %}</span>
+                    <span class="card-foot muted">Loaded indicators</span>
+                </article>
+                <article class="forensic-card actionable" onclick="location.href='/tools/terminal'">
+                    <span class="card-label">Acquisition Tools</span>
+                    <span class="card-value">Ready</span>
+                    <span class="card-foot positive">Open terminal</span>
+                </article>
+            </section>
 
-        <!-- IOCs - Special Section -->
-        <section class="iocs-section" aria-label="IOCs">
-            <h2><i class="fa-solid fa-bullseye section-icon" aria-hidden="true"></i> Indicators of Compromise</h2>
-            <a href="/tools/iocs" class="ioc-card">
-                <div class="ioc-header">
-                    <div class="ioc-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></div>
-                    <div class="ioc-content">
-                        <h3>IPsum IP Threat Feed</h3>
-                        <p>Daily-updated IP blacklist — cross-referenced across 30+ threat sources. Search, lookup and browse.</p>
+            <section class="endpoint-quickview" aria-label="Endpoint artifact explorer quick view">
+                <header class="endpoint-quickview-header">
+                    <div>
+                        <h2>Endpoint Artifact Explorer Quick View</h2>
+                        <p>Sections aligned to NTFS, Network, User Execution, Browser, and Memory artifacts.</p>
                     </div>
-                    <span class="special-badge">Live</span>
-                </div>
-                <div class="ioc-stats">
-                    <div class="ioc-stat">
-                        <span class="stat-value">{% if ioc_total %}{{ ioc_total }}{% else %}–{% endif %}</span>
-                        <span class="stat-label">Total IPs</span>
-                    </div>
-                    <div class="ioc-stat">
-                        <span class="stat-value">{% if ioc_high %}{{ ioc_high }}{% else %}–{% endif %}</span>
-                        <span class="stat-label">High Confidence</span>
-                    </div>
-                    <div class="ioc-stat">
-                        <span class="stat-value">{% if ioc_critical %}{{ ioc_critical }}{% else %}–{% endif %}</span>
-                        <span class="stat-label">Critical</span>
-                    </div>
-                    <div class="ioc-stat">
-                        <span class="stat-value ioc-date">{% if ioc_updated %}{{ ioc_updated }}{% else %}–{% endif %}</span>
-                        <span class="stat-label">Updated</span>
-                    </div>
-                </div>
-            </a>
-        </section>
+                    <nav class="endpoint-tab-nav" aria-label="Artifact sections">
+                        <a href="#windows-event-section">Windows Event</a>
+                        <a href="#ntfs-section">NTFS</a>
+                        <a href="#network-section">Network</a>
+                        <a href="#execution-section">User Execution</a>
+                        <a href="#process-tree-section">Process Tree</a>
+                        <a href="#browser-section">Browser</a>
+                        <a href="#memory-section">Memory</a>
+                    </nav>
+                </header>
 
-        <!-- Resources Grid -->
-        <section class="resources-section" aria-label="Available resources">
-            <h2>Available Resources</h2>
-            <div class="resources-grid">
-                {% for resource in resources %}
-                {% if resource.special is not defined or resource.special == false %}
-                <a href="{{ resource.url }}"
-                    class="resource-card {% if resource.status == 'coming-soon' %}coming-soon{% endif %}">
-                    <div class="resource-icon"><i class="{{ resource.icon }}" aria-hidden="true"></i></div>
-                    <div class="resource-content">
-                        <h3>{{ resource.name }}</h3>
-                        <p>{{ resource.description }}</p>
-                    </div>
-                    {% if resource.status == 'coming-soon' %}
-                    <span class="status-badge">Coming Soon</span>
-                    {% endif %}
-                </a>
-                {% endif %}
-                {% endfor %}
-            </div>
-        </section>
+                <div class="endpoint-quickview-grid">
+                    <article class="obs-panel windows-event-quickview" id="windows-event-section">
+                        <header class="windows-event-head">
+                            <div class="windows-event-icon-wrap">
+                                <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                            </div>
+                            <div class="windows-event-meta-wrap">
+                                <div class="windows-event-title-row">
+                                    <h2>{{ windows_event_quickview.title }}</h2>
+                                    <span class="windows-event-priority">{{ windows_event_quickview.priority }}</span>
+                                </div>
+                                <div class="windows-event-meta-row">
+                                    <span><i class="fa-solid fa-clock" aria-hidden="true"></i> {{ windows_event_quickview.timestamp }}</span>
+                                    <span><i class="fa-solid fa-hashtag" aria-hidden="true"></i> Event ID: {{ windows_event_quickview.event_id }}</span>
+                                    <span><i class="fa-solid fa-wave-square" aria-hidden="true"></i> Count: {{ windows_event_quickview.count }}</span>
+                                    <span class="host-meta"><i class="fa-solid fa-desktop" aria-hidden="true"></i> Host: {{ windows_event_quickview.host }}</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="windows-event-summary-box">
+                            <span>SUMMARY:</span>
+                            <p>{{ windows_event_quickview.summary }}</p>
+                        </div>
+                        <footer class="windows-event-footer">
+                            <div class="windows-event-tags">
+                                <span>{{ windows_event_quickview.category }}</span>
+                                <span>{{ windows_event_quickview.source_label }}</span>
+                            </div>
+                            <div class="windows-event-actions">
+                                <button type="button" class="windows-action windows-action-secondary"><i class="fa-solid fa-eye-slash" aria-hidden="true"></i> Mark False Positive</button>
+                                <button type="button" class="windows-action windows-action-secondary"><i class="fa-solid fa-user-plus" aria-hidden="true"></i> Assign</button>
+                                <a href="/reports/windows-event" class="windows-action windows-action-primary"><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Analyze Artifact</a>
+                            </div>
+                        </footer>
+                    </article>
 
-        <!-- Quick Actions -->
-        <section class="quick-actions" aria-label="Quick actions">
-            <h2>Quick Actions</h2>
-            <div class="actions-grid">
-                <button class="action-btn" onclick="location.href='#timeline'">
-                    <i class="fa-solid fa-magnifying-glass action-icon" aria-hidden="true"></i>
-                    <span>New Investigation</span>
-                </button>
-                <button class="action-btn" onclick="location.href='/tools/reporting'">
-                    <i class="fa-solid fa-file-lines action-icon" aria-hidden="true"></i>
-                    <span>Generate Report</span>
-                </button>
-            </div>
-        </section>
-    </main>
+                    <article class="obs-panel endpoint-panel endpoint-panel-ntfs" id="ntfs-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-folder-open" aria-hidden="true"></i> NTFS</h2>
+                                <p>MFT inventory and extension density from parsed records</p>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>Entries</span><strong>{{ ntfs_quickview.total_entries }}</strong></div>
+                            <div class="endpoint-stat"><span>Active</span><strong>{{ ntfs_quickview.active_entries }}</strong></div>
+                            <div class="endpoint-stat"><span>ADS</span><strong>{{ ntfs_quickview.ads_entries }}</strong></div>
+                            <div class="endpoint-stat"><span>Data Size</span><strong>{{ ntfs_quickview.total_file_size_human }}</strong></div>
+                        </div>
+                        <div class="endpoint-mini-table-wrap">
+                            <table class="endpoint-mini-table">
+                                <thead>
+                                    <tr>
+                                        <th>Extension</th>
+                                        <th>Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ext in ntfs_quickview.top_extensions %}
+                                    <tr>
+                                        <td>{{ ext.label }}</td>
+                                        <td>{{ ext.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if ntfs_quickview.top_extensions | length == 0 %}
+                                    <tr>
+                                        <td colspan="2">No NTFS extension data available.</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-browser" id="browser-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-globe" aria-hidden="true"></i> Browser</h2>
+                                <p>Session activity, domains, and latest web evidence</p>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>Browsers</span><strong>{{ browser_quickview.total_browsers }}</strong></div>
+                            <div class="endpoint-stat"><span>History</span><strong>{{ browser_quickview.total_history_entries }}</strong></div>
+                            <div class="endpoint-stat"><span>Downloads</span><strong>{{ browser_quickview.total_downloads }}</strong></div>
+                            <div class="endpoint-stat"><span>Cookies</span><strong>{{ browser_quickview.total_cookies }}</strong></div>
+                        </div>
+                        <div id="browserDomainChart" class="chart-host chart-host-browser" aria-label="Browser domain distribution chart"></div>
+                        <ul class="endpoint-inline-list">
+                            {% for domain in browser_quickview.top_domains %}
+                            <li><span>{{ domain.label }}</span><strong>{{ domain.count }}</strong></li>
+                            {% endfor %}
+                            {% if browser_quickview.top_domains | length == 0 %}
+                            <li><span>No domain distribution available.</span><strong>0</strong></li>
+                            {% endif %}
+                        </ul>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-network" id="network-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-network-wired" aria-hidden="true"></i> Network</h2>
+                                <p>Active connections from network_forensics outputs</p>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>Total Rows</span><strong>{{ network_quickview.total_connections }}</strong></div>
+                            <div class="endpoint-stat"><span>Established</span><strong>{{ network_quickview.established_connections }}</strong></div>
+                            <div class="endpoint-stat"><span>External</span><strong>{{ network_quickview.external_established_connections }}</strong></div>
+                            <div class="endpoint-stat"><span>Listening</span><strong>{{ network_quickview.listening_ports }}</strong></div>
+                        </div>
+                        <ul class="endpoint-connection-list">
+                            {% for conn in network_quickview.active_connections %}
+                            <li>
+                                <div class="conn-head">{{ conn.process }} [{{ conn.pid }}]</div>
+                                <div class="conn-flow">{{ conn.local_endpoint }} <i class="fa-solid fa-arrow-right" aria-hidden="true"></i> {{ conn.remote_endpoint }}</div>
+                            </li>
+                            {% endfor %}
+                            {% if network_quickview.active_connections | length == 0 %}
+                            <li>
+                                <div class="conn-head">No active external connections</div>
+                                <div class="conn-flow">Network capture did not return established external flows.</div>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-memory" id="memory-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-memory" aria-hidden="true"></i> Memory</h2>
+                                <p>Memory correlation severity map and category counts</p>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>Risk</span><strong>{{ memory_quickview.risk_level }}</strong></div>
+                            <div class="endpoint-stat"><span>Risk Score</span><strong>{{ memory_quickview.risk_score }}</strong></div>
+                            <div class="endpoint-stat"><span>Findings</span><strong>{{ memory_quickview.total_findings }}</strong></div>
+                            <div class="endpoint-stat"><span>PIDs</span><strong>{{ memory_quickview.unique_pids }}</strong></div>
+                        </div>
+                        <div id="memoryMapChart" class="chart-host chart-host-memory" aria-label="Memory severity map chart"></div>
+                        <ul class="endpoint-inline-list">
+                            {% for category in memory_quickview.top_categories %}
+                            <li><span>{{ category.label }}</span><strong>{{ category.count }}</strong></li>
+                            {% endfor %}
+                            {% if memory_quickview.top_categories | length == 0 %}
+                            <li><span>No category breakdown available.</span><strong>0</strong></li>
+                            {% endif %}
+                        </ul>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-execution" id="execution-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-terminal" aria-hidden="true"></i> User Execution</h2>
+                                <p>Recent PowerShell execution traces from execution artifacts</p>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>PowerShell Events</span><strong>{{ execution_quickview.powershell_events }}</strong></div>
+                            <div class="endpoint-stat"><span>Source</span><strong>{% if execution_quickview.source %}live_ps{% else %}n/a{% endif %}</strong></div>
+                        </div>
+                        <ul class="endpoint-exec-list">
+                            {% for evt in execution_quickview.recent_powershell %}
+                            <li>
+                                <div class="exec-head">
+                                    <span>{{ evt.timestamp }}</span>
+                                    <strong>{{ evt.process }} {% if evt.pid %}[{{ evt.pid }}]{% endif %}</strong>
+                                </div>
+                                <div class="exec-cmd">{{ evt.command }}</div>
+                            </li>
+                            {% endfor %}
+                            {% if execution_quickview.recent_powershell | length == 0 %}
+                            <li>
+                                <div class="exec-head"><span>No recent PowerShell execution found.</span><strong>idle</strong></div>
+                                <div class="exec-cmd">PowerShell execution evidence not present in current artifacts.</div>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-process-tree" id="process-tree-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-diagram-project" aria-hidden="true"></i> 2D Process Execution Tree</h2>
+                                <p>Parent-child lineage for non-baseline executables with suspicious branch isolation</p>
+                            </div>
+                            <div class="process-tree-header-meta">
+                                <span class="process-tree-count {% if malicious_process_quickview.has_malicious %}process-tree-count-hot{% endif %}">
+                                    {{ malicious_process_quickview.suspicious_count }} suspicious EXE
+                                </span>
+                            </div>
+                        </header>
+                        <p class="process-tree-summary">{{ malicious_process_quickview.summary }}</p>
+                        <div class="process-tree-layout">
+                            <div class="process-tree-graph-wrap">
+                                <div class="process-tree-legend">
+                                    <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Verified Process</span>
+                                    <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Suspicious / Hooked</span>
+                                </div>
+                                <div id="processExecutionTree2d" class="chart-host chart-host-process-tree" aria-label="2D process execution lineage graph"></div>
+                            </div>
+                            <aside class="process-timeline-pane">
+                                <h3>Execution Timeline</h3>
+                                <ul class="process-timeline-list">
+                                    {% for evt in malicious_process_quickview.execution_timeline %}
+                                    <li class="timeline-item {% if evt.status == "suspicious" %}timeline-item-hot{% else %}timeline-item-verified{% endif %}">
+                                        <div class="timeline-head">
+                                            <span>{{ evt.timestamp }}</span>
+                                            <strong>{{ evt.process }}{% if evt.pid %} [{{ evt.pid }}]{% endif %}</strong>
+                                        </div>
+                                        <div class="timeline-type">{{ evt.event_type }}</div>
+                                        <div class="timeline-cmd">{{ evt.command }}</div>
+                                    </li>
+                                    {% endfor %}
+                                    {% if malicious_process_quickview.execution_timeline | length == 0 %}
+                                    <li class="timeline-item timeline-item-verified">
+                                        <div class="timeline-head"><span>No suspicious execution path identified.</span><strong>baseline</strong></div>
+                                        <div class="timeline-type">No anomaly</div>
+                                        <div class="timeline-cmd">Current telemetry does not include non-baseline executable lineage.</div>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </aside>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="dashboard-panels-grid" aria-label="Interactive analysis panels">
+                <article class="obs-panel panel-timeline">
+                    <header class="panel-header">
+                        <div>
+                            <h2>Threat Activity Timeline</h2>
+                            <p>Alerts and IOC hit velocity over selected windows</p>
+                        </div>
+                        <div class="chart-range-controls" role="group" aria-label="Timeline window controls">
+                            <button class="chart-range-btn" data-range="6">6H</button>
+                            <button class="chart-range-btn active" data-range="24">24H</button>
+                            <button class="chart-range-btn" data-range="72">72H</button>
+                        </div>
+                    </header>
+                    <div id="timelineLegend" class="chart-legend" aria-live="polite"></div>
+                    <div id="threatTimelineChart" class="chart-host chart-host-timeline" aria-label="Threat timeline D3 chart"></div>
+                </article>
+
+                <article class="obs-panel panel-donut">
+                    <header class="panel-header">
+                        <div>
+                            <h2>IOC Confidence Mix</h2>
+                            <p>Interactive confidence distribution</p>
+                        </div>
+                    </header>
+                    <div id="iocMixChart" class="chart-host chart-host-donut" aria-label="IOC confidence donut chart"></div>
+                </article>
+
+                <article class="obs-panel panel-graph">
+                    <header class="panel-header">
+                        <div>
+                            <h2>Entity Correlation Graph</h2>
+                            <p>Drag nodes, zoom canvas, inspect link paths</p>
+                        </div>
+                    </header>
+                    <div id="entityGraphChart" class="chart-host chart-host-graph" aria-label="Entity relationship force graph"></div>
+                </article>
+
+                <article class="obs-panel panel-events">
+                    <header class="panel-header">
+                        <div>
+                            <h2>System Events</h2>
+                            <p>Compact high-frequency event stream</p>
+                        </div>
+                    </header>
+                    <ul class="event-feed">
+                        <li>
+                            <span class="event-dot positive"></span>
+                            <div>
+                                <strong>Feed Sync Complete</strong>
+                                <small>IOC feed updated {% if ioc_updated %}{{ ioc_updated }}{% else %}recently{% endif %}</small>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="event-dot muted"></span>
+                            <div>
+                                <strong>Connection Telemetry</strong>
+                                <small>{{ network_quickview.external_established_connections }} active external connections observed</small>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="event-dot {% if metrics.alerts %}warning{% else %}positive{% endif %}"></span>
+                            <div>
+                                <strong>Memory Correlation</strong>
+                                <small>Risk {{ memory_quickview.risk_level }} with {{ memory_quickview.total_findings }} correlated findings</small>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="event-dot muted"></span>
+                            <div>
+                                <strong>User Execution</strong>
+                                <small>{{ execution_quickview.powershell_events }} recent PowerShell events extracted from execution artifacts</small>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="event-actions">
+                        <a href="/tools/reporting" class="btn btn-primary"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> New Report</a>
+                        <a href="/tools/terminal" class="btn btn-secondary"><i class="fa-solid fa-terminal" aria-hidden="true"></i> Execute Scan</a>
+                    </div>
+                </article>
+
+                <article class="obs-panel panel-tools">
+                    <header class="panel-header">
+                        <div>
+                            <h2>Tool Access Matrix</h2>
+                            <p>Dense action grid for active modules</p>
+                        </div>
+                    </header>
+                    <div class="compact-resource-grid">
+                        {% for resource in resources %}
+                        {% if loop.index <= 8 and (resource.special is not defined or resource.special == false) %}
+                        <a href="{{ resource.url }}" class="compact-resource {% if resource.status == 'coming-soon' %}is-coming-soon{% endif %}">
+                            <i class="{{ resource.icon }}" aria-hidden="true"></i>
+                            <span>{{ resource.name }}</span>
+                            {% if resource.status == 'coming-soon' %}
+                            <em>Soon</em>
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="obs-panel panel-artifacts">
+                    <header class="panel-header">
+                        <div>
+                            <h2>Collected Artifacts</h2>
+                            <p>Evidence inventory across files, folders and format classes</p>
+                        </div>
+                        <div class="artifact-scan-badge">
+                            <i class="fa-solid fa-database" aria-hidden="true"></i>
+                            <span>Scanned {{ artifact_summary.scanned_at }}</span>
+                        </div>
+                    </header>
+
+                    <div class="artifact-summary-grid" aria-label="Collected artifacts summary metrics">
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Total Files</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.total_files }}</strong>
+                        </div>
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Total Folders</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.total_folders }}</strong>
+                        </div>
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Total Evidence Size</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.total_size_human }}</strong>
+                        </div>
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Average File Size</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.avg_file_size_human }}</strong>
+                        </div>
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Largest File</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.largest_file_size_human }}</strong>
+                            <small class="artifact-stat-sub" title="{{ artifact_summary.largest_file_name }}">{{ artifact_summary.largest_file_name }}</small>
+                        </div>
+                        <div class="artifact-stat">
+                            <span class="artifact-stat-label">Top Format</span>
+                            <strong class="artifact-stat-value">{{ artifact_summary.dominant_extension }}</strong>
+                            <small class="artifact-stat-sub">{{ artifact_summary.dominant_extension_count }} files</small>
+                        </div>
+                    </div>
+
+                    <div class="artifact-metrics-layout">
+                        <div class="artifact-table-wrap">
+                            <table class="artifact-table">
+                                <thead>
+                                    <tr>
+                                        <th>Format</th>
+                                        <th>Count</th>
+                                        <th>Share</th>
+                                        <th>Total Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ext in artifact_summary.top_types %}
+                                    <tr>
+                                        <td>{{ ext.extension }}</td>
+                                        <td>{{ ext.count }}</td>
+                                        <td>{{ ext.percent_files }}%</td>
+                                        <td>{{ ext.total_size_human }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% if artifact_summary.top_types | length == 0 %}
+                                    <tr>
+                                        <td colspan="4">No files found in evidence repository.</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="artifactTypeChart" class="chart-host chart-host-artifacts" aria-label="File format distribution chart"></div>
+                    </div>
+                </article>
+            </section>
+        </main>
+    </div>
 </div>
 
-<!-- KaliHeker Mark -->
+<div class="bottom-status-bar" role="status" aria-live="polite">
+    <span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> System: Nominal</span>
+    <span><i class="fa-solid fa-network-wired" aria-hidden="true"></i> Active Node: {{ user.username | upper }}</span>
+    <span><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> External Active: <strong>{{ network_quickview.external_established_connections }}</strong></span>
+    <span><i class="fa-solid fa-memory" aria-hidden="true"></i> Memory Risk: <strong>{{ memory_quickview.risk_level }}</strong></span>
+    <span><i class="fa-solid fa-clock" aria-hidden="true"></i> Session TTL: <strong id="bottomSessionTimer">{{ inactivity_timeout }}:00</strong></span>
+    <span><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Feed Updated: {% if ioc_updated %}{{ ioc_updated }}{% else %}Pending{% endif %}</span>
+</div>
+
 <div class="creator-mark">
     <i class="fa-solid fa-bolt mark-icon" aria-hidden="true"></i>
     <span class="mark-text">KaliHeker</span>
 </div>
 
-<!-- Inactivity Warning Modal -->
 <div class="modal" id="inactivityModal" hidden>
     <div class="modal-content">
         <div class="modal-icon"><i class="fa-solid fa-clock" aria-hidden="true"></i></div>
@@ -222,20 +606,949 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script>
-    // Initialize inactivity timeout from server
-    const INACTIVITY_TIMEOUT = {{ inactivity_timeout }} * 60 * 1000; // Convert to milliseconds
+(function () {
+    const model = {
+        securityScore: Number("{{ metrics.security_score }}") || 0,
+        activeSessions: Number("{{ metrics.active_sessions }}") || 0,
+        alerts: Number("{{ metrics.alerts }}") || 0,
+        iocTotal: Number("{{ ioc_total }}") || 0,
+        iocHigh: Number("{{ ioc_high }}") || 0,
+        iocCritical: Number("{{ ioc_critical }}") || 0,
+    };
+    const artifactTypeData = [
+        {% for ext in artifact_summary.top_types %}
+        {
+            extension: "{{ ext.extension }}",
+            count: {{ ext.count }},
+            totalBytes: {{ ext.total_bytes }},
+            totalSizeHuman: "{{ ext.total_size_human }}",
+            percentFiles: {{ ext.percent_files }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const memoryMapData = [
+        {% for segment in memory_quickview.severity_segments %}
+        {
+            label: "{{ segment.label }}",
+            count: {{ segment.count }},
+            percent: {{ segment.percent }},
+            color: "{{ segment.color }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const browserDomainData = [
+        {% for domain in browser_quickview.top_domains %}
+        {
+            label: "{{ domain.label }}",
+            count: {{ domain.count }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const processTreeNodes = [
+        {% for node in malicious_process_quickview.tree_nodes %}
+        {
+            id: "{{ node.id }}",
+            label: "{{ node.label }}",
+            process: "{{ node.process }}",
+            pid: "{{ node.pid }}",
+            status: "{{ node.status }}",
+            depth: {{ node.depth }},
+            firstSeen: "{{ node.first_seen }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const processTreeLinks = [
+        {% for link in malicious_process_quickview.tree_links %}
+        {
+            source: "{{ link.source }}",
+            target: "{{ link.target }}",
+            relationship: "{{ link.relationship }}",
+            weight: {{ link.weight }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    const hasMaliciousExe = "{% if malicious_process_quickview.has_malicious %}1{% else %}0{% endif %}" === "1";
+    const suspiciousExeCount = Number("{{ malicious_process_quickview.suspicious_count }}") || 0;
+
+    const INACTIVITY_TIMEOUT = {{ inactivity_timeout }} * 60 * 1000;
     initInactivityTimer(INACTIVITY_TIMEOUT);
 
-    // Mobile menu toggle
-    document.querySelector('.menu-toggle').addEventListener('click', function () {
-        document.querySelector('.sidebar').classList.toggle('open');
+    const stayLoggedIn = document.getElementById('stayLoggedIn');
+    const inactivityModal = document.getElementById('inactivityModal');
+    if (stayLoggedIn && inactivityModal) {
+        stayLoggedIn.addEventListener('click', function () {
+            inactivityModal.hidden = true;
+            resetInactivityTimer();
+        });
+    }
+
+    // Keep bottom status timer synchronized with main timer
+    const syncTimer = () => {
+        const topTimer = document.querySelector('#sessionTimer .timer-text');
+        const bottomTimer = document.getElementById('bottomSessionTimer');
+        if (!topTimer || !bottomTimer) return;
+        bottomTimer.textContent = topTimer.textContent;
+    };
+    setInterval(syncTimer, 1000);
+
+    if (!window.d3) return;
+
+    const tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'd3-tooltip')
+        .style('opacity', 0);
+
+    const chartState = {
+        timelineHours: 24,
+        timelineSeriesVisible: {
+            alerts: true,
+            iocHits: true,
+        }
+    };
+
+    function makeTimelineSeries(hours) {
+        const now = new Date();
+        const points = Math.max(12, hours * 2);
+        const stepMs = (hours * 60 * 60 * 1000) / (points - 1);
+        const alertBase = Math.max(2, model.alerts || 2);
+        const iocBase = Math.max(4, Math.round(model.iocHigh / 200));
+
+        return d3.range(points).map((i) => {
+            const wave1 = Math.sin(i * 0.42 + model.securityScore * 0.04);
+            const wave2 = Math.cos(i * 0.18 + model.activeSessions * 0.09);
+            const pulse = (i % 13 === 0 || i % 17 === 0) ? 2 : 0;
+            const alerts = Math.max(0, Math.round(alertBase + wave1 * 2.2 + wave2 * 1.5 + pulse));
+            const iocHits = Math.max(0, Math.round(iocBase + alerts * 0.95 + Math.sin(i * 0.3) * 2.6));
+            return {
+                time: new Date(now.getTime() - (points - i - 1) * stepMs),
+                alerts,
+                iocHits
+            };
+        });
+    }
+
+    function showTooltip(event, html) {
+        tooltip
+            .html(html)
+            .style('left', `${event.clientX + 14}px`)
+            .style('top', `${event.clientY + 14}px`)
+            .transition()
+            .duration(120)
+            .style('opacity', 1);
+    }
+
+    function hideTooltip() {
+        tooltip.transition().duration(120).style('opacity', 0);
+    }
+
+    function drawTimelineChart() {
+        const host = document.getElementById('threatTimelineChart');
+        if (!host) return;
+
+        const data = makeTimelineSeries(chartState.timelineHours);
+        host.innerHTML = '';
+
+        const width = host.clientWidth || 760;
+        const height = host.clientHeight || 320;
+        const margin = { top: 18, right: 24, bottom: 36, left: 48 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const defs = svg.append('defs');
+        const grad = defs.append('linearGradient')
+            .attr('id', 'timelineAreaGradient')
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '0%')
+            .attr('y2', '100%');
+        grad.append('stop').attr('offset', '0%').attr('stop-color', 'rgba(46,160,67,0.40)');
+        grad.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(46,160,67,0.02)');
+
+        const x = d3.scaleTime()
+            .domain(d3.extent(data, (d) => d.time))
+            .range([0, innerWidth]);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, (d) => Math.max(d.alerts, d.iocHits)) + 2])
+            .nice()
+            .range([innerHeight, 0]);
+
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const grid = d3.axisLeft(y)
+            .tickSize(-innerWidth)
+            .tickFormat('')
+            .ticks(5);
+        g.append('g')
+            .attr('class', 'chart-grid')
+            .call(grid)
+            .selectAll('line')
+            .attr('stroke', 'rgba(255,255,255,0.08)');
+        g.select('.chart-grid .domain').remove();
+
+        const area = d3.area()
+            .x((d) => x(d.time))
+            .y0(innerHeight)
+            .y1((d) => y(d.iocHits))
+            .curve(d3.curveMonotoneX);
+
+        const lineAlerts = d3.line()
+            .x((d) => x(d.time))
+            .y((d) => y(d.alerts))
+            .curve(d3.curveMonotoneX);
+
+        const lineIoc = d3.line()
+            .x((d) => x(d.time))
+            .y((d) => y(d.iocHits))
+            .curve(d3.curveMonotoneX);
+
+        const areaPath = g.append('path')
+            .datum(data)
+            .attr('fill', 'url(#timelineAreaGradient)')
+            .attr('d', area)
+            .style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.08);
+
+        const iocPath = g.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', '#2ea043')
+            .attr('stroke-width', 2.3)
+            .attr('d', lineIoc)
+            .style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.12);
+
+        const alertsPath = g.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', '#ff7351')
+            .attr('stroke-width', 2.3)
+            .attr('d', lineAlerts)
+            .style('opacity', chartState.timelineSeriesVisible.alerts ? 1 : 0.12);
+
+        [alertsPath, iocPath].forEach((path) => {
+            const length = path.node().getTotalLength();
+            path.attr('stroke-dasharray', `${length} ${length}`)
+                .attr('stroke-dashoffset', length)
+                .transition()
+                .duration(700)
+                .ease(d3.easeCubicOut)
+                .attr('stroke-dashoffset', 0);
+        });
+
+        g.append('g')
+            .attr('transform', `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%H:%M')))
+            .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.22)'))
+            .call((axis) => axis.selectAll('text').attr('fill', '#a8abb3').attr('font-size', 11));
+
+        g.append('g')
+            .call(d3.axisLeft(y).ticks(5))
+            .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.22)'))
+            .call((axis) => axis.selectAll('text').attr('fill', '#a8abb3').attr('font-size', 11));
+
+        const focus = g.append('g').style('display', 'none');
+        focus.append('line')
+            .attr('class', 'focus-line')
+            .attr('y1', 0)
+            .attr('y2', innerHeight)
+            .attr('stroke', 'rgba(255,255,255,0.28)')
+            .attr('stroke-dasharray', '4 4');
+        const focusAlerts = focus.append('circle').attr('r', 4.2).attr('fill', '#ff7351');
+        const focusIoc = focus.append('circle').attr('r', 4.2).attr('fill', '#2ea043');
+
+        const bisect = d3.bisector((d) => d.time).left;
+
+        g.append('rect')
+            .attr('width', innerWidth)
+            .attr('height', innerHeight)
+            .attr('fill', 'transparent')
+            .on('mouseenter', () => focus.style('display', null))
+            .on('mouseleave', () => {
+                focus.style('display', 'none');
+                hideTooltip();
+            })
+            .on('mousemove', (event) => {
+                const [mx] = d3.pointer(event);
+                const hoveredTime = x.invert(mx);
+                const index = bisect(data, hoveredTime, 1);
+                const d0 = data[index - 1] || data[0];
+                const d1 = data[index] || data[data.length - 1];
+                const point = hoveredTime - d0.time > d1.time - hoveredTime ? d1 : d0;
+                const cx = x(point.time);
+
+                focus.select('.focus-line').attr('transform', `translate(${cx},0)`);
+                focusAlerts.attr('cx', cx).attr('cy', y(point.alerts)).style('display', chartState.timelineSeriesVisible.alerts ? null : 'none');
+                focusIoc.attr('cx', cx).attr('cy', y(point.iocHits)).style('display', chartState.timelineSeriesVisible.iocHits ? null : 'none');
+
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d3.timeFormat('%d %b, %H:%M')(point.time)}</div>
+                    <div class="d3-tip-row"><span>Alerts</span><strong>${point.alerts}</strong></div>
+                    <div class="d3-tip-row"><span>IOC Hits</span><strong>${point.iocHits}</strong></div>
+                `);
+            });
+
+        const legendData = [
+            { key: 'alerts', label: 'Alerts', color: '#ff7351' },
+            { key: 'iocHits', label: 'IOC Hits', color: '#2ea043' }
+        ];
+
+        const legend = d3.select('#timelineLegend');
+        legend.html('');
+        legendData.forEach((item) => {
+            const button = legend.append('button')
+                .attr('type', 'button')
+                .attr('class', `legend-pill ${chartState.timelineSeriesVisible[item.key] ? 'active' : ''}`)
+                .on('click', () => {
+                    chartState.timelineSeriesVisible[item.key] = !chartState.timelineSeriesVisible[item.key];
+                    drawTimelineChart();
+                });
+            button.append('span').attr('class', 'legend-swatch').style('background', item.color);
+            button.append('span').text(item.label);
+        });
+
+        areaPath.style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.08);
+    }
+
+    function drawIocMixChart() {
+        const host = document.getElementById('iocMixChart');
+        if (!host) return;
+
+        host.innerHTML = '';
+        const width = host.clientWidth || 360;
+        const height = host.clientHeight || 320;
+        const radius = Math.min(width, height) / 2 - 14;
+
+        const total = Math.max(model.iocTotal, model.iocCritical + model.iocHigh + Math.max(0, model.iocTotal - model.iocHigh), 1);
+        const highOnly = Math.max(model.iocHigh - model.iocCritical, 0);
+        const medium = Math.max(Math.round(total * 0.22), 1);
+        const low = Math.max(total - model.iocCritical - highOnly - medium, 1);
+
+        const data = [
+            { label: 'Critical', value: Math.max(model.iocCritical, 1), color: '#ff7351' },
+            { label: 'High', value: Math.max(highOnly, 1), color: '#f6b73c' },
+            { label: 'Medium', value: medium, color: '#78b8ff' },
+            { label: 'Low/Clean', value: low, color: '#607080' },
+        ];
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const group = svg.append('g').attr('transform', `translate(${width / 2},${height / 2})`);
+
+        const pie = d3.pie().sort(null).value((d) => d.value);
+        const arc = d3.arc().innerRadius(radius * 0.56).outerRadius(radius);
+        const arcHover = d3.arc().innerRadius(radius * 0.56).outerRadius(radius + 7);
+
+        const centerValue = group.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '-0.1em')
+            .attr('fill', '#f1f3fc')
+            .attr('font-size', 27)
+            .attr('font-weight', 700)
+            .text(total);
+
+        group.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '1.5em')
+            .attr('fill', '#a8abb3')
+            .attr('font-size', 11)
+            .text('Total Indicators');
+
+        group.selectAll('path')
+            .data(pie(data))
+            .enter()
+            .append('path')
+            .attr('d', arc)
+            .attr('fill', (d) => d.data.color)
+            .attr('stroke', '#0a0e14')
+            .attr('stroke-width', 2)
+            .style('cursor', 'pointer')
+            .style('opacity', 0.94)
+            .on('mouseenter', function (event, d) {
+                d3.select(this).transition().duration(140).attr('d', arcHover);
+                centerValue.text(d.data.value);
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d.data.label}</div>
+                    <div class="d3-tip-row"><span>Count</span><strong>${d.data.value}</strong></div>
+                    <div class="d3-tip-row"><span>Share</span><strong>${((d.data.value / total) * 100).toFixed(1)}%</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', function () {
+                d3.select(this).transition().duration(140).attr('d', arc);
+                centerValue.text(total);
+                hideTooltip();
+            });
+    }
+
+    function drawEntityGraph() {
+        const host = document.getElementById('entityGraphChart');
+        if (!host) return;
+
+        host.innerHTML = '';
+        const width = host.clientWidth || 760;
+        const height = host.clientHeight || 320;
+
+        const nodes = [
+            { id: 'Investigator', group: 'user', weight: Math.max(model.activeSessions, 1) },
+            { id: 'IOC Feed', group: 'intel', weight: Math.max(Math.round(model.iocTotal / 4000), 2) },
+            { id: 'Alert Engine', group: 'system', weight: Math.max(model.alerts + 2, 3) },
+            { id: 'Evidence DB', group: 'data', weight: 4 },
+            { id: 'Timeline', group: 'tools', weight: 3 },
+            { id: 'Terminal', group: 'tools', weight: 2 },
+            { id: 'Reporting', group: 'tools', weight: 3 },
+            { id: 'Endpoint Cluster', group: 'infra', weight: 4 },
+        ];
+
+        const links = [
+            { source: 'Investigator', target: 'Alert Engine', value: 3 },
+            { source: 'Investigator', target: 'Reporting', value: 2 },
+            { source: 'Alert Engine', target: 'IOC Feed', value: 4 },
+            { source: 'Alert Engine', target: 'Endpoint Cluster', value: 3 },
+            { source: 'Alert Engine', target: 'Timeline', value: 2 },
+            { source: 'Endpoint Cluster', target: 'Evidence DB', value: 4 },
+            { source: 'Evidence DB', target: 'Timeline', value: 2 },
+            { source: 'Terminal', target: 'Evidence DB', value: 2 },
+            { source: 'Reporting', target: 'Evidence DB', value: 2 },
+            { source: 'IOC Feed', target: 'Timeline', value: 2 },
+        ];
+
+        const color = d3.scaleOrdinal()
+            .domain(['user', 'intel', 'system', 'data', 'tools', 'infra'])
+            .range(['#8bfb91', '#2ea043', '#ff7351', '#78b8ff', '#f6b73c', '#8a97a6']);
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const zoomLayer = svg.append('g');
+
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id((d) => d.id).distance((d) => 90 + d.value * 8))
+            .force('charge', d3.forceManyBody().strength(-240))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collision', d3.forceCollide().radius((d) => 16 + d.weight * 1.8));
+
+        const link = zoomLayer.append('g')
+            .attr('stroke', 'rgba(168,171,179,0.36)')
+            .selectAll('line')
+            .data(links)
+            .enter()
+            .append('line')
+            .attr('stroke-width', (d) => d.value);
+
+        const node = zoomLayer.append('g')
+            .selectAll('circle')
+            .data(nodes)
+            .enter()
+            .append('circle')
+            .attr('r', (d) => 9 + d.weight * 1.25)
+            .attr('fill', (d) => color(d.group))
+            .attr('stroke', '#0a0e14')
+            .attr('stroke-width', 2)
+            .style('cursor', 'grab')
+            .on('mouseenter', (event, d) => {
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d.id}</div>
+                    <div class="d3-tip-row"><span>Domain</span><strong>${d.group}</strong></div>
+                    <div class="d3-tip-row"><span>Weight</span><strong>${d.weight}</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', hideTooltip)
+            .call(
+                d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    })
+            );
+
+        const label = zoomLayer.append('g')
+            .selectAll('text')
+            .data(nodes)
+            .enter()
+            .append('text')
+            .attr('fill', '#d7dfec')
+            .attr('font-size', 10)
+            .attr('font-weight', 600)
+            .attr('dy', -14)
+            .attr('text-anchor', 'middle')
+            .text((d) => d.id);
+
+        simulation.on('tick', () => {
+            link
+                .attr('x1', (d) => d.source.x)
+                .attr('y1', (d) => d.source.y)
+                .attr('x2', (d) => d.target.x)
+                .attr('y2', (d) => d.target.y);
+
+            node
+                .attr('cx', (d) => d.x)
+                .attr('cy', (d) => d.y);
+
+            label
+                .attr('x', (d) => d.x)
+                .attr('y', (d) => d.y);
+        });
+
+        svg.call(
+            d3.zoom()
+                .scaleExtent([0.6, 2.4])
+                .on('zoom', (event) => {
+                    zoomLayer.attr('transform', event.transform);
+                })
+        );
+    }
+
+    function drawArtifactTypeChart() {
+        const host = document.getElementById('artifactTypeChart');
+        if (!host) return;
+
+        host.innerHTML = '';
+        if (artifactTypeData.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = 'No evidence files available for format analysis.';
+            host.appendChild(empty);
+            return;
+        }
+
+        const width = host.clientWidth || 760;
+        const height = host.clientHeight || 260;
+        const margin = { top: 12, right: 56, bottom: 26, left: 88 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const defs = svg.append('defs');
+        const grad = defs.append('linearGradient')
+            .attr('id', 'artifactBarGrad')
+            .attr('x1', '0%')
+            .attr('y1', '0%')
+            .attr('x2', '100%')
+            .attr('y2', '0%');
+        grad.append('stop').attr('offset', '0%').attr('stop-color', '#2ea043');
+        grad.append('stop').attr('offset', '100%').attr('stop-color', '#8bfb91');
+
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(artifactTypeData, (d) => d.count) || 1])
+            .nice()
+            .range([0, innerWidth]);
+
+        const y = d3.scaleBand()
+            .domain(artifactTypeData.map((d) => d.extension))
+            .range([0, innerHeight])
+            .padding(0.25);
+
+        g.append('g')
+            .call(d3.axisLeft(y))
+            .call((axis) => axis.select('.domain').remove())
+            .call((axis) => axis.selectAll('text').attr('fill', '#b7c4d7').attr('font-size', 11));
+
+        g.append('g')
+            .attr('transform', `translate(0,${innerHeight})`)
+            .call(d3.axisBottom(x).ticks(5).tickSizeOuter(0))
+            .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.2)'))
+            .call((axis) => axis.selectAll('text').attr('fill', '#95a2b4').attr('font-size', 10));
+
+        g.selectAll('.artifact-grid-line')
+            .data(x.ticks(5))
+            .enter()
+            .append('line')
+            .attr('x1', (d) => x(d))
+            .attr('x2', (d) => x(d))
+            .attr('y1', 0)
+            .attr('y2', innerHeight)
+            .attr('stroke', 'rgba(255,255,255,0.06)');
+
+        const bars = g.selectAll('.artifact-bar')
+            .data(artifactTypeData)
+            .enter()
+            .append('rect')
+            .attr('class', 'artifact-bar')
+            .attr('x', 0)
+            .attr('y', (d) => y(d.extension))
+            .attr('height', y.bandwidth())
+            .attr('width', 0)
+            .attr('fill', 'url(#artifactBarGrad)')
+            .attr('rx', 5)
+            .attr('ry', 5)
+            .on('mouseenter', (event, d) => {
+                showTooltip(event, `
+                    <div class="d3-tip-title">Format ${d.extension}</div>
+                    <div class="d3-tip-row"><span>Count</span><strong>${d.count}</strong></div>
+                    <div class="d3-tip-row"><span>Share</span><strong>${d.percentFiles}%</strong></div>
+                    <div class="d3-tip-row"><span>Total Size</span><strong>${d.totalSizeHuman}</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', hideTooltip);
+
+        bars.transition()
+            .duration(700)
+            .ease(d3.easeCubicOut)
+            .attr('width', (d) => x(d.count));
+
+        g.selectAll('.artifact-bar-label')
+            .data(artifactTypeData)
+            .enter()
+            .append('text')
+            .attr('class', 'artifact-bar-label')
+            .attr('x', (d) => x(d.count) + 6)
+            .attr('y', (d) => y(d.extension) + y.bandwidth() / 2 + 4)
+            .attr('fill', '#dbe8f8')
+            .attr('font-size', 10)
+            .text((d) => d.count);
+    }
+
+    function drawMemoryMapChart() {
+        const host = document.getElementById('memoryMapChart');
+        if (!host) return;
+
+        host.innerHTML = '';
+        const segmentsInput = memoryMapData.filter((d) => Number(d.count) > 0);
+        if (segmentsInput.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = 'No memory correlation map available.';
+            host.appendChild(empty);
+            return;
+        }
+
+        const width = host.clientWidth || 640;
+        const height = host.clientHeight || 160;
+        const margin = { top: 18, right: 14, bottom: 28, left: 14 };
+        const innerWidth = width - margin.left - margin.right;
+        const barHeight = 38;
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        let offset = 0;
+        const total = d3.sum(segmentsInput, (d) => d.count) || 1;
+        const segments = segmentsInput.map((segment) => {
+            const segmentWidth = Math.max(4, (segment.count / total) * innerWidth);
+            const item = { ...segment, x: offset, width: segmentWidth };
+            offset += segmentWidth;
+            return item;
+        });
+
+        g.selectAll('.mem-segment')
+            .data(segments)
+            .enter()
+            .append('rect')
+            .attr('class', 'mem-segment')
+            .attr('x', (d) => d.x)
+            .attr('y', 12)
+            .attr('width', (d) => d.width)
+            .attr('height', barHeight)
+            .attr('fill', (d) => d.color)
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .style('cursor', 'pointer')
+            .on('mouseenter', (event, d) => {
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d.label}</div>
+                    <div class="d3-tip-row"><span>Findings</span><strong>${d.count}</strong></div>
+                    <div class="d3-tip-row"><span>Share</span><strong>${d.percent}%</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', hideTooltip);
+
+        g.selectAll('.mem-label')
+            .data(segments)
+            .enter()
+            .append('text')
+            .attr('x', (d) => d.x + d.width / 2)
+            .attr('y', 74)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#a8b7ca')
+            .attr('font-size', 10)
+            .attr('font-weight', 600)
+            .text((d) => `${d.label} (${d.count})`);
+    }
+
+    function drawBrowserDomainChart() {
+        const host = document.getElementById('browserDomainChart');
+        if (!host) return;
+
+        host.innerHTML = '';
+        if (browserDomainData.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = 'No browser domain telemetry available.';
+            host.appendChild(empty);
+            return;
+        }
+
+        const width = host.clientWidth || 640;
+        const height = host.clientHeight || 200;
+        const margin = { top: 8, right: 18, bottom: 22, left: 120 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(browserDomainData, (d) => d.count) || 1])
+            .nice()
+            .range([0, innerWidth]);
+
+        const y = d3.scaleBand()
+            .domain(browserDomainData.map((d) => d.label))
+            .range([0, innerHeight])
+            .padding(0.24);
+
+        g.append('g')
+            .call(d3.axisLeft(y))
+            .call((axis) => axis.select('.domain').remove())
+            .call((axis) => axis.selectAll('text').attr('fill', '#b7c4d7').attr('font-size', 10));
+
+        const bars = g.selectAll('.browser-domain-bar')
+            .data(browserDomainData)
+            .enter()
+            .append('rect')
+            .attr('class', 'browser-domain-bar')
+            .attr('x', 0)
+            .attr('y', (d) => y(d.label))
+            .attr('height', y.bandwidth())
+            .attr('width', 0)
+            .attr('fill', '#2ea043')
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .on('mouseenter', (event, d) => {
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d.label}</div>
+                    <div class="d3-tip-row"><span>Visits</span><strong>${d.count}</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', hideTooltip);
+
+        bars.transition()
+            .duration(600)
+            .ease(d3.easeCubicOut)
+            .attr('width', (d) => x(d.count));
+
+        g.selectAll('.browser-domain-value')
+            .data(browserDomainData)
+            .enter()
+            .append('text')
+            .attr('x', (d) => x(d.count) + 7)
+            .attr('y', (d) => y(d.label) + y.bandwidth() / 2 + 4)
+            .attr('fill', '#dce8f9')
+            .attr('font-size', 10)
+            .text((d) => d.count);
+    }
+
+    function drawProcessExecutionTree2d() {
+        const host = document.getElementById('processExecutionTree2d');
+        if (!host) return;
+
+        host.innerHTML = '';
+
+        if (!hasMaliciousExe || processTreeNodes.length === 0 || processTreeLinks.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = suspiciousExeCount > 0
+                ? 'Suspicious executable count is non-zero, but lineage graph data is missing.'
+                : 'No suspicious non-baseline executable lineage available.';
+            host.appendChild(empty);
+            return;
+        }
+
+        const width = host.clientWidth || 860;
+        const height = host.clientHeight || 360;
+        const margin = { top: 16, right: 20, bottom: 16, left: 20 };
+
+        const svg = d3.select(host)
+            .append('svg')
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'none');
+
+        const zoomLayer = svg.append('g');
+
+        const nodes = processTreeNodes.map((node) => ({
+            ...node,
+            radius: node.status === 'suspicious' ? 11 : 8,
+            depth: Number(node.depth) || 0
+        }));
+        const links = processTreeLinks.map((link) => ({
+            ...link,
+            weight: Number(link.weight) || 1
+        }));
+
+        const maxDepth = d3.max(nodes, (node) => node.depth) || 1;
+        const depthScale = d3.scaleLinear()
+            .domain([0, maxDepth])
+            .range([margin.top + 38, height - margin.bottom - 38]);
+
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id((d) => d.id).distance((d) => 78 + d.weight * 26))
+            .force('charge', d3.forceManyBody().strength(-300))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .force('collide', d3.forceCollide().radius((d) => d.radius + 8))
+            .force('y', d3.forceY((d) => depthScale(d.depth)).strength(0.42));
+
+        const link = zoomLayer.append('g')
+            .selectAll('line')
+            .data(links)
+            .enter()
+            .append('line')
+            .attr('stroke', (d) => d.relationship === 'spawned' ? 'rgba(255,91,91,0.72)' : 'rgba(46,160,67,0.45)')
+            .attr('stroke-width', (d) => d.weight * 1.2 + 0.4);
+
+        const node = zoomLayer.append('g')
+            .selectAll('circle')
+            .data(nodes)
+            .enter()
+            .append('circle')
+            .attr('r', (d) => d.radius)
+            .attr('fill', (d) => d.status === 'suspicious' ? '#ff5b5b' : '#2ea043')
+            .attr('stroke', '#081019')
+            .attr('stroke-width', 1.8)
+            .style('cursor', 'grab')
+            .on('mouseenter', (event, d) => {
+                showTooltip(event, `
+                    <div class="d3-tip-title">${d.label}</div>
+                    <div class="d3-tip-row"><span>Status</span><strong>${d.status}</strong></div>
+                    <div class="d3-tip-row"><span>PID</span><strong>${d.pid || 'n/a'}</strong></div>
+                    <div class="d3-tip-row"><span>Depth</span><strong>${d.depth}</strong></div>
+                    <div class="d3-tip-row"><span>First Seen</span><strong>${d.firstSeen || 'unknown'}</strong></div>
+                `);
+            })
+            .on('mousemove', (event) => {
+                tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+            })
+            .on('mouseleave', hideTooltip)
+            .call(
+                d3.drag()
+                    .on('start', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        d.fx = d.x;
+                        d.fy = d.y;
+                    })
+                    .on('drag', (event, d) => {
+                        d.fx = event.x;
+                        d.fy = event.y;
+                    })
+                    .on('end', (event, d) => {
+                        if (!event.active) simulation.alphaTarget(0);
+                        d.fx = null;
+                        d.fy = null;
+                    })
+            );
+
+        const labels = zoomLayer.append('g')
+            .selectAll('text')
+            .data(nodes)
+            .enter()
+            .append('text')
+            .attr('fill', '#d8e7fa')
+            .attr('font-size', 10)
+            .attr('font-weight', 700)
+            .attr('text-anchor', 'middle')
+            .attr('dy', -14)
+            .text((d) => d.label);
+
+        simulation.on('tick', () => {
+            link
+                .attr('x1', (d) => d.source.x)
+                .attr('y1', (d) => d.source.y)
+                .attr('x2', (d) => d.target.x)
+                .attr('y2', (d) => d.target.y);
+
+            node
+                .attr('cx', (d) => d.x)
+                .attr('cy', (d) => d.y);
+
+            labels
+                .attr('x', (d) => d.x)
+                .attr('y', (d) => d.y);
+        });
+
+        svg.call(
+            d3.zoom()
+                .scaleExtent([0.5, 2.4])
+                .on('zoom', (event) => {
+                    zoomLayer.attr('transform', event.transform);
+                })
+        );
+    }
+
+    function drawAllCharts() {
+        drawTimelineChart();
+        drawIocMixChart();
+        drawEntityGraph();
+        drawArtifactTypeChart();
+        drawMemoryMapChart();
+        drawBrowserDomainChart();
+        drawProcessExecutionTree2d();
+    }
+
+    document.querySelectorAll('.chart-range-btn').forEach((button) => {
+        button.addEventListener('click', function () {
+            const range = Number(this.dataset.range) || 24;
+            chartState.timelineHours = range;
+            document.querySelectorAll('.chart-range-btn').forEach((btn) => btn.classList.remove('active'));
+            this.classList.add('active');
+            drawTimelineChart();
+        });
     });
 
-    // Stay logged in button
-    document.getElementById('stayLoggedIn').addEventListener('click', function () {
-        document.getElementById('inactivityModal').hidden = true;
-        resetInactivityTimer();
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(drawAllCharts, 180);
     });
+
+    drawAllCharts();
+})();
 </script>
 {% endblock %}

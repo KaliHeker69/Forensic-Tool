@@ -3,13 +3,13 @@
 /// GET  /tools/terminal     → renders the terminal HTML page
 /// GET  /tools/terminal/ws  → WebSocket upgrade → PTY bridge
 use axum::{
+    Router,
     extract::{
-        ws::{Message, WebSocket},
         State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
     },
     response::{Html, IntoResponse},
     routing::get,
-    Router,
 };
 use std::sync::Arc;
 
@@ -49,17 +49,14 @@ async fn terminal_page(
 
 // ── WebSocket upgrade ──────────────────────────────────────
 
-async fn ws_upgrade(
-    ws: WebSocketUpgrade,
-    AdminUser(_user): AdminUser,
-) -> impl IntoResponse {
+async fn ws_upgrade(ws: WebSocketUpgrade, AdminUser(_user): AdminUser) -> impl IntoResponse {
     ws.on_upgrade(handle_ws)
 }
 
 // ── WebSocket ↔ PTY bridge ─────────────────────────────────
 
 async fn handle_ws(mut socket: WebSocket) {
-    use portable_pty::{native_pty_system, CommandBuilder, PtySize};
+    use portable_pty::{CommandBuilder, PtySize, native_pty_system};
     use std::io::{Read, Write};
 
     // 1. Allocate PTY
@@ -192,4 +189,3 @@ fn parse_resize(s: &str) -> Option<(u16, u16)> {
     let cols: u16 = parts.next()?.parse().ok()?;
     Some((rows, cols))
 }
-

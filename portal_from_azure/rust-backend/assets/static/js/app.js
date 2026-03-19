@@ -8,6 +8,7 @@ let inactivityTimer;
 let warningTimer;
 let countdownInterval;
 let timeRemaining;
+let inactivityTimeoutMs = 0;
 
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 const WARNING_BEFORE_LOGOUT = 60 * 1000; // Show warning 60 seconds before logout
@@ -17,10 +18,11 @@ const WARNING_BEFORE_LOGOUT = 60 * 1000; // Show warning 60 seconds before logou
  * @param {number} timeoutMs - Timeout in milliseconds
  */
 function initInactivityTimer(timeoutMs) {
-    // Only init on dashboard page
-    if (!document.querySelector('.dashboard-page')) return;
+    // Only init on protected application pages
+    if (!document.querySelector('.dashboard-page, .reporting-page, .terminal-page-body')) return;
     
     timeRemaining = timeoutMs;
+    inactivityTimeoutMs = timeoutMs;
     
     // Add event listeners for user activity
     ACTIVITY_EVENTS.forEach(event => {
@@ -71,10 +73,8 @@ function resetInactivityTimer() {
         return;
     }
     
-    const timerElement = document.getElementById('sessionTimer');
-    if (timerElement) {
-        const timeoutMinutes = parseInt(timerElement.querySelector('.timer-text').textContent.split(':')[0]) || 15;
-        startInactivityTimer(timeoutMinutes * 60 * 1000);
+    if (inactivityTimeoutMs > 0) {
+        startInactivityTimer(inactivityTimeoutMs);
     }
 }
 
@@ -232,6 +232,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Shared mobile sidebar toggle behavior for dashboard-style pages
+    const sidebar = document.querySelector('.sidebar');
+    const menuToggle = document.querySelector('.menu-toggle');
+    if (sidebar && menuToggle) {
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!sidebar.classList.contains('open')) return;
+            if (sidebar.contains(e.target) || menuToggle.contains(e.target)) return;
+            sidebar.classList.remove('open');
+        });
+    }
 });
 
 // ==================== Add CSS Animations ====================

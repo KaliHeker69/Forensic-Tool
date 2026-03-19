@@ -1,11 +1,11 @@
+pub mod admin;
 pub mod auth_routes;
 pub mod dashboard;
+pub mod fetched_files;
 pub mod files;
-pub mod resources;
+pub mod iocs;
 pub mod reporting;
 pub mod reports;
-pub mod admin;
-pub mod fetched_files;
-pub mod iocs;
+pub mod resources;
 pub mod terminal;
 pub mod timesketch;

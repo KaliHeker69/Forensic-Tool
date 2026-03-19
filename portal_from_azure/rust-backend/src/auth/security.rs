@@ -1,9 +1,9 @@
 /// JWT + bcrypt security helpers – mirrors app/auth/security.py
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
-use crate::config::{secret_key, ACCESS_TOKEN_EXPIRE_MINUTES};
+use crate::config::{ACCESS_TOKEN_EXPIRE_MINUTES, secret_key};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -13,8 +13,7 @@ pub struct Claims {
 
 /// Create a signed JWT.
 pub fn create_access_token(username: &str, expire_minutes: Option<i64>) -> String {
-    let exp = Utc::now()
-        + Duration::minutes(expire_minutes.unwrap_or(ACCESS_TOKEN_EXPIRE_MINUTES));
+    let exp = Utc::now() + Duration::minutes(expire_minutes.unwrap_or(ACCESS_TOKEN_EXPIRE_MINUTES));
     let claims = Claims {
         sub: username.to_string(),
         exp: exp.timestamp(),
@@ -44,8 +43,7 @@ pub fn hash_password(password: &str) -> String {
     let truncated: String = password.chars().collect::<String>();
     let bytes = truncated.as_bytes();
     let slice = &bytes[..bytes.len().min(72)];
-    bcrypt::hash(std::str::from_utf8(slice).unwrap_or(password), 12)
-        .expect("bcrypt hash failed")
+    bcrypt::hash(std::str::from_utf8(slice).unwrap_or(password), 12).expect("bcrypt hash failed")
 }
 
 /// Verify a plain password against a bcrypt hash.

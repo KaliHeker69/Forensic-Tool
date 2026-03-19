@@ -23,11 +23,11 @@
 ///      and the Refresh header) so the browser stays within the proxy
 ///      mount point.
 use axum::{
+    Router,
     extract::Request,
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::any,
-    Router,
 };
 use regex::Regex;
 use reqwest::Client;
@@ -69,9 +69,7 @@ fn html_attr_re() -> &'static Regex {
 }
 
 fn css_url_re() -> &'static Regex {
-    CSS_URL_RE.get_or_init(|| {
-        Regex::new(r"url\((\/[^/)'][^)]*)\)").unwrap()
-    })
+    CSS_URL_RE.get_or_init(|| Regex::new(r"url\((\/[^/)'][^)]*)\)").unwrap())
 }
 
 // ── Router ───────────────────────────────────────────────────────────────────
@@ -167,8 +165,7 @@ async fn proxy_handler(
         }
     };
 
-    let status =
-        StatusCode::from_u16(upstream_resp.status().as_u16()).unwrap_or(StatusCode::OK);
+    let status = StatusCode::from_u16(upstream_resp.status().as_u16()).unwrap_or(StatusCode::OK);
 
     // Capture content-type before consuming headers iterator.
     let content_type = upstream_resp
@@ -187,10 +184,7 @@ async fn proxy_handler(
 
             // Rewrite redirect targets.
             "location" => {
-                let rewritten = value
-                    .to_str()
-                    .map(rewrite_location)
-                    .unwrap_or_default();
+                let rewritten = value.to_str().map(rewrite_location).unwrap_or_default();
                 if let Ok(v) = HeaderValue::from_str(&rewritten) {
                     resp_headers.insert(axum::http::header::LOCATION, v);
                 }
@@ -202,10 +196,7 @@ async fn proxy_handler(
                 if let Ok(s) = value.to_str() {
                     let rewritten = rewrite_refresh(s);
                     if let Ok(v) = HeaderValue::from_str(&rewritten) {
-                        resp_headers.insert(
-                            axum::http::HeaderName::from_static("refresh"),
-                            v,
-                        );
+                        resp_headers.insert(axum::http::HeaderName::from_static("refresh"), v);
                     }
                 }
                 continue;
@@ -326,7 +317,12 @@ fn rewrite_html(html: &str) -> String {
     // before any other script, including deferred bundles.
     let with_interceptor = if let Some(pos) = rewritten.find("<head>") {
         let insert_at = pos + "<head>".len();
-        format!("{}{}{}", &rewritten[..insert_at], interceptor, &rewritten[insert_at..])
+        format!(
+            "{}{}{}",
+            &rewritten[..insert_at],
+            interceptor,
+            &rewritten[insert_at..]
+        )
     } else {
         // Fallback: insert before </head>
         rewritten.replacen("</head>", &format!("{interceptor}</head>"), 1)

@@ -1,10 +1,10 @@
 /// File browser API – mirrors app/routers/files.py
 use axum::{
+    Json, Router,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -95,13 +95,22 @@ async fn list_directory(Query(q): Query<ListQuery>) -> Response {
     let target = PathBuf::from(&dir);
 
     if !is_path_allowed(&target) {
-        return err(StatusCode::FORBIDDEN, &format!("Access to path '{}' is not allowed", dir));
+        return err(
+            StatusCode::FORBIDDEN,
+            &format!("Access to path '{}' is not allowed", dir),
+        );
     }
     if !target.exists() {
-        return err(StatusCode::NOT_FOUND, &format!("Directory not found: {}", dir));
+        return err(
+            StatusCode::NOT_FOUND,
+            &format!("Directory not found: {}", dir),
+        );
     }
     if !target.is_dir() {
-        return err(StatusCode::BAD_REQUEST, &format!("Path is not a directory: {}", dir));
+        return err(
+            StatusCode::BAD_REQUEST,
+            &format!("Path is not a directory: {}", dir),
+        );
     }
 
     let mut contents = Vec::new();
@@ -171,20 +180,32 @@ pub struct PathQuery {
 async fn get_file_content(Query(q): Query<PathQuery>) -> Response {
     let fp = PathBuf::from(&q.path);
     if !is_path_allowed(&fp) {
-        return err(StatusCode::FORBIDDEN, &format!("Access to path '{}' is not allowed", q.path));
+        return err(
+            StatusCode::FORBIDDEN,
+            &format!("Access to path '{}' is not allowed", q.path),
+        );
     }
     if !fp.exists() {
-        return err(StatusCode::NOT_FOUND, &format!("File not found: {}", q.path));
+        return err(
+            StatusCode::NOT_FOUND,
+            &format!("File not found: {}", q.path),
+        );
     }
     if !fp.is_file() {
-        return err(StatusCode::BAD_REQUEST, &format!("Path is not a file: {}", q.path));
+        return err(
+            StatusCode::BAD_REQUEST,
+            &format!("Path is not a file: {}", q.path),
+        );
     }
     let ext = fp
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
     if ext != "csv" && ext != "txt" {
-        return err(StatusCode::BAD_REQUEST, "Only CSV and TXT files are allowed");
+        return err(
+            StatusCode::BAD_REQUEST,
+            "Only CSV and TXT files are allowed",
+        );
     }
     let meta = fp.metadata().unwrap();
     if meta.len() > MAX_FILE_SIZE {
@@ -192,7 +213,10 @@ async fn get_file_content(Query(q): Query<PathQuery>) -> Response {
     }
     match std::fs::read_to_string(&fp) {
         Ok(data) => (StatusCode::OK, data).into_response(),
-        Err(e) => err(StatusCode::INTERNAL_SERVER_ERROR, &format!("Error reading file: {}", e)),
+        Err(e) => err(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &format!("Error reading file: {}", e),
+        ),
     }
 }
 
@@ -201,10 +225,16 @@ async fn get_file_content(Query(q): Query<PathQuery>) -> Response {
 async fn get_file_info(Query(q): Query<PathQuery>) -> Response {
     let fp = PathBuf::from(&q.path);
     if !is_path_allowed(&fp) {
-        return err(StatusCode::FORBIDDEN, &format!("Access to path '{}' is not allowed", q.path));
+        return err(
+            StatusCode::FORBIDDEN,
+            &format!("Access to path '{}' is not allowed", q.path),
+        );
     }
     if !fp.exists() {
-        return err(StatusCode::NOT_FOUND, &format!("Path not found: {}", q.path));
+        return err(
+            StatusCode::NOT_FOUND,
+            &format!("Path not found: {}", q.path),
+        );
     }
     let meta = fp.metadata().unwrap();
     let modified = meta

@@ -1,18 +1,18 @@
 /// Reporting routes – mirrors app/routers/reporting.py
 use axum::{
+    Json, Router,
     extract::{Path as AxPath, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
     routing::{delete, get, post},
-    Json, Router,
 };
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::auth::middleware::{AppState, AuthUser};
-use crate::template_utils;
 use crate::config::INACTIVITY_TIMEOUT_MINUTES;
+use crate::template_utils;
 
 /// In-memory report storage (same as Python's dict-based store).
 type ReportsStore = Mutex<HashMap<String, Vec<Value>>>;
@@ -24,7 +24,10 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/tools/reporting", get(reporting_page))
         .route("/tools/reporting/save", post(save_report))
         .route("/tools/reporting/export", post(export_report))
-        .route("/tools/reporting/{report_id}", get(get_report).delete(delete_report))
+        .route(
+            "/tools/reporting/{report_id}",
+            get(get_report).delete(delete_report),
+        )
         .layer(axum::Extension(store))
 }
 
@@ -38,16 +41,25 @@ async fn reporting_page(
         lock.get(&user.username).cloned().unwrap_or_default()
     };
     let mut ctx = tera::Context::new();
-    ctx.insert("user", &serde_json::json!({
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-        "is_admin": user.is_admin,
-    }));
-    ctx.insert("avatar_letter", &template_utils::avatar_letter(&user.username));
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_admin": user.is_admin,
+        }),
+    );
+    ctx.insert(
+        "avatar_letter",
+        &template_utils::avatar_letter(&user.username),
+    );
     ctx.insert("reports", &reports);
     ctx.insert("inactivity_timeout", &INACTIVITY_TIMEOUT_MINUTES);
-    ctx.insert("current_date", &chrono::Local::now().format("%Y-%m-%d").to_string());
+    ctx.insert(
+        "current_date",
+        &chrono::Local::now().format("%Y-%m-%d").to_string(),
+    );
     template_utils::render(&state.templates, "reporting.html", &ctx)
 }
 
@@ -75,13 +87,18 @@ async fn save_report(
 
     let mut lock = store.lock().unwrap();
     let list = lock.entry(user.username.clone()).or_default();
-    if let Some(idx) = list.iter().position(|r| r.get("id").and_then(|v| v.as_str()) == Some(&report_id)) {
+    if let Some(idx) = list
+        .iter()
+        .position(|r| r.get("id").and_then(|v| v.as_str()) == Some(&report_id))
+    {
         list[idx] = report;
     } else {
         list.push(report);
     }
 
-    Json(serde_json::json!({"success": true, "message": "Report saved successfully", "report_id": report_id}))
+    Json(
+        serde_json::json!({"success": true, "message": "Report saved successfully", "report_id": report_id}),
+    )
 }
 
 async fn get_report(
@@ -91,10 +108,17 @@ async fn get_report(
 ) -> Response {
     let lock = store.lock().unwrap();
     let list = lock.get(&user.username);
-    let found = list.and_then(|v| v.iter().find(|r| r.get("id").and_then(|v| v.as_str()) == Some(&report_id)));
+    let found = list.and_then(|v| {
+        v.iter()
+            .find(|r| r.get("id").and_then(|v| v.as_str()) == Some(&report_id))
+    });
     match found {
         Some(r) => Json(serde_json::json!({"success": true, "report": r})).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(serde_json::json!({"success": false, "message": "Report not found"}))).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"success": false, "message": "Report not found"})),
+        )
+            .into_response(),
     }
 }
 
@@ -110,11 +134,11 @@ async fn delete_report(
     Json(serde_json::json!({"success": true, "message": "Report deleted"}))
 }
 
-async fn export_report(
-    AuthUser(_user): AuthUser,
-    Json(data): Json<Value>,
-) -> Json<Value> {
-    let sections = data.get("sections").cloned().unwrap_or(serde_json::json!({}));
+async fn export_report(AuthUser(_user): AuthUser, Json(data): Json<Value>) -> Json<Value> {
+    let sections = data
+        .get("sections")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
     let mut lines: Vec<String> = Vec::new();
 
     lines.push("=".repeat(80));
@@ -126,11 +150,41 @@ async fn export_report(
     if let Some(general) = sections.get("general") {
         lines.push("SECTION 1: GENERAL INFORMATION".into());
         lines.push("-".repeat(40));
-        lines.push(format!("Report Title: {}", general.get("title").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Case Identifier: {}", general.get("case_id").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Examining Organization: {}", general.get("organization").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Report Date: {}", general.get("report_date").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Examiner: {}", general.get("examiner").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Report Title: {}",
+            general
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Case Identifier: {}",
+            general
+                .get("case_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Examining Organization: {}",
+            general
+                .get("organization")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Report Date: {}",
+            general
+                .get("report_date")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Examiner: {}",
+            general
+                .get("examiner")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
         lines.push(String::new());
     }
 
@@ -138,12 +192,38 @@ async fn export_report(
     if let Some(req) = sections.get("request") {
         lines.push("SECTION 2: REQUEST DETAILS".into());
         lines.push("-".repeat(40));
-        lines.push(format!("Date of Request: {}", req.get("request_date").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Requestor: {}", req.get("requestor").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Requestor Organization: {}", req.get("requestor_org").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Authority: {}", req.get("authority").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Scope & Purpose: {}", req.get("scope").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Specific Tasks: {}", req.get("tasks").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Date of Request: {}",
+            req.get("request_date")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Requestor: {}",
+            req.get("requestor")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Requestor Organization: {}",
+            req.get("requestor_org")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Authority: {}",
+            req.get("authority")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Scope & Purpose: {}",
+            req.get("scope").and_then(|v| v.as_str()).unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Specific Tasks: {}",
+            req.get("tasks").and_then(|v| v.as_str()).unwrap_or("N/A")
+        ));
         lines.push(String::new());
     }
 
@@ -151,10 +231,28 @@ async fn export_report(
     if let Some(ev) = sections.get("evidence") {
         lines.push("SECTION 3: EVIDENCE RECEIVED".into());
         lines.push("-".repeat(40));
-        lines.push(format!("Receipt Date: {}", ev.get("receipt_date").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Submitter: {}", ev.get("submitter").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Delivery Method: {}", ev.get("delivery_method").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Evidence Items:\n{}", ev.get("items").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Receipt Date: {}",
+            ev.get("receipt_date")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Submitter: {}",
+            ev.get("submitter")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Delivery Method: {}",
+            ev.get("delivery_method")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Evidence Items:\n{}",
+            ev.get("items").and_then(|v| v.as_str()).unwrap_or("N/A")
+        ));
         lines.push(String::new());
     }
 
@@ -162,10 +260,28 @@ async fn export_report(
     if let Some(meth) = sections.get("methodology") {
         lines.push("SECTION 4: METHODOLOGY".into());
         lines.push("-".repeat(40));
-        lines.push(format!("Tools Used:\n{}", meth.get("tools").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Standards Applied: {}", meth.get("standards").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Acquisition Method: {}", meth.get("acquisition").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Procedures:\n{}", meth.get("procedures").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Tools Used:\n{}",
+            meth.get("tools").and_then(|v| v.as_str()).unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Standards Applied: {}",
+            meth.get("standards")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Acquisition Method: {}",
+            meth.get("acquisition")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Procedures:\n{}",
+            meth.get("procedures")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
         lines.push(String::new());
     }
 
@@ -228,10 +344,25 @@ async fn export_report(
     if let Some(auth) = sections.get("authorization") {
         lines.push("SECTION 10: REPORT AUTHORIZATION".into());
         lines.push("-".repeat(40));
-        lines.push(format!("Examiner Name: {}", auth.get("examiner_name").and_then(|v| v.as_str()).unwrap_or("N/A")));
-        lines.push(format!("Credentials: {}", auth.get("credentials").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Examiner Name: {}",
+            auth.get("examiner_name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
+        lines.push(format!(
+            "Credentials: {}",
+            auth.get("credentials")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
         lines.push("Signature: _________________________".into());
-        lines.push(format!("Date: {}", auth.get("sign_date").and_then(|v| v.as_str()).unwrap_or("N/A")));
+        lines.push(format!(
+            "Date: {}",
+            auth.get("sign_date")
+                .and_then(|v| v.as_str())
+                .unwrap_or("N/A")
+        ));
         lines.push(String::new());
     }
 

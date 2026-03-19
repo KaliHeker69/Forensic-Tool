@@ -47,6 +47,7 @@ timeline.csv
 **/*.json
 **/*.csv
 **/*.dat
+!portal_from_azure/rust-backend/data/dashboard_quickview.json
 
 portal.pid
 portal.log*

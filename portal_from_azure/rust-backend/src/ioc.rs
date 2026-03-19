@@ -1,15 +1,13 @@
+use chrono::{DateTime, Local};
 /// IPsum threat-intelligence feed management.
 ///
 /// Feed: https://github.com/stamparm/ipsum
 /// Format: tab-separated  "<ip>\t<score>"  lines; comment lines start with '#'.
 /// Higher score = more blacklists containing that IP = higher confidence.
-
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use chrono::{DateTime, Local};
 
-pub const IPSUM_URL: &str =
-    "https://raw.githubusercontent.com/stamparm/ipsum/master/ipsum.txt";
+pub const IPSUM_URL: &str = "https://raw.githubusercontent.com/stamparm/ipsum/master/ipsum.txt";
 
 /// Directory where ipsum.txt is stored (configurable via IOC_DIR env var).
 pub fn ioc_dir() -> PathBuf {
@@ -74,10 +72,7 @@ impl IpsumData {
             if line.starts_with('#') {
                 // Extract date from: "# Last update: Sat, 21 Feb 2026 03:01:02 +0100"
                 if source_date.is_none() && line.to_lowercase().contains("last update") {
-                    source_date = line
-                        .splitn(2, ':')
-                        .nth(1)
-                        .map(|s| s.trim().to_string());
+                    source_date = line.splitn(2, ':').nth(1).map(|s| s.trim().to_string());
                 }
                 continue;
             }
@@ -148,9 +143,12 @@ pub async fn download_ipsum() -> Result<String, String> {
     let out = tokio::process::Command::new("curl")
         .args([
             "-fsSL",
-            "--connect-timeout", "30",
-            "--max-time", "120",
-            "-o", &path_str,
+            "--connect-timeout",
+            "30",
+            "--max-time",
+            "120",
+            "-o",
+            &path_str,
             IPSUM_URL,
         ])
         .output()
@@ -164,7 +162,11 @@ pub async fn download_ipsum() -> Result<String, String> {
 
     // Count lines as a sanity check
     let lines = std::fs::read_to_string(&path)
-        .map(|c| c.lines().filter(|l| !l.starts_with('#') && !l.is_empty()).count())
+        .map(|c| {
+            c.lines()
+                .filter(|l| !l.starts_with('#') && !l.is_empty())
+                .count()
+        })
         .unwrap_or(0);
 
     Ok(format!("Downloaded {} IPs to {}", lines, path_str))

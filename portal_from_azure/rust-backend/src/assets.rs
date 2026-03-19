@@ -1,4 +1,4 @@
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use tera::Tera;
 
 // Embed the `app/` directory from the project root at compile time
@@ -14,7 +14,10 @@ pub fn register_templates(tera: &mut Tera) -> Result<(), tera::Error> {
         let mut entries: Vec<_> = tpl_dir
             .files()
             .filter_map(|file| {
-                file.path().file_name().and_then(|n| n.to_str()).map(|name| (name.to_string(), file))
+                file.path()
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|name| (name.to_string(), file))
             })
             .collect();
         // move base.html to front if present
@@ -40,7 +43,10 @@ pub fn get_static(path: &str) -> Option<(&'static [u8], &'static str)> {
     let path = path.trim_start_matches('/');
     let full = format!("static/{path}");
     if let Some(f) = APP_DIR.get_file(&full) {
-        let mime = mime_guess::from_path(f.path()).first_or_octet_stream().essence_str().to_string();
+        let mime = mime_guess::from_path(f.path())
+            .first_or_octet_stream()
+            .essence_str()
+            .to_string();
         return Some((f.contents(), Box::leak(mime.into_boxed_str())));
     }
     None
@@ -52,7 +58,10 @@ pub fn get_timeline(path: &str) -> Option<(&'static [u8], &'static str)> {
     let path = path.trim_start_matches('/');
     let lookup = if path.is_empty() { "index.html" } else { path };
     if let Some(f) = TIMELINE_DIR.get_file(lookup) {
-        let mime = mime_guess::from_path(f.path()).first_or_octet_stream().essence_str().to_string();
+        let mime = mime_guess::from_path(f.path())
+            .first_or_octet_stream()
+            .essence_str()
+            .to_string();
         return Some((f.contents(), Box::leak(mime.into_boxed_str())));
     }
     None
