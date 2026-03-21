@@ -25,6 +25,10 @@
                 <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
                 <span>Network</span>
             </a>
+            <a href="#srum-section" class="rail-link">
+                <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                <span>SRUM</span>
+            </a>
             <a href="#execution-section" class="rail-link">
                 <i class="fa-solid fa-terminal" aria-hidden="true"></i>
                 <span>Execution</span>
@@ -142,6 +146,11 @@
                     <span class="card-foot {% if execution_quickview.powershell_events > 0 %}warning{% else %}muted{% endif %}">Recent execution traces</span>
                 </article>
                 <article class="forensic-card">
+                    <span class="card-label">SRUM Critical</span>
+                    <span class="card-value">{{ srum_quickview.critical_count }}</span>
+                    <span class="card-foot {% if srum_quickview.critical_count > 0 %}warning{% else %}positive{% endif %}">Resource abuse alerts</span>
+                </article>
+                <article class="forensic-card">
                     <span class="card-label">IOC Total</span>
                     <span class="card-value">{% if ioc_total %}{{ ioc_total }}{% else %}0{% endif %}</span>
                     <span class="card-foot muted">Loaded indicators</span>
@@ -157,12 +166,13 @@
                 <header class="endpoint-quickview-header">
                     <div>
                         <h2>Endpoint Artifact Explorer Quick View</h2>
-                        <p>Sections aligned to NTFS, Network, User Execution, Browser, and Memory artifacts.</p>
+                        <p>Sections aligned to Windows Event, NTFS, Network, SRUM, User Execution, Browser, and Memory artifacts.</p>
                     </div>
                     <nav class="endpoint-tab-nav" aria-label="Artifact sections">
                         <a href="#windows-event-section">Windows Event</a>
                         <a href="#ntfs-section">NTFS</a>
                         <a href="#network-section">Network</a>
+                        <a href="#srum-section">System Resource</a>
                         <a href="#execution-section">User Execution</a>
                         <a href="#process-tree-section">Process Tree</a>
                         <a href="#browser-section">Browser</a>
@@ -295,6 +305,110 @@
                             </li>
                             {% endif %}
                         </ul>
+                    </article>
+
+                    <article class="obs-panel endpoint-panel endpoint-panel-srum" id="srum-section">
+                        <header class="panel-header">
+                            <div>
+                                <h2><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> System Resource Utilization</h2>
+                                <p>SRUM application telemetry, aggregate resource pressure, and critical alert triage</p>
+                            </div>
+                            <div class="srum-chip-row">
+                                <span class="srum-chip srum-chip-critical">{{ srum_quickview.critical_count }} critical</span>
+                                <span class="srum-chip srum-chip-high">{{ srum_quickview.high_count }} high</span>
+                            </div>
+                        </header>
+                        <div class="endpoint-stat-grid">
+                            <div class="endpoint-stat"><span>Total Utilization</span><strong>{{ srum_quickview.total_usage_human }}</strong></div>
+                            <div class="endpoint-stat"><span>Applications</span><strong>{{ srum_quickview.monitored_apps }}</strong></div>
+                            <div class="endpoint-stat"><span>Total Findings</span><strong>{{ srum_quickview.total_findings }}</strong></div>
+                            <div class="endpoint-stat"><span>Critical Feed</span><strong>{{ srum_quickview.critical_alerts | length }}</strong></div>
+                        </div>
+                        <div class="srum-usage-strip">
+                            <div class="srum-usage-track" aria-label="SRUM utilization breakdown">
+                                <span class="srum-usage-segment srum-usage-read" style="width: {{ srum_quickview.disk_read_percent }}%"></span>
+                                <span class="srum-usage-segment srum-usage-write" style="width: {{ srum_quickview.disk_write_percent }}%"></span>
+                                <span class="srum-usage-segment srum-usage-network" style="width: {{ srum_quickview.network_percent }}%"></span>
+                            </div>
+                            <div class="srum-usage-legend">
+                                <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Read {{ srum_quickview.disk_read_human }} · {{ srum_quickview.disk_read_percent }}%</span>
+                                <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Write {{ srum_quickview.disk_write_human }} · {{ srum_quickview.disk_write_percent }}%</span>
+                                <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Network {{ srum_quickview.network_human }} · {{ srum_quickview.network_percent }}%</span>
+                            </div>
+                        </div>
+                        <div class="srum-layout">
+                            <section class="srum-pane">
+                                <div class="srum-pane-head">
+                                    <h3>Top Consumers</h3>
+                                    <span>Top 5 by aggregate bytes</span>
+                                </div>
+                                <ul class="srum-consumer-list">
+                                    {% for consumer in srum_quickview.top_consumers %}
+                                    <li>
+                                        <div class="srum-consumer-head">
+                                            <strong>{{ consumer.app_label }}</strong>
+                                            <span>{{ consumer.total_usage_human }}</span>
+                                        </div>
+                                        <div class="srum-consumer-meta">{{ consumer.user }} · {{ consumer.record_count }} records · last {{ consumer.last_seen }}</div>
+                                        <div class="srum-consumer-bar"><span style="width: {{ consumer.percent_of_total }}%"></span></div>
+                                    </li>
+                                    {% endfor %}
+                                    {% if srum_quickview.top_consumers | length == 0 %}
+                                    <li>
+                                        <div class="srum-consumer-head">
+                                            <strong>No SRUM consumer data</strong>
+                                            <span>0 B</span>
+                                        </div>
+                                        <div class="srum-consumer-meta">SRUM application statistics were not available for this case.</div>
+                                        <div class="srum-consumer-bar"><span style="width: 0%"></span></div>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </section>
+                            <section class="srum-pane">
+                                <div class="srum-pane-head">
+                                    <h3>Top 5 Critical Alerts</h3>
+                                    <span>Latest critical findings from the SRUM report</span>
+                                </div>
+                                <ul class="srum-alert-feed">
+                                    {% for alert in srum_quickview.critical_alerts %}
+                                    <li class="srum-alert-card">
+                                        <div class="srum-alert-head">
+                                            <div>
+                                                <span class="srum-alert-time">{{ alert.timestamp }}</span>
+                                                <strong>{{ alert.title }}</strong>
+                                            </div>
+                                            <span class="srum-alert-category">{{ alert.category }}</span>
+                                        </div>
+                                        <div class="srum-alert-meta">
+                                            <span>{{ alert.app_label }}</span>
+                                            <span>{{ alert.user }}</span>
+                                        </div>
+                                        <p>{{ alert.description }}</p>
+                                        {% if alert.evidence_summary != "" %}
+                                        <div class="srum-alert-evidence">{{ alert.evidence_summary }}</div>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                    {% if srum_quickview.critical_alerts | length == 0 %}
+                                    <li class="srum-alert-card">
+                                        <div class="srum-alert-head">
+                                            <div>
+                                                <span class="srum-alert-time">No critical SRUM alert</span>
+                                                <strong>Utilization telemetry appears nominal</strong>
+                                            </div>
+                                            <span class="srum-alert-category">baseline</span>
+                                        </div>
+                                        <div class="srum-alert-meta">
+                                            <span>SRUM</span>
+                                            <span>no critical evidence</span>
+                                        </div>
+                                        <p>The SRUM report did not return any critical findings for the current case payload.</p>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </section>
+                        </div>
                     </article>
 
                     <article class="obs-panel endpoint-panel endpoint-panel-memory" id="memory-section">

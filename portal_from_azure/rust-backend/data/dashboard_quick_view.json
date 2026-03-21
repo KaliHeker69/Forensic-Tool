@@ -1,0 +1,1068 @@
+{
+  "analysis_metadata": {
+    "generated_at": "2026-03-21 00:56:38 +05:30",
+    "generated_by": "dashboard_setter",
+    "modules_processed": [
+      "network",
+      "memory",
+      "ntfs",
+      "browser",
+      "windows-event",
+      "srum"
+    ],
+    "output_path": "/Users/kali/Codes/wsl/portal_from_azure/rust-backend/data/dashboard_quick_view.json"
+  },
+  "browser_quickview": {
+    "browsers_found": [
+      "Microsoft Edge",
+      "Google Chrome",
+      "Brave Browser"
+    ],
+    "recent_history": [
+      {
+        "browser": "Chrome",
+        "domain": "youtube.com",
+        "last_visit": "2026-02-22T12:45:34Z",
+        "title": "Black Ops 6 hack computer puzzle guide / walkthrough, how to hack the computer - YouTube",
+        "url": "https://www.youtube.com/watch?v=Zs9SvuaKLwI"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:45:31Z",
+        "title": "how to hack a computer in black ops 6 - Google Search",
+        "url": "https://www.google.com/search?q=How+to+hack+a+computer+in+black+ops+6&oq=How+to+hack+a+computer+in+black+ops+6&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIICAEQABgWGB4yCAgCEAAYFhgeMgoIAxAAGAoYFhgeMggIBBAAGBYYHjINCAUQABiGAxiABBiKBTIHCAYQABjvBTIKCAcQABiABBiiBDIHCAgQABjvBTIHCAkQABjvBdIBCDgwNTRqMGo3qAIHsAIB8QVNTCwYQtorV_EFTUwsGELaK1c&sourceid=chrome&ie=UTF-8"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:43:24Z",
+        "title": "How to hack a system. - Google Search",
+        "url": "https://www.google.com/search?q=How+to+hack+a+system.&sourceid=chrome&ie=UTF-8&udm=50&aep=48&cud=0&qsubts=1771764192526&source=chrome.crn.obic&sei=4PmaaduWL8eXseMP8ZiyOA&mstk=AUtExfCOXPU9DJYI-RLxbHGZKHGAVtqCFK7zgko6SJMiogE_7bhqRjJfujHrvv_XyA-FNsuJkjLdzb2sj2goQV4bqNx1knEPl4S6ExxyfZOuEl8Vq1BxDSwwYpEPkSPAdOLNf98xrYIXdaOJ2yKk24FQOpzIsjgjVjuFrgE&csuir=1"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:43:19Z",
+        "title": "How to hack a system. - Google Search",
+        "url": "https://www.google.com/search?q=How+to+hack+a+system.&sourceid=chrome&ie=UTF-8&udm=50&aep=48&cud=0&qsubts=1771764192526&source=chrome.crn.obic&sei=4PmaaduWL8eXseMP8ZiyOA"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:43:19Z",
+        "title": "How to hack a system. - Google Search",
+        "url": "https://www.google.com/search?q=&sourceid=chrome&ie=UTF-8&udm=50&aep=48&cud=0&qsubts=1771764192526&source=chrome.crn.obic&sei=4PmaaduWL8eXseMP8ZiyOA"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:43:12Z",
+        "title": "How to hack a system. - Google Search",
+        "url": "https://www.google.com/search?q=&sourceid=chrome&ie=UTF-8&udm=50&aep=48&cud=0&qsubts=1771764192526&source=chrome.crn.obic"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "kali.org",
+        "last_visit": "2026-02-22T12:43:01Z",
+        "title": "What is Kali Linux? | Kali Linux Documentation",
+        "url": "https://www.kali.org/docs/introduction/what-is-kali-linux/"
+      },
+      {
+        "browser": "Chrome",
+        "domain": "google.com",
+        "last_visit": "2026-02-22T12:42:58Z",
+        "title": "what is kali test1 - Google Search",
+        "url": "https://www.google.com/search?q=what+is+kali+test1&oq=what+is+kali+test1&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQIRgKGKABMgcIAhAhGI8CMgcIAxAhGI8C0gEINDk0OGowajeoAgCwAgA&sourceid=chrome&ie=UTF-8&sei=0vmaafvjILSUseMPtdqjyAc"
+      }
+    ],
+    "source": "/Users/kali/Codes/wsl/browser_forensics/report.json",
+    "top_domains": [
+      {
+        "count": 10,
+        "label": "google.com"
+      },
+      {
+        "count": 6,
+        "label": "youtube.com"
+      },
+      {
+        "count": 5,
+        "label": "search.brave.com"
+      },
+      {
+        "count": 2,
+        "label": "bing.com"
+      },
+      {
+        "count": 2,
+        "label": "microsoft.com"
+      },
+      {
+        "count": 2,
+        "label": "support.google.com"
+      }
+    ],
+    "total_browsers": 3,
+    "total_cookies": 29,
+    "total_downloads": 3,
+    "total_history_entries": 34,
+    "total_sessions": 200
+  },
+  "memory_quickview": {
+    "analysis_metadata": {
+      "analysis_time": "2026-03-20T15:40:13.238221+00:00",
+      "input_path": "jsonl",
+      "plugins_used": [
+        "cachedump",
+        "certificates",
+        "cmdline",
+        "cmdscan",
+        "consoles",
+        "dlllist",
+        "filescan",
+        "getsids",
+        "handles",
+        "hivelist",
+        "hivescan",
+        "info",
+        "malfind",
+        "mftscan",
+        "modscan",
+        "netscan",
+        "netstat",
+        "printkey",
+        "privileges",
+        "psscan",
+        "pstree",
+        "scheduled_tasks",
+        "svcscan",
+        "thrdscan",
+        "userassist",
+        "vadinfo"
+      ],
+      "tool": "vol3-correlate",
+      "version": "0.1.0"
+    },
+    "findings_by_category": {
+      "Certificate": [
+        {
+          "category": "certificate",
+          "confidence": 0.55,
+          "description": "A significant portion of certificates have empty names. This may indicate store corruption, parser issues, or tampering and should be validated against raw plugin output.",
+          "evidence": [
+            {
+              "data": "EmptyNameCount:20 Total:48 Ratio:0.417",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "certificates"
+            }
+          ],
+          "id": "CERT005_5536c02c",
+          "mitre_attack": "T1562.001",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [],
+          "rule_id": "CERT005",
+          "rule_name": "Certificate Store Anomaly Detection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Certificates with empty names (20/48, 42%)"
+        }
+      ],
+      "Credential": [
+        {
+          "category": "credential",
+          "confidence": 0.9,
+          "description": "Process 'inject.x64.exe' (PID 9068) is holding a handle to lsass.exe. This is a strong indicator of credential dumping activity. \n\nGranted Access: 5178 (20856)\nDecoded Rights: QUERY_LIMITED_INFO | VM_WRITE | VM_READ | VM_OPERATION\nHolder Created: 2023-01-23 18:09:47 UTC\n\n\nAnalysis: A handle with VM_READ/VM_WRITE access allows reading LSASS memory to extract credentials.",
+          "evidence": [
+            {
+              "data": "Holder: inject.x64.exe (PID 9068) Target: lsass.exe Access: 5178 (QUERY_LIMITED_INFO | VM_WRITE | VM_READ | VM_OPERATION)",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "handles"
+            },
+            {
+              "data": "Process Created: 2023-01-23 18:09:47 UTC",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "pslist"
+            }
+          ],
+          "id": "CRED001_4e58dca4",
+          "mitre_attack": "T1003",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068
+          ],
+          "rule_id": "CRED001",
+          "rule_name": "LSASS Process Handle Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Potential credential dump: inject.x64.exe accessing lsass"
+        },
+        {
+          "category": "credential",
+          "confidence": 0.98,
+          "description": "Process 'inject.x64.exe' (PID 9068) is targeting lsass.exe via its command line. [KNOWN CREDENTIAL/INJECTION TOOL]\n\nEvidence: Command line contains PID 708 which belongs to lsass.exe\nCommand: inject.x64.exe  708\nCreated: 2023-01-23 18:09:47 UTC\n\nThis is a strong indicator of credential dumping or process injection targeting the Local Security Authority Subsystem Service.",
+          "evidence": [
+            {
+              "data": "Process: inject.x64.exe PID: 9068 Args: inject.x64.exe  708",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "cmdline"
+            },
+            {
+              "data": "Created: 2023-01-23 18:09:47 UTC LSASS PIDs: {708}",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "pslist"
+            }
+          ],
+          "id": "CRED006_4e62df24",
+          "mitre_attack": "T1003.001",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068,
+            708
+          ],
+          "rule_id": "CRED006",
+          "rule_name": "LSASS Targeting Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "LSASS targeting: inject.x64.exe (PID:9068) [KNOWN CREDENTIAL/INJECTION TOOL]"
+        },
+        {
+          "category": "credential",
+          "confidence": 0.92,
+          "description": "Detected suspicious command history entries from cmdscan/consoles for PID 660. Commands: Administrator: Command Prompt - inject.x64.exe  708 | cp inject.x64.exe \\tmp | inject.x64.exe | inject.x64.exe 708 | mv inject.x64.exe \\tmp",
+          "evidence": [
+            {
+              "data": "Administrator: Command Prompt - inject.x64.exe  708 | cp inject.x64.exe \\tmp | inject.x64.exe | inject.x64.exe 708 | mv inject.x64.exe \\tmp",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "cmdscan+consoles"
+            }
+          ],
+          "id": "CRED004_4e604afc",
+          "mitre_attack": "T1059.003",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            660
+          ],
+          "rule_id": "CRED004",
+          "rule_name": "Suspicious Console Command History",
+          "severity": "high",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Suspicious console command history (PID 660)"
+        }
+      ],
+      "Injection": [
+        {
+          "category": "injection",
+          "confidence": 1.0,
+          "description": "Process lsass.exe shows 2 injection indicators: 2 MZ headers, 2 RWX regions",
+          "evidence": [
+            {
+              "data": "Risk score: 100/100, 2 suspicious regions",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "malfind"
+            }
+          ],
+          "id": "INJ001_4d9f8b3c",
+          "mitre_attack": "T1055",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            708
+          ],
+          "rule_id": "INJ001",
+          "rule_name": "Malfind Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Code injection in lsass.exe (PID:708)"
+        },
+        {
+          "category": "injection",
+          "confidence": 0.95,
+          "description": "PE file (MZ header) detected in process lsass.exe memory at 1742871461888. This indicates reflective DLL injection or process hollowing.",
+          "evidence": [
+            {
+              "data": "4d 5a 90 00 03 00 00 00 04 00 00 00 ff ff 00 00 b8 00 00 00 00 00 00 00 40 00 00 00 00 00 00 00 00 0",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "malfind"
+            }
+          ],
+          "id": "INJ003_4d9fe12c",
+          "mitre_attack": "T1620",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            708
+          ],
+          "rule_id": "INJ003",
+          "rule_name": "MZ Header in Memory",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "PE file in memory: lsass.exe (PID:708)"
+        },
+        {
+          "category": "injection",
+          "confidence": 0.95,
+          "description": "Process 'inject.x64.exe' (PID 9068) appears to be a process injection tool targeting lsass.exe (PID:708). Command line: 'inject.x64.exe  708'. This indicates active code injection activity.",
+          "evidence": [
+            {
+              "data": "Process: inject.x64.exe PID: 9068 Args: inject.x64.exe  708",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "cmdline"
+            }
+          ],
+          "id": "INJ004_4da3ffdc",
+          "mitre_attack": "T1055",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068,
+            708
+          ],
+          "rule_id": "INJ004",
+          "rule_name": "Process Injection Tool Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Injection tool detected: inject.x64.exe (PID:9068) targeting lsass.exe (PID:708)"
+        },
+        {
+          "category": "injection",
+          "confidence": 0.9,
+          "description": "Process 'lsass.exe' (PID 708) has 2 private executable memory regions without file backing. 2 of these are RWX (read-write-execute). This pattern indicates code injection or shellcode execution.\n\nRegions:\n1742871461888 - 1742871531519 [PAGE_EXECUTE_READWRITE] Tag:VadS\n1742871592960 - 1742871687167 [PAGE_EXECUTE_READWRITE] Tag:VadS",
+          "evidence": [
+            {
+              "data": "Process:lsass.exe PID:708 SuspiciousVADs:2 RWX:2",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "vadinfo"
+            }
+          ],
+          "id": "INJ005_4df3aa64",
+          "mitre_attack": "T1055.012",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            708
+          ],
+          "rule_id": "INJ005",
+          "rule_name": "VAD-Based Injection Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Suspicious VADs in lsass.exe (PID:708): 2 unbacked executable regions"
+        },
+        {
+          "category": "injection",
+          "confidence": 0.7,
+          "description": "Process 'SearchApp.exe' (PID 8228) has 2 private executable memory regions without file backing. 2 of these are RWX (read-write-execute). This pattern indicates code injection or shellcode execution.\n\nRegions:\n3055297822720 - 3055297953791 [PAGE_EXECUTE_READWRITE] Tag:VadS\n3055605383168 - 3055605792767 [PAGE_EXECUTE_READWRITE] Tag:VadS",
+          "evidence": [
+            {
+              "data": "Process:SearchApp.exe PID:8228 SuspiciousVADs:2 RWX:2",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "vadinfo"
+            }
+          ],
+          "id": "INJ005_4df3b61c",
+          "mitre_attack": "T1055.012",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "INJ005",
+          "rule_name": "VAD-Based Injection Detection",
+          "severity": "medium",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Suspicious VADs in SearchApp.exe (PID:8228): 2 unbacked executable regions"
+        }
+      ],
+      "Network": [
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process Sysmon64.exe (PID:2732) has ESTABLISHED connection to external address 104.18.21.226:80",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50275 → 104.18.21.226:80 [ESTABLISHED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d95fdec",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "104.18.21.226"
+          ],
+          "related_pids": [
+            2732
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "medium",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:30:25Z",
+          "title": "External connection: Sysmon64.exe → 104.18.21.226:80"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process svchost.exe (PID:2960) has ESTABLISHED connection to external address 20.198.118.190:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:49727 → 20.198.118.190:443 [ESTABLISHED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d95a7fc",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "20.198.118.190"
+          ],
+          "related_pids": [
+            2960
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T17:54:13Z",
+          "title": "External connection: svchost.exe → 20.198.118.190:443"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process SearchApp.exe (PID:8228) has CLOSED connection to external address 204.79.197.200:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50254 → 204.79.197.200:443 [CLOSED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d95e294",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "204.79.197.200"
+          ],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:21:39Z",
+          "title": "External connection: SearchApp.exe → 204.79.197.200:443"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process SearchApp.exe (PID:8228) has CLOSED connection to external address 204.79.197.222:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50255 → 204.79.197.222:443 [CLOSED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d962114",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "204.79.197.222"
+          ],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:21:56Z",
+          "title": "External connection: SearchApp.exe → 204.79.197.222:443"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process SearchApp.exe (PID:8228) has CLOSE_WAIT connection to external address 152.199.43.62:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50258 → 152.199.43.62:443 [CLOSE_WAIT]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d95bb84",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "152.199.43.62"
+          ],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:21:58Z",
+          "title": "External connection: SearchApp.exe → 152.199.43.62:443"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process SearchApp.exe (PID:8228) has CLOSED connection to external address 13.107.3.254:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50257 → 13.107.3.254:443 [CLOSED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d95d2f4",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "13.107.3.254"
+          ],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:21:58Z",
+          "title": "External connection: SearchApp.exe → 13.107.3.254:443"
+        },
+        {
+          "category": "network",
+          "confidence": 0.8,
+          "description": "Process SearchApp.exe (PID:8228) has CLOSED connection to external address 13.107.237.254:443",
+          "evidence": [
+            {
+              "data": "TCPv4 10.0.2.15:50256 → 13.107.237.254:443 [CLOSED]",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "netscan"
+            }
+          ],
+          "id": "NET001_4d9609a4",
+          "mitre_attack": "T1071",
+          "related_files": [],
+          "related_ips": [
+            "13.107.237.254"
+          ],
+          "related_pids": [
+            8228
+          ],
+          "rule_id": "NET001",
+          "rule_name": "External Network Connection",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": "2023-01-23T18:21:58Z",
+          "title": "External connection: SearchApp.exe → 13.107.237.254:443"
+        }
+      ],
+      "Persistence": [
+        {
+          "category": "persistence",
+          "confidence": 0.75,
+          "description": "Persistence mechanism detected in registry key '\\??\\C:\\Windows\\ServiceProfiles\\NetworkService\\NTUSER.DAT\\HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' with value: ",
+          "evidence": [
+            {
+              "data": "\\??\\C:\\Windows\\ServiceProfiles\\NetworkService\\NTUSER.DAT\\HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run = ",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "printkey"
+            }
+          ],
+          "id": "PERS001_4df5254c",
+          "mitre_attack": "T1547.001",
+          "related_files": [
+            ""
+          ],
+          "related_ips": [],
+          "related_pids": [],
+          "rule_id": "PERS001",
+          "rule_name": "Registry Persistence",
+          "severity": "low",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Registry persistence: Run"
+        }
+      ],
+      "Privilege": [
+        {
+          "category": "privilege",
+          "confidence": 0.8,
+          "description": "Process inject.x64.exe has SeDebugPrivilege ENABLED - this allows reading/writing other process memory and is commonly abused for credential theft.",
+          "evidence": [
+            {
+              "data": "PID:9068 Process:inject.x64.exe Privilege:SeDebugPrivilege Attributes:Present,Enabled",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "privileges"
+            }
+          ],
+          "id": "PRIV001_542b4b6c",
+          "mitre_attack": "T1134.001",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068
+          ],
+          "rule_id": "PRIV001",
+          "rule_name": "SeDebugPrivilege Abuse Detection",
+          "severity": "critical",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "SeDebugPrivilege enabled for inject.x64.exe (PID 9068)"
+        },
+        {
+          "category": "privilege",
+          "confidence": 0.8,
+          "description": "Process cmd.exe has SeImpersonatePrivilege - potential for Potato-style privilege escalation attacks.",
+          "evidence": [
+            {
+              "data": "PID:9932 Process:cmd.exe Privilege:SeImpersonatePrivilege",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "privileges"
+            }
+          ],
+          "id": "PRIV005_551bcdbc",
+          "mitre_attack": "T1134.003",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9932
+          ],
+          "rule_id": "PRIV005",
+          "rule_name": "SeImpersonatePrivilege Abuse Detection",
+          "severity": "high",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "SeImpersonatePrivilege in cmd.exe (PID 9932)"
+        },
+        {
+          "category": "privilege",
+          "confidence": 0.8,
+          "description": "Process inject.x64.exe has SeImpersonatePrivilege - potential for Potato-style privilege escalation attacks.",
+          "evidence": [
+            {
+              "data": "PID:9068 Process:inject.x64.exe Privilege:SeImpersonatePrivilege",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "privileges"
+            }
+          ],
+          "id": "PRIV005_552a835c",
+          "mitre_attack": "T1134.003",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068
+          ],
+          "rule_id": "PRIV005",
+          "rule_name": "SeImpersonatePrivilege Abuse Detection",
+          "severity": "high",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "SeImpersonatePrivilege in inject.x64.exe (PID 9068)"
+        }
+      ],
+      "Thread": [
+        {
+          "category": "thread",
+          "confidence": 0.8,
+          "description": "Thread has unusual start path: Some(\"\\\\Windows\\\\System32\\\\ntdll.dll\") (Win32: Some(\"\\\\Users\\\\BLACKP~1\\\\AppData\\\\Local\\\\Temp\\\\inject\")). This may indicate shellcode injection or unbacked code execution.",
+          "evidence": [
+            {
+              "data": "TID:9188 StartPath:Some(\"\\\\Windows\\\\System32\\\\ntdll.dll\") Win32StartPath:Some(\"\\\\Users\\\\BLACKP~1\\\\AppData\\\\Local\\\\Temp\\\\inject\")",
+              "line_number": null,
+              "source_file": "",
+              "source_plugin": "thrdscan"
+            }
+          ],
+          "id": "THRD002_53fadcfc",
+          "mitre_attack": "T1055.003",
+          "related_files": [],
+          "related_ips": [],
+          "related_pids": [
+            9068
+          ],
+          "rule_id": "THRD002",
+          "rule_name": "Suspicious Thread Start Address",
+          "severity": "high",
+          "threat_intel": null,
+          "timestamp": null,
+          "title": "Thread TID 9188 in PID 9068 has suspicious start path"
+        }
+      ]
+    },
+    "risk_level": "CRITICAL",
+    "risk_score": 100,
+    "severity_segments": [
+      {
+        "color": "#ff7351",
+        "count": 7,
+        "label": "Critical",
+        "percent": 33.3
+      },
+      {
+        "color": "#f6b73c",
+        "count": 4,
+        "label": "High",
+        "percent": 19.0
+      },
+      {
+        "color": "#78b8ff",
+        "count": 2,
+        "label": "Medium",
+        "percent": 9.5
+      },
+      {
+        "color": "#2ea043",
+        "count": 8,
+        "label": "Low",
+        "percent": 38.1
+      },
+      {
+        "color": "#7b8490",
+        "count": 0,
+        "label": "Info",
+        "percent": 0.0
+      }
+    ],
+    "source": "/Users/kali/Codes/wsl/memory_corelation/reports/analysis.json",
+    "top_categories": [
+      {
+        "count": 7,
+        "label": "Network"
+      },
+      {
+        "count": 5,
+        "label": "Injection"
+      },
+      {
+        "count": 3,
+        "label": "Credential"
+      },
+      {
+        "count": 3,
+        "label": "Privilege"
+      },
+      {
+        "count": 1,
+        "label": "Certificate"
+      },
+      {
+        "count": 1,
+        "label": "Persistence"
+      }
+    ],
+    "total_findings": 21,
+    "unique_ips": 7,
+    "unique_pids": 7
+  },
+  "network_quickview": {
+    "active_connections": [
+      {
+        "local_endpoint": "192.168.180.138:60301",
+        "pid": 0,
+        "process": "Idle",
+        "remote_endpoint": "40.126.18.32:443",
+        "state": "OUTBOUND"
+      },
+      {
+        "local_endpoint": "192.168.180.138:60300",
+        "pid": 0,
+        "process": "Idle",
+        "remote_endpoint": "52.110.16.164:443",
+        "state": "OUTBOUND"
+      },
+      {
+        "local_endpoint": "192.168.180.138:60302",
+        "pid": 3240,
+        "process": "MpDefenderCoreService",
+        "remote_endpoint": "52.123.128.14:443",
+        "state": "OUTBOUND"
+      },
+      {
+        "local_endpoint": "192.168.180.138:50773",
+        "pid": 8336,
+        "process": "StartMenuExperienceHost",
+        "remote_endpoint": "52.110.16.163:443",
+        "state": "OUTBOUND"
+      },
+      {
+        "local_endpoint": "192.168.180.138:49692",
+        "pid": 8336,
+        "process": "StartMenuExperienceHost",
+        "remote_endpoint": "52.110.16.163:443",
+        "state": "OUTBOUND"
+      },
+      {
+        "local_endpoint": "192.168.180.138:49689",
+        "pid": 2496,
+        "process": "svchost",
+        "remote_endpoint": "4.213.25.240:443",
+        "state": "OUTBOUND"
+      }
+    ],
+    "established_connections": 30,
+    "external_established_connections": 13,
+    "listening_ports": 13,
+    "source": "/Users/kali/Codes/wsl/network_forensics/output/live_ps_all_v1/forensic_report.json",
+    "top_remote_hosts": [
+      {
+        "count": 4,
+        "label": "52.110.16.163"
+      },
+      {
+        "count": 2,
+        "label": "4.213.25.240"
+      },
+      {
+        "count": 2,
+        "label": "40.126.18.32"
+      },
+      {
+        "count": 2,
+        "label": "52.110.16.164"
+      },
+      {
+        "count": 2,
+        "label": "52.123.128.14"
+      },
+      {
+        "count": 1,
+        "label": "255.255.255.255"
+      }
+    ],
+    "total_connections": 661
+  },
+  "ntfs_quickview": {
+    "active_entries": 171015,
+    "ads_entries": 8136,
+    "directories": 35713,
+    "files": 135302,
+    "source": "/Users/kali/Codes/wsl/ntfs_analyzer/output/mft.json",
+    "top_extensions": [
+      {
+        "count": 29602,
+        "label": ".dll"
+      },
+      {
+        "count": 18445,
+        "label": ".manifest"
+      },
+      {
+        "count": 17017,
+        "label": ".png"
+      },
+      {
+        "count": 9801,
+        "label": ".mui"
+      },
+      {
+        "count": 4224,
+        "label": ".exe"
+      },
+      {
+        "count": 3595,
+        "label": ".cat"
+      },
+      {
+        "count": 2346,
+        "label": ".inf"
+      },
+      {
+        "count": 2331,
+        "label": ".cdf-ms"
+      },
+      {
+        "count": 2298,
+        "label": ".xml"
+      },
+      {
+        "count": 2226,
+        "label": "[no-ext]"
+      }
+    ],
+    "total_entries": 171015,
+    "total_file_size_human": "0 B"
+  },
+  "srum_quickview": {
+    "critical_alerts": [
+      {
+        "app_label": "go-winpmem_amd64_1.0-rc2_signed.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260214_123720_KALINIGHA\\go-winpmem_amd64_1.0-rc2_signed.exe",
+        "category": "CredentialTheft",
+        "description": "Known credential theft/dumping tool 'winpmem' was executed",
+        "evidence_summary": "Path: \\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260214_123720_ | Tool Pattern: winpmem",
+        "id": "APP-CREDTHEFT-0083",
+        "severity": "Critical",
+        "timestamp": "2026-02-14 09:19:00",
+        "title": "Credential Theft Tool Detected",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      },
+      {
+        "app_label": "powershell.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "category": "DataExfiltration",
+        "description": "Application 'powershell.exe' sent 18.25 GB (exceeds 100.00 MB threshold)",
+        "evidence_summary": "Application: \\Device\\HarddiskVolume3\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe | Bytes Sent: 18.25 GB",
+        "id": "NET-EXFIL-0122",
+        "severity": "Critical",
+        "timestamp": "2026-02-14 09:19:00",
+        "title": "Potential Data Exfiltration",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      },
+      {
+        "app_label": "go-winpmem_amd64_1.0-rc2_signed.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260214_123720_KALINIGHA\\go-winpmem_amd64_1.0-rc2_signed.exe",
+        "category": "Ransomware",
+        "description": "Application 'go-winpmem_amd64_1.0-rc2_signed.exe' wrote 11.29 GB (exceeds 1.00 GB threshold) — possible file encryption",
+        "evidence_summary": "Path: \\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260214_123720_ | Total Bytes Written: 11.29 GB",
+        "id": "APP-RANSOMWARE-0084",
+        "severity": "Critical",
+        "timestamp": "2026-02-14 09:19:00",
+        "title": "Potential Ransomware Activity",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      },
+      {
+        "app_label": "powershell.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "category": "DataExfiltration",
+        "description": "Application 'powershell.exe' sent 16.90 GB (exceeds 100.00 MB threshold)",
+        "evidence_summary": "Application: \\Device\\HarddiskVolume3\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe | Bytes Sent: 16.90 GB",
+        "id": "NET-EXFIL-0114",
+        "severity": "Critical",
+        "timestamp": "2026-02-12 07:09:00",
+        "title": "Potential Data Exfiltration",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      },
+      {
+        "app_label": "go-winpmem_amd64_1.0-rc2_signed.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260212_112434_KALINIGHA\\go-winpmem_amd64_1.0-rc2_signed.exe",
+        "category": "CredentialTheft",
+        "description": "Known credential theft/dumping tool 'winpmem' was executed",
+        "evidence_summary": "Path: \\Device\\HarddiskVolume3\\Users\\intel\\AppData\\Local\\Temp\\Forensics_CASE_20260212_112434_ | Tool Pattern: winpmem",
+        "id": "APP-CREDTHEFT-0080",
+        "severity": "Critical",
+        "timestamp": "2026-02-12 06:02:00",
+        "title": "Credential Theft Tool Detected",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      }
+    ],
+    "critical_count": 31,
+    "disk_read_human": "3.5 TB",
+    "disk_read_percent": 67.8,
+    "disk_write_human": "1.3 TB",
+    "disk_write_percent": 25.7,
+    "high_count": 134,
+    "monitored_apps": 998,
+    "network_human": "345.7 GB",
+    "network_percent": 6.5,
+    "source": "/Users/kali/Codes/wsl/srum_analysis/reports/srum_analysis_report.json",
+    "top_consumers": [
+      {
+        "app_label": "lsass.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Windows\\System32\\lsass.exe",
+        "last_seen": "2026-02-16 10:21:00",
+        "percent_of_total": 5.8,
+        "record_count": 309,
+        "total_usage_bytes": 331313870465,
+        "total_usage_human": "308.6 GB",
+        "user": "S-1-5-18"
+      },
+      {
+        "app_label": "chrome.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "last_seen": "2026-02-16 09:18:00",
+        "percent_of_total": 5.1,
+        "record_count": 228,
+        "total_usage_bytes": 291665683695,
+        "total_usage_human": "271.6 GB",
+        "user": "S-1-5-21-1491582332-726934267-1684091681-1001"
+      },
+      {
+        "app_label": "System",
+        "app_path": "System",
+        "last_seen": "2026-02-16 10:21:00",
+        "percent_of_total": 5.0,
+        "record_count": 661,
+        "total_usage_bytes": 286628546983,
+        "total_usage_human": "266.9 GB",
+        "user": "S-1-5-18"
+      },
+      {
+        "app_label": "svchost.exe [netsvcs]",
+        "app_path": "\\Device\\HarddiskVolume3\\Windows\\System32\\svchost.exe [netsvcs]",
+        "last_seen": "2026-02-16 10:21:00",
+        "percent_of_total": 4.3,
+        "record_count": 309,
+        "total_usage_bytes": 248750094622,
+        "total_usage_human": "231.7 GB",
+        "user": "S-1-5-18"
+      },
+      {
+        "app_label": "services.exe",
+        "app_path": "\\Device\\HarddiskVolume3\\Windows\\System32\\services.exe",
+        "last_seen": "2026-02-16 10:21:00",
+        "percent_of_total": 3.9,
+        "record_count": 309,
+        "total_usage_bytes": 224101944192,
+        "total_usage_human": "208.7 GB",
+        "user": "S-1-5-18"
+      }
+    ],
+    "total_findings": 452,
+    "total_usage_human": "5.2 TB"
+  },
+  "windows_event_quickview": {
+    "category": "POLICY_TAMPERING",
+    "count": 10,
+    "event_id": "N/A",
+    "host": "LiberySV08",
+    "priority": "HIGH PRIORITY",
+    "source": "/Users/kali/Codes/wsl/portal_from_azure/tools/win_event_analysis/liberty.html",
+    "source_label": "Firewall Rule Modified",
+    "summary": "Firewall Rule Modified on '@{Microsoft.Win32WebViewHost_10.0.20348.1_neutral_neutral_cw5n1h2txyewy?ms-resource://Windows.Win32WebViewHost/resources/DisplayName}' by '-'. Observed 10 time(s).",
+    "timestamp": "2025-06-07T14:30:24.773250Z",
+    "title": "Policy Tampering Detected on LiberySV08"
+  }
+}

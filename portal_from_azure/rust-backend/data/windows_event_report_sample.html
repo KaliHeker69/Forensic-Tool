@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Windows Event Report Sample</title>
+</head>
+<body>
+    <div class="category-section">
+        <div class="command-block">
+            <div class="command-title"><span>Policy Tampering Summary</span><span class="cmd-count">1 unique</span></div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Count</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Changed By</th>
+                            <th>Computer</th>
+                            <th>First Seen</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>3</td>
+                            <td>Audit policy disabled</td>
+                            <td>Security auditing configuration</td>
+                            <td>WORKSTATION-EF2\\Administrator</td>
+                            <td>WORKSTATION-EF2</td>
+                            <td>2026-03-20 18:11:27 UTC</td>
+                            <td>2026-03-20 18:18:54 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="command-block">
+            <div class="command-title"><span>PowerShell Activity</span><span class="cmd-count">1 unique</span></div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Count</th>
+                            <th>Type</th>
+                            <th>Script/Command</th>
+                            <th>User</th>
+                            <th>Computer</th>
+                            <th>First Seen</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>12</td>
+                            <td>EncodedCommand</td>
+                            <td>powershell.exe -enc SQBtAHAAbwByAHQALQBNAG8AZAB1AGwAZQAgAEIAaQB0AHMAVAByAGEAbgBzAGYAZQByAA==</td>
+                            <td>WORKSTATION-EF2\\analyst</td>
+                            <td>WORKSTATION-EF2</td>
+                            <td>2026-03-20 18:09:02 UTC</td>
+                            <td>2026-03-20 18:15:49 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="command-block">
+            <div class="command-title"><span>Suspicious Encoding Summary</span><span class="cmd-count">1 unique</span></div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Count</th>
+                            <th>Technique</th>
+                            <th>Source</th>
+                            <th>Preview</th>
+                            <th>User</th>
+                            <th>Computer</th>
+                            <th>First Seen</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>7</td>
+                            <td>Base64</td>
+                            <td>PowerShell 4104</td>
+                            <td>Encoded PowerShell command observed with download cradle behavior</td>
+                            <td>WORKSTATION-EF2\\analyst</td>
+                            <td>WORKSTATION-EF2</td>
+                            <td>2026-03-20 18:10:11 UTC</td>
+                            <td>2026-03-20 18:16:04 UTC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

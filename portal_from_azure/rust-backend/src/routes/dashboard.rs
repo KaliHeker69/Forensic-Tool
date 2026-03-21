@@ -16,7 +16,8 @@ use crate::config::INACTIVITY_TIMEOUT_MINUTES;
 use crate::template_utils;
 
 const FETCHED_FILES_DIR: &str = "/srv/forensics/fetched_files";
-const DASHBOARD_QUICKVIEW_JSON_ENV: &str = "DASHBOARD_QUICKVIEW_JSON";
+const DASHBOARD_QUICK_VIEW_JSON_ENV: &str = "DASHBOARD_QUICK_VIEW_JSON";
+const LEGACY_DASHBOARD_QUICKVIEW_JSON_ENV: &str = "DASHBOARD_QUICKVIEW_JSON";
 const MAX_ARTIFACT_TYPES: usize = 10;
 const MAX_LIST_ITEMS: usize = 8;
 const MAX_TOP_VALUES: usize = 6;
@@ -153,6 +154,50 @@ struct BrowserQuickView {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
+struct SrumTopConsumer {
+    app_label: String,
+    app_path: String,
+    user: String,
+    total_usage_human: String,
+    total_usage_bytes: u64,
+    percent_of_total: f64,
+    last_seen: String,
+    record_count: u64,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct SrumCriticalAlert {
+    id: String,
+    severity: String,
+    category: String,
+    title: String,
+    description: String,
+    timestamp: String,
+    app_label: String,
+    app_path: String,
+    user: String,
+    evidence_summary: String,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct SrumQuickView {
+    source: String,
+    total_usage_human: String,
+    disk_read_human: String,
+    disk_write_human: String,
+    network_human: String,
+    disk_read_percent: f64,
+    disk_write_percent: f64,
+    network_percent: f64,
+    critical_count: u64,
+    high_count: u64,
+    total_findings: u64,
+    monitored_apps: u64,
+    top_consumers: Vec<SrumTopConsumer>,
+    critical_alerts: Vec<SrumCriticalAlert>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
 struct ExecutionEvent {
     timestamp: String,
     process: String,
@@ -241,6 +286,8 @@ struct DashboardQuickviewData {
     windows_event_quickview: WindowsEventQuickView,
     #[serde(default)]
     malicious_process_quickview: MaliciousProcessQuickView,
+    #[serde(default)]
+    srum_quickview: SrumQuickView,
 }
 
 fn format_size(bytes: u64) -> String {
@@ -410,22 +457,32 @@ fn read_text_file(path: &Path) -> Option<String> {
 }
 
 fn resolve_dashboard_quickview_json() -> Option<PathBuf> {
-    if let Ok(from_env) = std::env::var(DASHBOARD_QUICKVIEW_JSON_ENV) {
-        let direct = PathBuf::from(&from_env);
-        if direct.exists() {
-            return Some(direct);
-        }
+    for env_key in [
+        DASHBOARD_QUICK_VIEW_JSON_ENV,
+        LEGACY_DASHBOARD_QUICKVIEW_JSON_ENV,
+    ] {
+        if let Ok(from_env) = std::env::var(env_key) {
+            let direct = PathBuf::from(&from_env);
+            if direct.exists() {
+                return Some(direct);
+            }
 
-        for root in workspace_roots() {
-            let joined = root.join(&from_env);
-            if joined.exists() {
-                return Some(joined);
+            for root in workspace_roots() {
+                let joined = root.join(&from_env);
+                if joined.exists() {
+                    return Some(joined);
+                }
             }
         }
     }
 
-    resolve_existing_path("portal_from_azure/rust-backend/data/dashboard_quickview.json")
+    resolve_existing_path("portal_from_azure/rust-backend/data/dashboard_quick_view.json")
+        .or_else(|| {
+            resolve_existing_path("portal_from_azure/rust-backend/data/dashboard_quickview.json")
+        })
+        .or_else(|| resolve_existing_path("rust-backend/data/dashboard_quick_view.json"))
         .or_else(|| resolve_existing_path("rust-backend/data/dashboard_quickview.json"))
+        .or_else(|| resolve_existing_path("data/dashboard_quick_view.json"))
         .or_else(|| resolve_existing_path("data/dashboard_quickview.json"))
 }
 
@@ -1056,7 +1113,7 @@ fn collect_ntfs_quickview() -> NtfsQuickView {
     }
 
     view.total_file_size_human = format_size(total_file_size_bytes);
-    view.top_extensions = sort_label_counts(extension_counts, MAX_TOP_VALUES);
+    view.top_extensions = sort_label_counts(extension_counts, 10);
     view
 }
 
@@ -1185,6 +1242,227 @@ fn collect_browser_quickview() -> BrowserQuickView {
     view
 }
 
+fn srum_app_label(path: &str) -> String {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return "Unknown".to_string();
+    }
+
+    trimmed
+        .rsplit(['\\', '/'])
+        .next()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(trimmed)
+        .to_string()
+}
+
+fn srum_evidence_summary(value: Option<&Value>) -> String {
+    match value {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(Value::as_str)
+            .take(2)
+            .map(|item| truncate_chars(item, 92))
+            .collect::<Vec<_>>()
+            .join(" | "),
+        Some(Value::Object(map)) => map
+            .iter()
+            .take(2)
+            .map(|(key, value)| {
+                let rendered = value
+                    .as_str()
+                    .map(|text| truncate_chars(text, 72))
+                    .unwrap_or_else(|| truncate_chars(&value.to_string(), 72));
+                format!("{}: {}", key, rendered)
+            })
+            .collect::<Vec<_>>()
+            .join(" | "),
+        Some(Value::String(text)) => truncate_chars(text, 120),
+        Some(other) => truncate_chars(&other.to_string(), 120),
+        None => String::new(),
+    }
+}
+
+fn collect_srum_quickview() -> SrumQuickView {
+    let mut view = SrumQuickView::default();
+    let srum_path = match resolve_existing_path("srum_analysis/reports/srum_analysis_report.json") {
+        Some(path) => path,
+        None => return view,
+    };
+
+    view.source = srum_path.to_string_lossy().to_string();
+
+    let raw = match read_text_file(&srum_path) {
+        Some(raw) => raw,
+        None => return view,
+    };
+    let json: Value = match serde_json::from_str(&raw) {
+        Ok(value) => value,
+        Err(_) => return view,
+    };
+
+    let summary = json.get("summary");
+    view.critical_count = value_to_u64(summary.and_then(|v| v.get("critical")));
+    view.high_count = value_to_u64(summary.and_then(|v| v.get("high")));
+    view.total_findings = value_to_u64(summary.and_then(|v| v.get("total")));
+
+    let mut disk_read_bytes = 0u64;
+    let mut disk_write_bytes = 0u64;
+    let mut network_bytes = 0u64;
+    let mut consumers = Vec::new();
+
+    if let Some(app_statistics) = json.get("app_statistics").and_then(Value::as_array) {
+        view.monitored_apps = app_statistics.len() as u64;
+
+        for app in app_statistics {
+            let foreground_read = value_to_u64(app.get("total_foreground_bytes_read"));
+            let foreground_write = value_to_u64(app.get("total_foreground_bytes_written"));
+            let background_read = value_to_u64(app.get("total_background_bytes_read"));
+            let background_write = value_to_u64(app.get("total_background_bytes_written"));
+            let bytes_sent = value_to_u64(app.get("total_bytes_sent"));
+            let bytes_received = value_to_u64(app.get("total_bytes_received"));
+
+            let total_usage_bytes = foreground_read
+                .saturating_add(foreground_write)
+                .saturating_add(background_read)
+                .saturating_add(background_write)
+                .saturating_add(bytes_sent)
+                .saturating_add(bytes_received);
+
+            disk_read_bytes = disk_read_bytes.saturating_add(foreground_read + background_read);
+            disk_write_bytes = disk_write_bytes.saturating_add(foreground_write + background_write);
+            network_bytes = network_bytes.saturating_add(bytes_sent + bytes_received);
+
+            let app_path = app
+                .get("app_path")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+
+            consumers.push(SrumTopConsumer {
+                app_label: srum_app_label(&app_path),
+                app_path,
+                user: app
+                    .get("user")
+                    .and_then(Value::as_str)
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                total_usage_human: format_size(total_usage_bytes),
+                total_usage_bytes,
+                percent_of_total: 0.0,
+                last_seen: app
+                    .get("last_seen")
+                    .and_then(Value::as_str)
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                record_count: value_to_u64(app.get("record_count")),
+            });
+        }
+    }
+
+    let total_usage_bytes = disk_read_bytes
+        .saturating_add(disk_write_bytes)
+        .saturating_add(network_bytes);
+    let total_usage_denominator = total_usage_bytes.max(1) as f64;
+
+    view.total_usage_human = format_size(total_usage_bytes);
+    view.disk_read_human = format_size(disk_read_bytes);
+    view.disk_write_human = format_size(disk_write_bytes);
+    view.network_human = format_size(network_bytes);
+    view.disk_read_percent =
+        ((disk_read_bytes as f64 / total_usage_denominator) * 1000.0).round() / 10.0;
+    view.disk_write_percent =
+        ((disk_write_bytes as f64 / total_usage_denominator) * 1000.0).round() / 10.0;
+    view.network_percent =
+        ((network_bytes as f64 / total_usage_denominator) * 1000.0).round() / 10.0;
+
+    consumers.sort_by(|a, b| {
+        b.total_usage_bytes
+            .cmp(&a.total_usage_bytes)
+            .then_with(|| a.app_label.cmp(&b.app_label))
+    });
+    for consumer in &mut consumers {
+        consumer.percent_of_total =
+            ((consumer.total_usage_bytes as f64 / total_usage_denominator) * 1000.0).round() / 10.0;
+    }
+    consumers.truncate(5);
+    view.top_consumers = consumers;
+
+    let mut critical_alerts = Vec::new();
+    for source_name in ["findings", "anomalies"] {
+        if let Some(items) = json.get(source_name).and_then(Value::as_array) {
+            for item in items {
+                if !item
+                    .get("severity")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .eq_ignore_ascii_case("critical")
+                {
+                    continue;
+                }
+
+                let app_path = item
+                    .get("app_path")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+
+                critical_alerts.push(SrumCriticalAlert {
+                    id: item
+                        .get("id")
+                        .and_then(Value::as_str)
+                        .unwrap_or("")
+                        .to_string(),
+                    severity: item
+                        .get("severity")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Critical")
+                        .to_string(),
+                    category: item
+                        .get("category")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Unknown")
+                        .to_string(),
+                    title: item
+                        .get("title")
+                        .and_then(Value::as_str)
+                        .unwrap_or("SRUM alert")
+                        .to_string(),
+                    description: truncate_chars(
+                        item.get("description")
+                            .and_then(Value::as_str)
+                            .unwrap_or(""),
+                        180,
+                    ),
+                    timestamp: item
+                        .get("timestamp")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Unknown")
+                        .to_string(),
+                    app_label: srum_app_label(&app_path),
+                    app_path,
+                    user: item
+                        .get("user")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Unknown")
+                        .to_string(),
+                    evidence_summary: srum_evidence_summary(item.get("evidence")),
+                });
+            }
+        }
+    }
+
+    critical_alerts.sort_by(|a, b| {
+        b.timestamp
+            .cmp(&a.timestamp)
+            .then_with(|| a.title.cmp(&b.title))
+    });
+    critical_alerts.truncate(5);
+    view.critical_alerts = critical_alerts;
+
+    view
+}
+
 fn truncate_chars(value: &str, max_chars: usize) -> String {
     if value.chars().count() <= max_chars {
         return value.to_string();
@@ -1206,11 +1484,18 @@ fn sanitize_html_cell(value: &str) -> String {
 
 fn extract_first_table_row(report_html: &str, section_title: &str) -> Option<Vec<String>> {
     let pattern = format!(
-        r#"(?s)<div class="command-title"><span>{}</span>.*?<tbody>\s*<tr>(.*?)</tr>"#,
+        r#"(?s)<div class="command-block">\s*<div class="command-title"><span>{}</span>.*?</div>\s*<div class="table-wrap">(.*?)</div>\s*</div>"#,
         regex::escape(section_title)
     );
-    let row_re = Regex::new(&pattern).ok()?;
-    let row_html = row_re.captures(report_html)?.get(1)?.as_str();
+    let block_re = Regex::new(&pattern).ok()?;
+    let block_html = block_re.captures(report_html)?.get(1)?.as_str();
+
+    if block_html.contains("empty-msg") {
+        return None;
+    }
+
+    let row_re = Regex::new(r#"(?s)<tbody>\s*<tr>(.*?)</tr>"#).ok()?;
+    let row_html = row_re.captures(block_html)?.get(1)?.as_str();
 
     let cell_re = Regex::new(r#"(?s)<td[^>]*>(.*?)</td>"#).ok()?;
     let mut cells = Vec::new();
@@ -1585,51 +1870,63 @@ pub fn router() -> Router<Arc<AppState>> {
 }
 
 async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser) -> Html<String> {
-    let (
-        artifact_summary,
-        network_quickview,
-        memory_quickview,
-        ntfs_quickview,
-        browser_quickview,
-        execution_quickview,
-        windows_event_quickview,
-        malicious_process_quickview,
-    ) = if let Some(seed) = load_dashboard_quickview_data() {
-        (
-            seed.artifact_summary,
-            seed.network_quickview,
-            seed.memory_quickview,
-            seed.ntfs_quickview,
-            seed.browser_quickview,
-            seed.execution_quickview,
-            seed.windows_event_quickview,
-            seed.malicious_process_quickview,
-        )
-    } else {
-        let artifact_summary = collect_artifact_summary(Path::new(FETCHED_FILES_DIR));
-        let network_quickview = collect_network_quickview();
-        let memory_quickview = collect_memory_quickview();
-        let ntfs_quickview = collect_ntfs_quickview();
-        let browser_quickview = collect_browser_quickview();
-        let execution_quickview = collect_execution_quickview();
-        let windows_event_quickview = collect_windows_event_quickview();
-        let malicious_process_quickview = collect_malicious_process_quickview(
-            &execution_quickview,
-            &network_quickview,
-            &windows_event_quickview,
-        );
+    let dashboard_seed = load_dashboard_quickview_data();
 
-        (
-            artifact_summary,
-            network_quickview,
-            memory_quickview,
-            ntfs_quickview,
-            browser_quickview,
-            execution_quickview,
-            windows_event_quickview,
-            malicious_process_quickview,
-        )
-    };
+    let artifact_summary = collect_artifact_summary(Path::new(FETCHED_FILES_DIR));
+    let mut network_quickview = collect_network_quickview();
+    let mut memory_quickview = collect_memory_quickview();
+    let mut ntfs_quickview = collect_ntfs_quickview();
+    let mut browser_quickview = collect_browser_quickview();
+    let execution_quickview = collect_execution_quickview();
+    let mut windows_event_quickview = collect_windows_event_quickview();
+    let mut srum_quickview = collect_srum_quickview();
+
+    if let Some(seed) = dashboard_seed {
+        if !seed.network_quickview.source.is_empty()
+            || seed.network_quickview.total_connections > 0
+            || !seed.network_quickview.active_connections.is_empty()
+        {
+            network_quickview = seed.network_quickview;
+        }
+
+        memory_quickview = seed.memory_quickview;
+
+        if !seed.ntfs_quickview.source.is_empty()
+            || seed.ntfs_quickview.total_entries > 0
+            || !seed.ntfs_quickview.top_extensions.is_empty()
+        {
+            ntfs_quickview = seed.ntfs_quickview;
+        }
+
+        if !seed.browser_quickview.source.is_empty()
+            || seed.browser_quickview.total_browsers > 0
+            || !seed.browser_quickview.recent_history.is_empty()
+        {
+            browser_quickview = seed.browser_quickview;
+        }
+
+        if !seed.windows_event_quickview.source.is_empty()
+            || seed.windows_event_quickview.count > 0
+            || !seed.windows_event_quickview.summary.is_empty()
+        {
+            windows_event_quickview = seed.windows_event_quickview;
+        }
+
+        if !seed.srum_quickview.source.is_empty()
+            || seed.srum_quickview.total_findings > 0
+            || !seed.srum_quickview.critical_alerts.is_empty()
+        {
+            srum_quickview = seed.srum_quickview;
+        }
+    }
+
+    ntfs_quickview.total_file_size_human = artifact_summary.total_size_human.clone();
+
+    let malicious_process_quickview = collect_malicious_process_quickview(
+        &execution_quickview,
+        &network_quickview,
+        &windows_event_quickview,
+    );
 
     // Quick ipsum stats (non-blocking read)
     let (ioc_total, ioc_high, ioc_critical, ioc_updated) = {
@@ -1650,6 +1947,7 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
         {"id":"registry","name":"Registry","description":"Windows Registry analysis and investigation","icon":"fa-solid fa-folder-open","url":"#registry","status":"active"},
         {"id":"ntfs","name":"NTFS Data","description":"NTFS file system and metadata analysis","icon":"fa-solid fa-hdd","url":"#ntfs-section","status":"active"},
         {"id":"memory","name":"Memory Analysis","description":"Volatile memory capture & analysis","icon":"fa-solid fa-brain","url":"#memory-section","status":"active"},
+        {"id":"srum","name":"System Resource Utilization","description":"SRUM application activity, utilization totals, and critical alerts","icon":"fa-solid fa-gauge-high","url":"#srum-section","status":"active"},
         {"id":"windows-event","name":"Windows Event","description":"Windows Event Log viewer and analyzer","icon":"fa-solid fa-scroll","url":"/reports/windows-event","status":"active"},
         {"id":"shimcache-amcache-report","name":"Shimcache Amcache Report","description":"Open the latest shimcache/amcache report","icon":"fa-solid fa-clipboard-check","url":"/reports/shimcache-amcache","status":"active"},
         {"id":"prefetch-report","name":"Prefetch Report","description":"Open the latest prefetch analysis report","icon":"fa-solid fa-list-check","url":"/reports/prefetch","status":"active"},
@@ -1708,6 +2006,7 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
     ctx.insert("execution_quickview", &execution_quickview);
     ctx.insert("windows_event_quickview", &windows_event_quickview);
     ctx.insert("malicious_process_quickview", &malicious_process_quickview);
+    ctx.insert("srum_quickview", &srum_quickview);
 
     template_utils::render(&state.templates, "dashboard.html", &ctx)
 }
