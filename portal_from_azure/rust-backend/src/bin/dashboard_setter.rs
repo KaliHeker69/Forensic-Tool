@@ -1,5 +1,6 @@
 use chrono::Local;
 use regex::Regex;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::env;
@@ -12,6 +13,25 @@ use walkdir::WalkDir;
 const DEFAULT_OUTPUT: &str = "portal_from_azure/rust-backend/data/dashboard_quick_view.json";
 const WINDOWS_EVENT_REPORT_HTML_ENV: &str = "WINDOWS_EVENT_REPORT_HTML";
 const FETCHED_FILES_DIR: &str = "/srv/forensics/fetched_files";
+const JSON_FILES_PATH_CONFIG_ENV: &str = "JSON_FILES_PATH_CONFIG";
+
+#[derive(Deserialize, Default)]
+struct DashboardInputPathConfig {
+    #[serde(default)]
+    memory_analysis: Vec<String>,
+    #[serde(default)]
+    browser_report: Vec<String>,
+    #[serde(default)]
+    network_report: Vec<String>,
+    #[serde(default)]
+    network_events_csv: Vec<String>,
+    #[serde(default)]
+    ntfs_mft: Vec<String>,
+    #[serde(default)]
+    windows_event_report_html: Vec<String>,
+    #[serde(default)]
+    srum_report: Vec<String>,
+}
 
 fn workspace_roots(root_override: Option<PathBuf>) -> Vec<PathBuf> {
     let mut roots = Vec::new();
@@ -74,6 +94,51 @@ fn read_text(path: &Path) -> Option<String> {
         bytes.as_slice()
     };
     Some(String::from_utf8_lossy(bytes).into_owned())
+}
+
+fn resolve_json_path_config_file(roots: &[PathBuf]) -> Option<PathBuf> {
+    if let Ok(from_env) = env::var(JSON_FILES_PATH_CONFIG_ENV) {
+        if let Some(path) = resolve_existing_path(&from_env, roots) {
+            return Some(path);
+        }
+    }
+
+    resolve_existing_path("portal_from_azure/json_files_path.json", roots)
+        .or_else(|| resolve_existing_path("json_files_path.json", roots))
+}
+
+fn load_input_path_config(roots: &[PathBuf]) -> DashboardInputPathConfig {
+    let Some(path) = resolve_json_path_config_file(roots) else {
+        return DashboardInputPathConfig::default();
+    };
+
+    let Some(raw) = read_text(&path) else {
+        return DashboardInputPathConfig::default();
+    };
+
+    if raw.trim().is_empty() {
+        return DashboardInputPathConfig::default();
+    }
+
+    serde_json::from_str(&raw).unwrap_or_default()
+}
+
+fn resolve_configured_path(
+    roots: &[PathBuf],
+    configured_paths: &[String],
+    default_paths: &[&str],
+) -> Option<PathBuf> {
+    for candidate in configured_paths
+        .iter()
+        .map(String::as_str)
+        .chain(default_paths.iter().copied())
+    {
+        if let Some(path) = resolve_existing_path(candidate, roots) {
+            return Some(path);
+        }
+    }
+
+    None
 }
 
 fn resolve_case_artifact_dir(roots: &[PathBuf]) -> Option<PathBuf> {
@@ -177,14 +242,16 @@ fn extract_domain(url: &str) -> String {
 }
 
 fn resolve_memory_source(roots: &[PathBuf]) -> Option<PathBuf> {
-    resolve_existing_path("memory_corelation/reports/analysis.json", roots)
-        .or_else(|| resolve_existing_path("memory_corelation/analysis.json", roots))
-        .or_else(|| {
-            resolve_existing_path(
-                "portal_from_azure/rust-backend/data/memory_analysis.json",
-                roots,
-            )
-        })
+    let config = load_input_path_config(roots);
+    resolve_configured_path(
+        roots,
+        &config.memory_analysis,
+        &[
+            "memory_corelation/reports/analysis.json",
+            "memory_corelation/analysis.json",
+            "portal_from_azure/rust-backend/data/memory_analysis.json",
+        ],
+    )
 }
 
 fn default_memory_quickview(source: String) -> Value {
@@ -274,7 +341,12 @@ fn default_browser_quickview(source: String) -> Value {
 }
 
 fn build_browser_quickview(roots: &[PathBuf]) -> Value {
-    let Some(path) = resolve_existing_path("browser_forensics/report.json", roots) else {
+    let config = load_input_path_config(roots);
+    let Some(path) = resolve_configured_path(
+        roots,
+        &config.browser_report,
+        &["browser_forensics/report.json"],
+    ) else {
         return default_browser_quickview(String::new());
     };
 
@@ -432,9 +504,12 @@ fn default_srum_quickview(source: String) -> Value {
 }
 
 fn build_srum_quickview(roots: &[PathBuf]) -> Value {
-    let Some(path) =
-        resolve_existing_path("srum_analysis/reports/srum_analysis_report.json", roots)
-    else {
+    let config = load_input_path_config(roots);
+    let Some(path) = resolve_configured_path(
+        roots,
+        &config.srum_report,
+        &["srum_analysis/reports/srum_analysis_report.json"],
+    ) else {
         return default_srum_quickview(String::new());
     };
 
@@ -693,7 +768,10 @@ fn default_ntfs_quickview(source: String) -> Value {
 }
 
 fn build_ntfs_quickview(roots: &[PathBuf]) -> Value {
-    let Some(path) = resolve_existing_path("ntfs_analyzer/output/mft.json", roots) else {
+    let config = load_input_path_config(roots);
+    let Some(path) =
+        resolve_configured_path(roots, &config.ntfs_mft, &["ntfs_analyzer/output/mft.json"])
+    else {
         return default_ntfs_quickview(String::new());
     };
 
@@ -777,19 +855,26 @@ fn build_ntfs_quickview(roots: &[PathBuf]) -> Value {
 }
 
 fn build_network_quickview(roots: &[PathBuf]) -> Value {
-    let Some(report_path) = resolve_existing_path(
-        "network_forensics/output/live_ps_all_v1/forensic_report.json",
+    let config = load_input_path_config(roots);
+    let Some(report_path) = resolve_configured_path(
         roots,
-    )
-    .or_else(|| resolve_existing_path("network_forensics/output/forensic_report.json", roots)) else {
+        &config.network_report,
+        &[
+            "network_forensics/output/live_ps_all_v1/forensic_report.json",
+            "network_forensics/output/forensic_report.json",
+        ],
+    ) else {
         return default_network_quickview(String::new());
     };
 
-    let Some(events_path) = resolve_existing_path(
-        "network_forensics/output/live_ps_all_v1/forensic_events.csv",
+    let Some(events_path) = resolve_configured_path(
         roots,
-    )
-    .or_else(|| resolve_existing_path("network_forensics/output/forensic_events.csv", roots)) else {
+        &config.network_events_csv,
+        &[
+            "network_forensics/output/live_ps_all_v1/forensic_events.csv",
+            "network_forensics/output/forensic_events.csv",
+        ],
+    ) else {
         return default_network_quickview(report_path.to_string_lossy().to_string());
     };
 
@@ -988,6 +1073,12 @@ fn extract_event_id(text: &str) -> String {
 }
 
 fn resolve_windows_event_report(roots: &[PathBuf]) -> Option<PathBuf> {
+    let input_config = load_input_path_config(roots);
+    if let Some(path) = resolve_configured_path(roots, &input_config.windows_event_report_html, &[])
+    {
+        return Some(path);
+    }
+
     if let Ok(from_env) = env::var(WINDOWS_EVENT_REPORT_HTML_ENV) {
         let direct = PathBuf::from(&from_env);
         if direct.exists() {
