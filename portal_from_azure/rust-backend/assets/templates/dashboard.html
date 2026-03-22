@@ -267,7 +267,13 @@
                             <div class="endpoint-stat"><span>Downloads</span><strong>{{ browser_quickview.total_downloads }}</strong></div>
                             <div class="endpoint-stat"><span>Cookies</span><strong>{{ browser_quickview.total_cookies }}</strong></div>
                         </div>
-                        <div id="browserDomainChart" class="chart-host chart-host-browser" aria-label="Browser domain distribution chart"></div>
+                        <div class="chart-frame">
+                            <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#browser-section" aria-label="Open Browser chart in pop-out evidence view">
+                                <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                                <span class="chart-fullscreen-label">Pop Out</span>
+                            </button>
+                            <div id="browserDomainChart" class="chart-host chart-host-browser" aria-label="Browser domain distribution chart"></div>
+                        </div>
                         <ul class="endpoint-inline-list">
                             {% for domain in browser_quickview.top_domains %}
                             <li><span>{{ domain.label }}</span><strong>{{ domain.count }}</strong></li>
@@ -424,7 +430,13 @@
                             <div class="endpoint-stat"><span>Findings</span><strong>{{ memory_quickview.total_findings }}</strong></div>
                             <div class="endpoint-stat"><span>PIDs</span><strong>{{ memory_quickview.unique_pids }}</strong></div>
                         </div>
-                        <div id="memoryMapChart" class="chart-host chart-host-memory" aria-label="Memory severity map chart"></div>
+                                <div class="chart-frame">
+                                    <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#memory-section" aria-label="Open Memory chart in pop-out evidence view">
+                                        <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                                        <span class="chart-fullscreen-label">Pop Out</span>
+                                    </button>
+                                    <div id="memoryMapChart" class="chart-host chart-host-memory" aria-label="Memory severity map chart"></div>
+                                </div>
                         <ul class="endpoint-inline-list">
                             {% for category in memory_quickview.top_categories %}
                             <li><span>{{ category.label }}</span><strong>{{ category.count }}</strong></li>
@@ -484,7 +496,13 @@
                                     <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Verified Process</span>
                                     <span><i class="fa-solid fa-circle" aria-hidden="true"></i> Suspicious / Hooked</span>
                                 </div>
-                                <div id="processExecutionTree2d" class="chart-host chart-host-process-tree" aria-label="2D process execution lineage graph"></div>
+                                <div class="chart-frame">
+                                    <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#process-tree-section" aria-label="Open Process Execution Tree in pop-out evidence view">
+                                        <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                                        <span class="chart-fullscreen-label">Pop Out</span>
+                                    </button>
+                                    <div id="processExecutionTree2d" class="chart-host chart-host-process-tree" aria-label="2D process execution lineage graph"></div>
+                                </div>
                             </div>
                             <aside class="process-timeline-pane">
                                 <h3>Execution Timeline</h3>
@@ -514,40 +532,68 @@
             </section>
 
             <section class="dashboard-panels-grid" aria-label="Interactive analysis panels">
-                <article class="obs-panel panel-timeline">
+                <article class="obs-panel panel-timeline" id="timeline-panel">
                     <header class="panel-header">
                         <div>
-                            <h2>Threat Activity Timeline</h2>
-                            <p>Alerts and IOC hit velocity over selected windows</p>
+                            <h2>Global MACB Timeline</h2>
+                            <p>Unified forensic super timeline across NTFS, browser, prefetch and execution artifacts</p>
                         </div>
                         <div class="chart-range-controls" role="group" aria-label="Timeline window controls">
                             <button class="chart-range-btn" data-range="6">6H</button>
-                            <button class="chart-range-btn active" data-range="24">24H</button>
-                            <button class="chart-range-btn" data-range="72">72H</button>
+                            <button class="chart-range-btn" data-range="24">24H</button>
+                            <button class="chart-range-btn active" data-range="72">72H</button>
                         </div>
                     </header>
                     <div id="timelineLegend" class="chart-legend" aria-live="polite"></div>
-                    <div id="threatTimelineChart" class="chart-host chart-host-timeline" aria-label="Threat timeline D3 chart"></div>
+                    <div class="chart-frame">
+                        <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#timeline-panel" aria-label="Open Global MACB Timeline in pop-out evidence view">
+                            <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                            <span class="chart-fullscreen-label">Pop Out</span>
+                        </button>
+                        <div id="macbTimelineChart" class="chart-host chart-host-timeline" aria-label="Global MACB timeline D3 chart"></div>
+                    </div>
                 </article>
 
-                <article class="obs-panel panel-donut">
+                <article class="obs-panel panel-donut" id="ioc-panel">
                     <header class="panel-header">
                         <div>
                             <h2>IOC Confidence Mix</h2>
                             <p>Interactive confidence distribution</p>
                         </div>
                     </header>
-                    <div id="iocMixChart" class="chart-host chart-host-donut" aria-label="IOC confidence donut chart"></div>
+                    <div class="chart-frame">
+                        <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#ioc-panel" aria-label="Open IOC Confidence Mix in pop-out evidence view">
+                            <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                            <span class="chart-fullscreen-label">Pop Out</span>
+                        </button>
+                        <div id="iocMixChart" class="chart-host chart-host-donut" aria-label="IOC confidence donut chart"></div>
+                    </div>
                 </article>
 
-                <article class="obs-panel panel-graph">
+                <article class="obs-panel panel-graph" id="connections-panel">
                     <header class="panel-header">
                         <div>
-                            <h2>Entity Correlation Graph</h2>
-                            <p>Drag nodes, zoom canvas, inspect link paths</p>
+                            <h2>Connections Engine</h2>
+                            <p>Pivot on a user, file hash, IP or browser entity and reconstruct linked activity</p>
+                        </div>
+                        <div class="connections-toolbar">
+                            <label class="connections-search" for="connectionsSearchInput">
+                                <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+                                <input id="connectionsSearchInput" type="search" placeholder="Focus entity: IP, hash, username" autocomplete="off">
+                            </label>
+                            <button id="connectionsResetBtn" type="button" class="connection-reset-btn">Reset</button>
                         </div>
                     </header>
-                    <div id="entityGraphChart" class="chart-host chart-host-graph" aria-label="Entity relationship force graph"></div>
+                    <div id="connectionsLegend" class="chart-legend" aria-live="polite"></div>
+                    <div id="connectionsFocusStrip" class="connections-focus-strip" aria-label="Connections pivot entities"></div>
+                    <div class="chart-frame">
+                        <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#connections-panel" aria-label="Open Connections Engine in pop-out evidence view">
+                            <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                            <span class="chart-fullscreen-label">Pop Out</span>
+                        </button>
+                        <div id="connectionsEngineChart" class="chart-host chart-host-graph" aria-label="Connections engine relationship force graph"></div>
+                    </div>
+                    <div id="connectionsEngineMeta" class="connections-meta" aria-live="polite"></div>
                 </article>
 
                 <article class="obs-panel panel-events">
@@ -615,7 +661,7 @@
                     </div>
                 </article>
 
-                <article class="obs-panel panel-artifacts">
+                <article class="obs-panel panel-artifacts" id="artifacts-panel">
                     <header class="panel-header">
                         <div>
                             <h2>Collected Artifacts</h2>
@@ -684,7 +730,13 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="artifactTypeChart" class="chart-host chart-host-artifacts" aria-label="File format distribution chart"></div>
+                        <div class="chart-frame">
+                            <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#artifacts-panel" aria-label="Open Collected Artifacts chart in pop-out evidence view">
+                                <i class="fa-solid fa-expand" aria-hidden="true"></i>
+                                <span class="chart-fullscreen-label">Pop Out</span>
+                            </button>
+                            <div id="artifactTypeChart" class="chart-host chart-host-artifacts" aria-label="File format distribution chart"></div>
+                        </div>
                     </div>
                 </article>
             </section>
@@ -717,6 +769,26 @@
         </div>
     </div>
 </div>
+
+<div class="modal evidence-modal" id="evidenceViewModal" hidden>
+    <div class="evidence-modal-shell" role="dialog" aria-modal="true" aria-labelledby="evidenceViewTitle">
+        <header class="evidence-modal-header">
+            <div>
+                <span class="evidence-modal-kicker">Evidence Pop-Out</span>
+                <h2 id="evidenceViewTitle">Graph View</h2>
+                <p id="evidenceViewSubtitle">Focused artifact visualization</p>
+            </div>
+            <div class="evidence-modal-actions">
+                <span class="evidence-modal-hint"><kbd>F</kbd> toggle <kbd>Esc</kbd> close</span>
+                <button type="button" class="evidence-modal-close" id="evidenceViewCloseBtn">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    <span>Close</span>
+                </button>
+            </div>
+        </header>
+        <div class="evidence-modal-body" id="evidenceViewBody"></div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -731,58 +803,16 @@
         iocHigh: Number("{{ ioc_high }}") || 0,
         iocCritical: Number("{{ ioc_critical }}") || 0,
     };
-    const artifactTypeData = [
-        {% for ext in artifact_summary.top_types %}
-        {
-            extension: "{{ ext.extension }}",
-            count: {{ ext.count }},
-            totalBytes: {{ ext.total_bytes }},
-            totalSizeHuman: "{{ ext.total_size_human }}",
-            percentFiles: {{ ext.percent_files }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
-    const memoryMapData = [
-        {% for segment in memory_quickview.severity_segments %}
-        {
-            label: "{{ segment.label }}",
-            count: {{ segment.count }},
-            percent: {{ segment.percent }},
-            color: "{{ segment.color }}"
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
-    const browserDomainData = [
-        {% for domain in browser_quickview.top_domains %}
-        {
-            label: "{{ domain.label }}",
-            count: {{ domain.count }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
-    const processTreeNodes = [
-        {% for node in malicious_process_quickview.tree_nodes %}
-        {
-            id: "{{ node.id }}",
-            label: "{{ node.label }}",
-            process: "{{ node.process }}",
-            pid: "{{ node.pid }}",
-            status: "{{ node.status }}",
-            depth: {{ node.depth }},
-            firstSeen: "{{ node.first_seen }}"
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
-    const processTreeLinks = [
-        {% for link in malicious_process_quickview.tree_links %}
-        {
-            source: "{{ link.source }}",
-            target: "{{ link.target }}",
-            relationship: "{{ link.relationship }}",
-            weight: {{ link.weight }}
-        }{% if not loop.last %},{% endif %}
-        {% endfor %}
-    ];
+    const artifactTypeData = {{ artifact_type_data_json | safe }};
+    const memoryMapData = {{ memory_map_data_json | safe }};
+    const browserDomainData = {{ browser_domain_data_json | safe }};
+    const processTreeNodes = {{ process_tree_nodes_json | safe }};
+    const processTreeLinks = {{ process_tree_links_json | safe }};
+    const superTimelineEvents = {{ super_timeline_events_json | safe }};
+    const connectionNodes = {{ connection_nodes_json | safe }};
+    const connectionLinks = {{ connection_links_json | safe }};
+    const connectionFocusEntities = {{ connection_focus_entities_json | safe }};
+    const defaultConnectionFocus = {{ default_connection_focus_json | safe }};
     const hasMaliciousExe = "{% if malicious_process_quickview.has_malicious %}1{% else %}0{% endif %}" === "1";
     const suspiciousExeCount = Number("{{ malicious_process_quickview.suspicious_count }}") || 0;
 
@@ -814,33 +844,289 @@
         .attr('class', 'd3-tooltip')
         .style('opacity', 0);
 
-    const chartState = {
-        timelineHours: 24,
-        timelineSeriesVisible: {
-            alerts: true,
-            iocHits: true,
-        }
+    const timelinePalette = {
+        NTFS: '#8bfb91',
+        Browser: '#78b8ff',
+        Prefetch: '#f6b73c',
+        Execution: '#ff7351'
     };
+    const connectionPalette = {
+        user: '#8bfb91',
+        process: '#2ea043',
+        file: '#f6b73c',
+        hash: '#78b8ff',
+        ip: '#ff7351',
+        domain: '#8fa0b3',
+        browser: '#7bd1ff'
+    };
+    const timelineLaneOrder = ['NTFS', 'Browser', 'Prefetch', 'Execution'];
+    const parsedTimelineEvents = superTimelineEvents
+        .map((event) => ({
+            ...event,
+            epoch_seconds: Number(event.epoch_seconds) || 0,
+            time: new Date((Number(event.epoch_seconds) || 0) * 1000)
+        }))
+        .filter((event) => event.epoch_seconds > 0 && !Number.isNaN(event.time.getTime()))
+        .sort((a, b) => a.epoch_seconds - b.epoch_seconds);
+    const graphModel = {
+        nodes: connectionNodes.map((node) => ({
+            ...node,
+            hits: Number(node.hits) || 1
+        })),
+        links: connectionLinks.map((link) => ({
+            ...link,
+            hits: Number(link.hits) || 1
+        }))
+    };
+    const chartState = {
+        timelineHours: 72,
+        timelineSeriesVisible: {
+            NTFS: true,
+            Browser: true,
+            Prefetch: true,
+            Execution: true,
+        },
+        connectionFocus: defaultConnectionFocus || '',
+    };
+    const popoutButtons = Array.from(document.querySelectorAll('.chart-fullscreen-toggle'));
+    const chartFrames = Array.from(document.querySelectorAll('.chart-frame'));
+    const evidenceModal = document.getElementById('evidenceViewModal');
+    const evidenceModalBody = document.getElementById('evidenceViewBody');
+    const evidenceModalTitle = document.getElementById('evidenceViewTitle');
+    const evidenceModalSubtitle = document.getElementById('evidenceViewSubtitle');
+    const evidenceModalCloseBtn = document.getElementById('evidenceViewCloseBtn');
+    let activeChartButton = null;
+    let activePopout = null;
 
-    function makeTimelineSeries(hours) {
-        const now = new Date();
-        const points = Math.max(12, hours * 2);
-        const stepMs = (hours * 60 * 60 * 1000) / (points - 1);
-        const alertBase = Math.max(2, model.alerts || 2);
-        const iocBase = Math.max(4, Math.round(model.iocHigh / 200));
+    function getPopoutTarget(button) {
+        const selector = button ? button.dataset.fullscreenTarget : '';
+        if (selector) {
+            const target = document.querySelector(selector);
+            if (target) return target;
+        }
+        return button ? button.closest('.obs-panel, .endpoint-panel') : null;
+    }
 
-        return d3.range(points).map((i) => {
-            const wave1 = Math.sin(i * 0.42 + model.securityScore * 0.04);
-            const wave2 = Math.cos(i * 0.18 + model.activeSessions * 0.09);
-            const pulse = (i % 13 === 0 || i % 17 === 0) ? 2 : 0;
-            const alerts = Math.max(0, Math.round(alertBase + wave1 * 2.2 + wave2 * 1.5 + pulse));
-            const iocHits = Math.max(0, Math.round(iocBase + alerts * 0.95 + Math.sin(i * 0.3) * 2.6));
-            return {
-                time: new Date(now.getTime() - (points - i - 1) * stepMs),
-                alerts,
-                iocHits
-            };
+    function getPopoutTitle(target) {
+        const heading = target ? target.querySelector('.panel-header h2') : null;
+        return heading ? heading.textContent.trim() : 'Evidence View';
+    }
+
+    function getPopoutSubtitle(target) {
+        const description = target ? target.querySelector('.panel-header p') : null;
+        return description ? description.textContent.trim() : 'Focused artifact visualization';
+    }
+
+    function setActiveChartButton(button) {
+        if (!button) return;
+        activeChartButton = button;
+        chartFrames.forEach((frame) => {
+            frame.classList.toggle('chart-frame-active', frame.contains(button));
         });
+    }
+
+    function syncPopoutButtons() {
+        popoutButtons.forEach((button) => {
+            const target = getPopoutTarget(button);
+            const isActive = Boolean(activePopout && activePopout.panel === target);
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            button.setAttribute('aria-label', isActive ? 'Return graph to dashboard' : 'Open graph in pop-out evidence view');
+            button.title = isActive ? 'Return graph to dashboard' : 'Open in pop-out evidence view';
+
+            const icon = button.querySelector('i');
+            const label = button.querySelector('.chart-fullscreen-label');
+            if (icon) {
+                icon.className = `fa-solid ${isActive ? 'fa-compress' : 'fa-expand'}`;
+            }
+            if (label) {
+                label.textContent = isActive ? 'Return' : 'Pop Out';
+            }
+        });
+    }
+
+    function closeEvidenceModal(restoreFocus = true) {
+        if (!activePopout || !evidenceModal || !evidenceModalBody) return;
+
+        const { panel, placeholder, button } = activePopout;
+        if (placeholder && placeholder.parentNode) {
+            placeholder.parentNode.insertBefore(panel, placeholder);
+            placeholder.remove();
+        }
+        panel.classList.remove('is-evidence-popout');
+        evidenceModal.hidden = true;
+        evidenceModalBody.innerHTML = '';
+        document.body.classList.remove('evidence-modal-open');
+        activePopout = null;
+        syncPopoutButtons();
+        window.setTimeout(drawAllCharts, 140);
+        if (restoreFocus && button) {
+            button.focus();
+        }
+    }
+
+    function openEvidenceModal(button) {
+        if (!button || !evidenceModal || !evidenceModalBody) return;
+
+        const target = getPopoutTarget(button);
+        if (!target || !target.parentNode) return;
+
+        if (activePopout && activePopout.panel === target) {
+            return;
+        }
+
+        if (activePopout) {
+            closeEvidenceModal(false);
+        }
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'evidence-popout-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.style.height = `${Math.max(target.getBoundingClientRect().height, 180)}px`;
+
+        target.parentNode.insertBefore(placeholder, target);
+        evidenceModalBody.appendChild(target);
+        target.classList.add('is-evidence-popout');
+
+        activePopout = { panel: target, placeholder, button };
+        evidenceModal.hidden = false;
+        document.body.classList.add('evidence-modal-open');
+        setActiveChartButton(button);
+
+        if (evidenceModalTitle) {
+            evidenceModalTitle.textContent = getPopoutTitle(target);
+        }
+        if (evidenceModalSubtitle) {
+            evidenceModalSubtitle.textContent = getPopoutSubtitle(target);
+        }
+
+        syncPopoutButtons();
+        window.setTimeout(drawAllCharts, 140);
+        if (evidenceModalCloseBtn) {
+            evidenceModalCloseBtn.focus();
+        }
+    }
+
+    function toggleEvidenceModal(button) {
+        const target = getPopoutTarget(button);
+        if (!target) return;
+
+        if (activePopout && activePopout.panel === target) {
+            closeEvidenceModal();
+            return;
+        }
+
+        openEvidenceModal(button);
+    }
+
+    function initEvidencePopout() {
+        popoutButtons.forEach((button) => {
+            button.addEventListener('mouseenter', () => {
+                setActiveChartButton(button);
+            });
+            button.addEventListener('focus', () => {
+                setActiveChartButton(button);
+            });
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setActiveChartButton(button);
+                toggleEvidenceModal(button);
+            });
+        });
+
+        chartFrames.forEach((frame) => {
+            const button = frame.querySelector('.chart-fullscreen-toggle');
+            if (!button) return;
+
+            frame.addEventListener('mouseenter', () => {
+                setActiveChartButton(button);
+            });
+            frame.addEventListener('focusin', () => {
+                setActiveChartButton(button);
+            });
+        });
+
+        const registeredTargets = new Set();
+        popoutButtons.forEach((button) => {
+            const target = getPopoutTarget(button);
+            if (!target || registeredTargets.has(target)) return;
+            registeredTargets.add(target);
+
+            target.addEventListener('mouseenter', () => {
+                setActiveChartButton(button);
+            });
+            target.addEventListener('focusin', () => {
+                setActiveChartButton(button);
+            });
+        });
+
+        if (evidenceModalCloseBtn) {
+            evidenceModalCloseBtn.addEventListener('click', () => {
+                closeEvidenceModal();
+            });
+        }
+
+        if (evidenceModal) {
+            evidenceModal.addEventListener('click', (event) => {
+                if (event.target === evidenceModal) {
+                    closeEvidenceModal(false);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            const tagName = event.target && event.target.tagName ? event.target.tagName.toLowerCase() : '';
+            const isTypingField = Boolean(
+                event.target
+                && (event.target.isContentEditable
+                    || tagName === 'input'
+                    || tagName === 'textarea'
+                    || tagName === 'select')
+            );
+
+            if (event.key === 'Escape' && activePopout) {
+                event.preventDefault();
+                closeEvidenceModal();
+                return;
+            }
+
+            if (isTypingField) return;
+            if (event.altKey || event.ctrlKey || event.metaKey) return;
+            if (event.key.toLowerCase() !== 'f') return;
+
+            event.preventDefault();
+            if (activePopout && (!activeChartButton || getPopoutTarget(activeChartButton) === activePopout.panel)) {
+                closeEvidenceModal();
+                return;
+            }
+
+            if (activeChartButton) {
+                toggleEvidenceModal(activeChartButton);
+            }
+        });
+
+        syncPopoutButtons();
+    }
+
+    function getFilteredTimelineEvents() {
+        const visibleEvents = parsedTimelineEvents.filter((event) => chartState.timelineSeriesVisible[event.lane] !== false);
+        if (visibleEvents.length === 0) {
+            return [];
+        }
+
+        const latestEpoch = d3.max(visibleEvents, (event) => event.epoch_seconds) || 0;
+        const cutoff = latestEpoch - (chartState.timelineHours * 60 * 60);
+        const scoped = visibleEvents.filter((event) => event.epoch_seconds >= cutoff);
+        return scoped.length > 0 ? scoped : visibleEvents;
+    }
+
+    function timelineTickFormatter(domain) {
+        const spanMs = Math.max(1, domain[1] - domain[0]);
+        if (spanMs <= 5 * 60 * 1000) return d3.timeFormat('%H:%M:%S');
+        if (spanMs <= 24 * 60 * 60 * 1000) return d3.timeFormat('%H:%M');
+        if (spanMs <= 7 * 24 * 60 * 60 * 1000) return d3.timeFormat('%d %b %H:%M');
+        return d3.timeFormat('%d %b');
     }
 
     function showTooltip(event, html) {
@@ -858,175 +1144,199 @@
     }
 
     function drawTimelineChart() {
-        const host = document.getElementById('threatTimelineChart');
+        const host = document.getElementById('macbTimelineChart');
         if (!host) return;
 
-        const data = makeTimelineSeries(chartState.timelineHours);
         host.innerHTML = '';
+        const events = getFilteredTimelineEvents();
+        if (events.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = 'No timestamped forensic events are available for the selected window.';
+            host.appendChild(empty);
+            d3.select('#timelineLegend').html('');
+            return;
+        }
 
         const width = host.clientWidth || 760;
-        const height = host.clientHeight || 320;
-        const margin = { top: 18, right: 24, bottom: 36, left: 48 };
+        const height = host.clientHeight || 340;
+        const margin = { top: 18, right: 20, bottom: 38, left: 86 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
+        const overviewHeight = 58;
+        const lanes = timelineLaneOrder.filter((lane) => events.some((event) => event.lane === lane));
 
         const svg = d3.select(host)
             .append('svg')
             .attr('viewBox', `0 0 ${width} ${height}`)
             .attr('preserveAspectRatio', 'none');
 
-        const defs = svg.append('defs');
-        const grad = defs.append('linearGradient')
-            .attr('id', 'timelineAreaGradient')
-            .attr('x1', '0%')
-            .attr('y1', '0%')
-            .attr('x2', '0%')
-            .attr('y2', '100%');
-        grad.append('stop').attr('offset', '0%').attr('stop-color', 'rgba(46,160,67,0.40)');
-        grad.append('stop').attr('offset', '100%').attr('stop-color', 'rgba(46,160,67,0.02)');
+        const extent = d3.extent(events, (event) => event.time);
+        let domainStart = extent[0];
+        let domainEnd = extent[1];
+        if (domainStart.getTime() === domainEnd.getTime()) {
+            domainStart = new Date(domainStart.getTime() - (60 * 60 * 1000));
+            domainEnd = new Date(domainEnd.getTime() + (60 * 60 * 1000));
+        }
 
-        const x = d3.scaleTime()
-            .domain(d3.extent(data, (d) => d.time))
+        const baseX = d3.scaleTime()
+            .domain([domainStart, domainEnd])
             .range([0, innerWidth]);
+        const laneScale = d3.scaleBand()
+            .domain(lanes)
+            .range([overviewHeight + 26, innerHeight])
+            .padding(0.3);
 
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(data, (d) => Math.max(d.alerts, d.iocHits)) + 2])
+        const binSizeSeconds = chartState.timelineHours <= 6 ? 300 : chartState.timelineHours <= 24 ? 1800 : 3600;
+        const bins = [];
+        const firstBucket = Math.floor(events[0].epoch_seconds / binSizeSeconds) * binSizeSeconds;
+        const lastBucket = Math.floor(events[events.length - 1].epoch_seconds / binSizeSeconds) * binSizeSeconds;
+        for (let epoch = firstBucket; epoch <= lastBucket + binSizeSeconds; epoch += binSizeSeconds) {
+            bins.push({ epoch, total: 0, dominantLane: 'NTFS', counts: {} });
+        }
+        const binsByEpoch = new Map(bins.map((bin) => [bin.epoch, bin]));
+        events.forEach((event) => {
+            const bucket = Math.floor(event.epoch_seconds / binSizeSeconds) * binSizeSeconds;
+            const target = binsByEpoch.get(bucket);
+            if (!target) return;
+            target.total += 1;
+            target.counts[event.lane] = (target.counts[event.lane] || 0) + 1;
+            const dominant = Object.entries(target.counts).sort((a, b) => b[1] - a[1])[0];
+            target.dominantLane = dominant ? dominant[0] : target.dominantLane;
+        });
+
+        const overviewY = d3.scaleLinear()
+            .domain([0, d3.max(bins, (bin) => bin.total) || 1])
             .nice()
-            .range([innerHeight, 0]);
+            .range([overviewHeight, 0]);
 
         const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-        const grid = d3.axisLeft(y)
-            .tickSize(-innerWidth)
-            .tickFormat('')
-            .ticks(5);
         g.append('g')
             .attr('class', 'chart-grid')
-            .call(grid)
+            .call(d3.axisLeft(laneScale).tickSize(-innerWidth).tickFormat(() => ''))
             .selectAll('line')
-            .attr('stroke', 'rgba(255,255,255,0.08)');
+            .attr('stroke', 'rgba(255,255,255,0.06)');
         g.select('.chart-grid .domain').remove();
 
-        const area = d3.area()
-            .x((d) => x(d.time))
-            .y0(innerHeight)
-            .y1((d) => y(d.iocHits))
-            .curve(d3.curveMonotoneX);
-
-        const lineAlerts = d3.line()
-            .x((d) => x(d.time))
-            .y((d) => y(d.alerts))
-            .curve(d3.curveMonotoneX);
-
-        const lineIoc = d3.line()
-            .x((d) => x(d.time))
-            .y((d) => y(d.iocHits))
-            .curve(d3.curveMonotoneX);
-
-        const areaPath = g.append('path')
-            .datum(data)
-            .attr('fill', 'url(#timelineAreaGradient)')
-            .attr('d', area)
-            .style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.08);
-
-        const iocPath = g.append('path')
-            .datum(data)
-            .attr('fill', 'none')
-            .attr('stroke', '#2ea043')
-            .attr('stroke-width', 2.3)
-            .attr('d', lineIoc)
-            .style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.12);
-
-        const alertsPath = g.append('path')
-            .datum(data)
-            .attr('fill', 'none')
-            .attr('stroke', '#ff7351')
-            .attr('stroke-width', 2.3)
-            .attr('d', lineAlerts)
-            .style('opacity', chartState.timelineSeriesVisible.alerts ? 1 : 0.12);
-
-        [alertsPath, iocPath].forEach((path) => {
-            const length = path.node().getTotalLength();
-            path.attr('stroke-dasharray', `${length} ${length}`)
-                .attr('stroke-dashoffset', length)
-                .transition()
-                .duration(700)
-                .ease(d3.easeCubicOut)
-                .attr('stroke-dashoffset', 0);
-        });
-
         g.append('g')
-            .attr('transform', `translate(0,${innerHeight})`)
-            .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat('%H:%M')))
-            .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.22)'))
-            .call((axis) => axis.selectAll('text').attr('fill', '#a8abb3').attr('font-size', 11));
+            .call(d3.axisLeft(laneScale).tickSize(0))
+            .call((axis) => axis.select('.domain').remove())
+            .call((axis) => axis.selectAll('text').attr('fill', '#c7d6e7').attr('font-size', 11).attr('font-weight', 700));
 
-        g.append('g')
-            .call(d3.axisLeft(y).ticks(5))
-            .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.22)'))
-            .call((axis) => axis.selectAll('text').attr('fill', '#a8abb3').attr('font-size', 11));
+        g.append('text')
+            .attr('x', 0)
+            .attr('y', overviewHeight + 14)
+            .attr('fill', '#8ea2b8')
+            .attr('font-size', 10)
+            .attr('font-weight', 700)
+            .attr('letter-spacing', '0.12em')
+            .text('SPIKE OVERLAY');
 
-        const focus = g.append('g').style('display', 'none');
-        focus.append('line')
-            .attr('class', 'focus-line')
-            .attr('y1', 0)
-            .attr('y2', innerHeight)
-            .attr('stroke', 'rgba(255,255,255,0.28)')
-            .attr('stroke-dasharray', '4 4');
-        const focusAlerts = focus.append('circle').attr('r', 4.2).attr('fill', '#ff7351');
-        const focusIoc = focus.append('circle').attr('r', 4.2).attr('fill', '#2ea043');
+        g.append('text')
+            .attr('x', innerWidth)
+            .attr('y', 10)
+            .attr('text-anchor', 'end')
+            .attr('fill', '#7f93a8')
+            .attr('font-size', 10)
+            .text('Wheel to zoom. Drag to pan.');
 
-        const bisect = d3.bisector((d) => d.time).left;
+        const overviewGroup = g.append('g');
+        const eventsGroup = g.append('g');
+        const xAxisGroup = g.append('g').attr('transform', `translate(0,${innerHeight})`);
 
-        g.append('rect')
-            .attr('width', innerWidth)
-            .attr('height', innerHeight)
-            .attr('fill', 'transparent')
-            .on('mouseenter', () => focus.style('display', null))
-            .on('mouseleave', () => {
-                focus.style('display', 'none');
-                hideTooltip();
-            })
-            .on('mousemove', (event) => {
-                const [mx] = d3.pointer(event);
-                const hoveredTime = x.invert(mx);
-                const index = bisect(data, hoveredTime, 1);
-                const d0 = data[index - 1] || data[0];
-                const d1 = data[index] || data[data.length - 1];
-                const point = hoveredTime - d0.time > d1.time - hoveredTime ? d1 : d0;
-                const cx = x(point.time);
+        const markerShape = (lane) => {
+            if (lane === 'NTFS') return d3.symbolSquare;
+            if (lane === 'Prefetch') return d3.symbolTriangle;
+            if (lane === 'Execution') return d3.symbolDiamond;
+            return d3.symbolCircle;
+        };
 
-                focus.select('.focus-line').attr('transform', `translate(${cx},0)`);
-                focusAlerts.attr('cx', cx).attr('cy', y(point.alerts)).style('display', chartState.timelineSeriesVisible.alerts ? null : 'none');
-                focusIoc.attr('cx', cx).attr('cy', y(point.iocHits)).style('display', chartState.timelineSeriesVisible.iocHits ? null : 'none');
-
-                showTooltip(event, `
-                    <div class="d3-tip-title">${d3.timeFormat('%d %b, %H:%M')(point.time)}</div>
-                    <div class="d3-tip-row"><span>Alerts</span><strong>${point.alerts}</strong></div>
-                    <div class="d3-tip-row"><span>IOC Hits</span><strong>${point.iocHits}</strong></div>
-                `);
+        const renderTimeline = (xScale) => {
+            const visibleDomain = xScale.domain();
+            const tickFormat = timelineTickFormatter(visibleDomain);
+            const visibleBins = bins.filter((bin) => {
+                const current = new Date(bin.epoch * 1000);
+                return current >= visibleDomain[0] && current <= visibleDomain[1];
             });
+            const barWidth = Math.max(2, innerWidth / Math.max(visibleBins.length, 1) - 1);
 
-        const legendData = [
-            { key: 'alerts', label: 'Alerts', color: '#ff7351' },
-            { key: 'iocHits', label: 'IOC Hits', color: '#2ea043' }
-        ];
+            const overviewBars = overviewGroup.selectAll('rect').data(visibleBins, (bin) => bin.epoch);
+            overviewBars.enter()
+                .append('rect')
+                .merge(overviewBars)
+                .attr('x', (bin) => xScale(new Date(bin.epoch * 1000)))
+                .attr('y', (bin) => overviewY(bin.total))
+                .attr('width', barWidth)
+                .attr('height', (bin) => overviewHeight - overviewY(bin.total))
+                .attr('rx', 3)
+                .attr('fill', (bin) => timelinePalette[bin.dominantLane] || '#8fa0b3')
+                .attr('opacity', 0.28);
+            overviewBars.exit().remove();
+
+            const visibleEvents = events.filter((event) => event.time >= visibleDomain[0] && event.time <= visibleDomain[1]);
+            const markers = eventsGroup.selectAll('path').data(visibleEvents, (event) => `${event.lane}-${event.entity}-${event.timestamp}-${event.event_type}`);
+
+            markers.enter()
+                .append('path')
+                .merge(markers)
+                .attr('transform', (event) => `translate(${xScale(event.time)},${(laneScale(event.lane) || 0) + (laneScale.bandwidth() / 2)})`)
+                .attr('d', (event) => d3.symbol().type(markerShape(event.lane)).size(event.lane === 'NTFS' ? 62 : 70)())
+                .attr('fill', (event) => timelinePalette[event.lane] || '#8fa0b3')
+                .attr('stroke', '#081018')
+                .attr('stroke-width', 1.8)
+                .attr('opacity', 0.94)
+                .style('cursor', 'pointer')
+                .on('mouseenter', (event, point) => {
+                    showTooltip(event, `
+                        <div class="d3-tip-title">${point.lane} · ${point.event_type}</div>
+                        <div class="d3-tip-row"><span>Time</span><strong>${d3.timeFormat('%d %b %Y %H:%M:%S')(point.time)}</strong></div>
+                        <div class="d3-tip-row"><span>Entity</span><strong>${point.entity}</strong></div>
+                        <div class="d3-tip-row"><span>MACB</span><strong>${point.macb || 'N/A'}</strong></div>
+                        <div class="d3-tip-row"><span>Detail</span><strong>${point.detail}</strong></div>
+                    `);
+                })
+                .on('mousemove', (event) => {
+                    tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
+                })
+                .on('mouseleave', hideTooltip);
+            markers.exit().remove();
+
+            xAxisGroup
+                .call(d3.axisBottom(xScale).ticks(6).tickFormat(tickFormat))
+                .call((axis) => axis.select('.domain').attr('stroke', 'rgba(255,255,255,0.22)'))
+                .call((axis) => axis.selectAll('text').attr('fill', '#a8abb3').attr('font-size', 11));
+        };
+
+        renderTimeline(baseX);
+
+        svg.call(
+            d3.zoom()
+                .scaleExtent([1, 240])
+                .translateExtent([[margin.left, 0], [width - margin.right, height]])
+                .extent([[margin.left, 0], [width - margin.right, height]])
+                .on('zoom', (event) => {
+                    renderTimeline(event.transform.rescaleX(baseX));
+                })
+        );
 
         const legend = d3.select('#timelineLegend');
         legend.html('');
-        legendData.forEach((item) => {
+        timelineLaneOrder.forEach((lane) => {
             const button = legend.append('button')
                 .attr('type', 'button')
-                .attr('class', `legend-pill ${chartState.timelineSeriesVisible[item.key] ? 'active' : ''}`)
+                .attr('class', `legend-pill ${chartState.timelineSeriesVisible[lane] ? 'active' : ''}`)
                 .on('click', () => {
-                    chartState.timelineSeriesVisible[item.key] = !chartState.timelineSeriesVisible[item.key];
+                    chartState.timelineSeriesVisible[lane] = !chartState.timelineSeriesVisible[lane];
                     drawTimelineChart();
                 });
-            button.append('span').attr('class', 'legend-swatch').style('background', item.color);
-            button.append('span').text(item.label);
+            button.append('span').attr('class', 'legend-swatch').style('background', timelinePalette[lane]);
+            button.append('span').text(lane);
         });
 
-        areaPath.style('opacity', chartState.timelineSeriesVisible.iocHits ? 1 : 0.08);
+        legend.append('span')
+            .attr('class', 'legend-note')
+            .text('MACB = Modified / Accessed / MFT Changed / Created');
     }
 
     function drawIocMixChart() {
@@ -1105,41 +1415,126 @@
             });
     }
 
-    function drawEntityGraph() {
-        const host = document.getElementById('entityGraphChart');
+    function buildConnectionNeighborhood(focusId) {
+        if (!focusId) {
+            return graphModel;
+        }
+
+        const knownNodeIds = new Set(graphModel.nodes.map((node) => node.id));
+        if (!knownNodeIds.has(focusId)) {
+            return graphModel;
+        }
+
+        const adjacency = new Map();
+        graphModel.links.forEach((link) => {
+            const source = typeof link.source === 'object' ? link.source.id : link.source;
+            const target = typeof link.target === 'object' ? link.target.id : link.target;
+            if (!adjacency.has(source)) adjacency.set(source, new Set());
+            if (!adjacency.has(target)) adjacency.set(target, new Set());
+            adjacency.get(source).add(target);
+            adjacency.get(target).add(source);
+        });
+
+        const visited = new Set([focusId]);
+        let frontier = [focusId];
+        for (let depth = 0; depth < 2; depth += 1) {
+            const nextFrontier = [];
+            frontier.forEach((id) => {
+                const neighbors = adjacency.get(id) || new Set();
+                neighbors.forEach((neighborId) => {
+                    if (visited.has(neighborId)) return;
+                    visited.add(neighborId);
+                    nextFrontier.push(neighborId);
+                });
+            });
+            if (nextFrontier.length === 0) break;
+            frontier = nextFrontier;
+        }
+
+        return {
+            nodes: graphModel.nodes.filter((node) => visited.has(node.id)),
+            links: graphModel.links.filter((link) => {
+                const source = typeof link.source === 'object' ? link.source.id : link.source;
+                const target = typeof link.target === 'object' ? link.target.id : link.target;
+                return visited.has(source) && visited.has(target);
+            })
+        };
+    }
+
+    function resolveConnectionFocus(query) {
+        const normalized = (query || '').trim().toLowerCase();
+        if (!normalized) return '';
+        const exact = graphModel.nodes.find((node) => node.id.toLowerCase() === normalized || node.label.toLowerCase() === normalized);
+        if (exact) return exact.id;
+        const partial = graphModel.nodes.find((node) => node.label.toLowerCase().includes(normalized) || node.id.toLowerCase().includes(normalized));
+        return partial ? partial.id : '';
+    }
+
+    function updateConnectionsUi(graphData) {
+        const legend = d3.select('#connectionsLegend');
+        legend.html('');
+        [
+            ['user', 'User'],
+            ['process', 'Process'],
+            ['file', 'File'],
+            ['hash', 'Hash'],
+            ['ip', 'IP'],
+            ['domain', 'Domain'],
+            ['browser', 'Browser']
+        ].forEach(([key, label]) => {
+            const chip = legend.append('span').attr('class', 'legend-pill active');
+            chip.append('span').attr('class', 'legend-swatch').style('background', connectionPalette[key]);
+            chip.append('span').text(label);
+        });
+
+        const strip = d3.select('#connectionsFocusStrip');
+        strip.html('');
+        connectionFocusEntities.forEach((entity) => {
+            const button = strip.append('button')
+                .attr('type', 'button')
+                .attr('class', `connection-chip ${chartState.connectionFocus === entity.id ? 'active' : ''}`)
+                .on('click', () => {
+                    chartState.connectionFocus = entity.id;
+                    const input = document.getElementById('connectionsSearchInput');
+                    if (input) input.value = entity.label;
+                    drawConnectionsGraph();
+                });
+            button.append('span').attr('class', 'connection-chip-type').text(entity.entity_type.toUpperCase());
+            button.append('span').text(entity.label);
+        });
+
+        const meta = document.getElementById('connectionsEngineMeta');
+        if (!meta) return;
+        const focusNode = graphModel.nodes.find((node) => node.id === chartState.connectionFocus);
+        meta.innerHTML = `
+            <span>Focus <strong>${focusNode ? focusNode.label : 'Full evidence graph'}</strong></span>
+            <span>Nodes <strong>${graphData.nodes.length}</strong></span>
+            <span>Relationships <strong>${graphData.links.length}</strong></span>
+            <span>Pivot depth <strong>2 hops</strong></span>
+        `;
+    }
+
+    function drawConnectionsGraph() {
+        const host = document.getElementById('connectionsEngineChart');
         if (!host) return;
 
         host.innerHTML = '';
+        const graphData = buildConnectionNeighborhood(chartState.connectionFocus);
+        updateConnectionsUi(graphData);
+
+        if (graphData.nodes.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'artifact-chart-empty';
+            empty.textContent = 'No linked evidence entities are available for the selected pivot.';
+            host.appendChild(empty);
+            return;
+        }
+
         const width = host.clientWidth || 760;
-        const height = host.clientHeight || 320;
-
-        const nodes = [
-            { id: 'Investigator', group: 'user', weight: Math.max(model.activeSessions, 1) },
-            { id: 'IOC Feed', group: 'intel', weight: Math.max(Math.round(model.iocTotal / 4000), 2) },
-            { id: 'Alert Engine', group: 'system', weight: Math.max(model.alerts + 2, 3) },
-            { id: 'Evidence DB', group: 'data', weight: 4 },
-            { id: 'Timeline', group: 'tools', weight: 3 },
-            { id: 'Terminal', group: 'tools', weight: 2 },
-            { id: 'Reporting', group: 'tools', weight: 3 },
-            { id: 'Endpoint Cluster', group: 'infra', weight: 4 },
-        ];
-
-        const links = [
-            { source: 'Investigator', target: 'Alert Engine', value: 3 },
-            { source: 'Investigator', target: 'Reporting', value: 2 },
-            { source: 'Alert Engine', target: 'IOC Feed', value: 4 },
-            { source: 'Alert Engine', target: 'Endpoint Cluster', value: 3 },
-            { source: 'Alert Engine', target: 'Timeline', value: 2 },
-            { source: 'Endpoint Cluster', target: 'Evidence DB', value: 4 },
-            { source: 'Evidence DB', target: 'Timeline', value: 2 },
-            { source: 'Terminal', target: 'Evidence DB', value: 2 },
-            { source: 'Reporting', target: 'Evidence DB', value: 2 },
-            { source: 'IOC Feed', target: 'Timeline', value: 2 },
-        ];
-
-        const color = d3.scaleOrdinal()
-            .domain(['user', 'intel', 'system', 'data', 'tools', 'infra'])
-            .range(['#8bfb91', '#2ea043', '#ff7351', '#78b8ff', '#f6b73c', '#8a97a6']);
+        const height = host.clientHeight || 340;
+        const nodes = graphData.nodes.map((node) => ({ ...node }));
+        const links = graphData.links.map((link) => ({ ...link }));
+        const focusSet = new Set(chartState.connectionFocus ? [chartState.connectionFocus] : []);
 
         const svg = d3.select(host)
             .append('svg')
@@ -1149,89 +1544,97 @@
         const zoomLayer = svg.append('g');
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id((d) => d.id).distance((d) => 90 + d.value * 8))
-            .force('charge', d3.forceManyBody().strength(-240))
+            .force('link', d3.forceLink(links).id((node) => node.id).distance((link) => Math.max(78, 128 - (link.hits * 6))))
+            .force('charge', d3.forceManyBody().strength(-340))
             .force('center', d3.forceCenter(width / 2, height / 2))
-            .force('collision', d3.forceCollide().radius((d) => 16 + d.weight * 1.8));
+            .force('collision', d3.forceCollide().radius((node) => 18 + Math.min(node.hits, 6) * 2));
 
         const link = zoomLayer.append('g')
-            .attr('stroke', 'rgba(168,171,179,0.36)')
+            .attr('stroke', 'rgba(168,171,179,0.34)')
             .selectAll('line')
             .data(links)
             .enter()
             .append('line')
-            .attr('stroke-width', (d) => d.value);
+            .attr('stroke-width', (item) => 1.4 + Math.min(item.hits, 5));
 
-        const node = zoomLayer.append('g')
-            .selectAll('circle')
+        const nodeGroup = zoomLayer.append('g')
+            .selectAll('g')
             .data(nodes)
             .enter()
-            .append('circle')
-            .attr('r', (d) => 9 + d.weight * 1.25)
-            .attr('fill', (d) => color(d.group))
-            .attr('stroke', '#0a0e14')
-            .attr('stroke-width', 2)
+            .append('g')
             .style('cursor', 'grab')
-            .on('mouseenter', (event, d) => {
+            .on('mouseenter', (event, node) => {
                 showTooltip(event, `
-                    <div class="d3-tip-title">${d.id}</div>
-                    <div class="d3-tip-row"><span>Domain</span><strong>${d.group}</strong></div>
-                    <div class="d3-tip-row"><span>Weight</span><strong>${d.weight}</strong></div>
+                    <div class="d3-tip-title">${node.label}</div>
+                    <div class="d3-tip-row"><span>Type</span><strong>${node.entity_type}</strong></div>
+                    <div class="d3-tip-row"><span>Hits</span><strong>${node.hits}</strong></div>
+                    <div class="d3-tip-row"><span>Detail</span><strong>${node.detail || 'N/A'}</strong></div>
                 `);
             })
             .on('mousemove', (event) => {
                 tooltip.style('left', `${event.clientX + 14}px`).style('top', `${event.clientY + 14}px`);
             })
             .on('mouseleave', hideTooltip)
+            .on('click', (event, node) => {
+                event.stopPropagation();
+                chartState.connectionFocus = node.id;
+                const input = document.getElementById('connectionsSearchInput');
+                if (input) input.value = node.label;
+                drawConnectionsGraph();
+            })
             .call(
                 d3.drag()
-                    .on('start', (event, d) => {
-                        if (!event.active) simulation.alphaTarget(0.3).restart();
-                        d.fx = d.x;
-                        d.fy = d.y;
+                    .on('start', (event, node) => {
+                        if (!event.active) simulation.alphaTarget(0.25).restart();
+                        node.fx = node.x;
+                        node.fy = node.y;
                     })
-                    .on('drag', (event, d) => {
-                        d.fx = event.x;
-                        d.fy = event.y;
+                    .on('drag', (event, node) => {
+                        node.fx = event.x;
+                        node.fy = event.y;
                     })
-                    .on('end', (event, d) => {
+                    .on('end', (event, node) => {
                         if (!event.active) simulation.alphaTarget(0);
-                        d.fx = null;
-                        d.fy = null;
+                        node.fx = null;
+                        node.fy = null;
                     })
             );
 
-        const label = zoomLayer.append('g')
-            .selectAll('text')
-            .data(nodes)
-            .enter()
-            .append('text')
+        nodeGroup.append('circle')
+            .attr('r', (node) => 10 + Math.min(node.hits, 7) * 1.4)
+            .attr('fill', (node) => connectionPalette[node.entity_type] || '#8fa0b3')
+            .attr('stroke', (node) => focusSet.has(node.id) ? '#f3fbff' : '#0a0e14')
+            .attr('stroke-width', (node) => focusSet.has(node.id) ? 3 : 2);
+
+        nodeGroup.append('text')
             .attr('fill', '#d7dfec')
             .attr('font-size', 10)
-            .attr('font-weight', 600)
-            .attr('dy', -14)
+            .attr('font-weight', 700)
             .attr('text-anchor', 'middle')
-            .text((d) => d.id);
+            .attr('dy', -16)
+            .text((node) => node.label.length > 22 ? `${node.label.slice(0, 22)}...` : node.label);
 
         simulation.on('tick', () => {
             link
-                .attr('x1', (d) => d.source.x)
-                .attr('y1', (d) => d.source.y)
-                .attr('x2', (d) => d.target.x)
-                .attr('y2', (d) => d.target.y);
+                .attr('x1', (item) => item.source.x)
+                .attr('y1', (item) => item.source.y)
+                .attr('x2', (item) => item.target.x)
+                .attr('y2', (item) => item.target.y);
 
-            node
-                .attr('cx', (d) => d.x)
-                .attr('cy', (d) => d.y);
+            nodeGroup.attr('transform', (node) => `translate(${node.x},${node.y})`);
+        });
 
-            label
-                .attr('x', (d) => d.x)
-                .attr('y', (d) => d.y);
+        svg.on('click', () => {
+            if (!chartState.connectionFocus) return;
+            chartState.connectionFocus = '';
+            const input = document.getElementById('connectionsSearchInput');
+            if (input) input.value = '';
+            drawConnectionsGraph();
         });
 
         svg.call(
             d3.zoom()
-                .scaleExtent([0.6, 2.4])
+                .scaleExtent([0.55, 2.8])
                 .on('zoom', (event) => {
                     zoomLayer.attr('transform', event.transform);
                 })
@@ -1321,8 +1724,8 @@
                 showTooltip(event, `
                     <div class="d3-tip-title">Format ${d.extension}</div>
                     <div class="d3-tip-row"><span>Count</span><strong>${d.count}</strong></div>
-                    <div class="d3-tip-row"><span>Share</span><strong>${d.percentFiles}%</strong></div>
-                    <div class="d3-tip-row"><span>Total Size</span><strong>${d.totalSizeHuman}</strong></div>
+                    <div class="d3-tip-row"><span>Share</span><strong>${d.percent_files}%</strong></div>
+                    <div class="d3-tip-row"><span>Total Size</span><strong>${d.total_size_human}</strong></div>
                 `);
             })
             .on('mousemove', (event) => {
@@ -1574,7 +1977,7 @@
                     <div class="d3-tip-row"><span>Status</span><strong>${d.status}</strong></div>
                     <div class="d3-tip-row"><span>PID</span><strong>${d.pid || 'n/a'}</strong></div>
                     <div class="d3-tip-row"><span>Depth</span><strong>${d.depth}</strong></div>
-                    <div class="d3-tip-row"><span>First Seen</span><strong>${d.firstSeen || 'unknown'}</strong></div>
+                    <div class="d3-tip-row"><span>First Seen</span><strong>${d.first_seen || 'unknown'}</strong></div>
                 `);
             })
             .on('mousemove', (event) => {
@@ -1639,7 +2042,7 @@
     function drawAllCharts() {
         drawTimelineChart();
         drawIocMixChart();
-        drawEntityGraph();
+        drawConnectionsGraph();
         drawArtifactTypeChart();
         drawMemoryMapChart();
         drawBrowserDomainChart();
@@ -1656,12 +2059,39 @@
         });
     });
 
+    const connectionsSearchInput = document.getElementById('connectionsSearchInput');
+    if (connectionsSearchInput) {
+        const activeFocus = graphModel.nodes.find((node) => node.id === chartState.connectionFocus);
+        if (activeFocus) {
+            connectionsSearchInput.value = activeFocus.label;
+        }
+        connectionsSearchInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            const resolved = resolveConnectionFocus(connectionsSearchInput.value);
+            if (!resolved) return;
+            chartState.connectionFocus = resolved;
+            drawConnectionsGraph();
+        });
+    }
+
+    const connectionsResetBtn = document.getElementById('connectionsResetBtn');
+    if (connectionsResetBtn) {
+        connectionsResetBtn.addEventListener('click', () => {
+            chartState.connectionFocus = '';
+            if (connectionsSearchInput) {
+                connectionsSearchInput.value = '';
+            }
+            drawConnectionsGraph();
+        });
+    }
+
     let resizeTimer = null;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(drawAllCharts, 180);
     });
 
+    initEvidencePopout();
     drawAllCharts();
 })();
 </script>

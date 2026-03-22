@@ -1,0 +1,19 @@
+[package]
+name = "registry_parser"
+version = "0.2.0"
+edition = "2021"
+description = "Cross-platform offline Windows registry hive parser – outputs JSON"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive"] }
+nt_hive2 = "4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

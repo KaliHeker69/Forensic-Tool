@@ -1,4 +1,4 @@
-use chrono::Local;
+use chrono::{DateTime, Datelike, Local, NaiveDateTime, Utc};
 use regex::Regex;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -14,6 +14,9 @@ const DEFAULT_OUTPUT: &str = "portal_from_azure/rust-backend/data/dashboard_quic
 const WINDOWS_EVENT_REPORT_HTML_ENV: &str = "WINDOWS_EVENT_REPORT_HTML";
 const FETCHED_FILES_DIR: &str = "/srv/forensics/fetched_files";
 const JSON_FILES_PATH_CONFIG_ENV: &str = "JSON_FILES_PATH_CONFIG";
+const MAX_SUPERTIMELINE_EVENTS: usize = 600;
+const MAX_CONNECTION_NODES: usize = 64;
+const MAX_CONNECTION_LINKS: usize = 96;
 
 #[derive(Deserialize, Default)]
 struct DashboardInputPathConfig {
@@ -27,6 +30,8 @@ struct DashboardInputPathConfig {
     network_events_csv: Vec<String>,
     #[serde(default)]
     ntfs_mft: Vec<String>,
+    #[serde(default)]
+    prefetch_report: Vec<String>,
     #[serde(default)]
     windows_event_report_html: Vec<String>,
     #[serde(default)]
@@ -139,6 +144,167 @@ fn resolve_configured_path(
     }
 
     None
+}
+
+fn truncate_chars(value: &str, max_chars: usize) -> String {
+    if value.chars().count() <= max_chars {
+        return value.to_string();
+    }
+
+    let truncated: String = value.chars().take(max_chars).collect();
+    format!("{}...", truncated.trim_end())
+}
+
+fn parse_event_timestamp(raw: &str) -> Option<DateTime<Utc>> {
+    let trimmed = raw.trim().trim_matches('"');
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("unknown") {
+        return None;
+    }
+
+    if let Ok(parsed) = DateTime::parse_from_rfc3339(trimmed) {
+        let utc = parsed.with_timezone(&Utc);
+        if utc.year() >= 2000 {
+            return Some(utc);
+        }
+    }
+
+    for format in [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%d %H:%M",
+    ] {
+        if let Ok(parsed) = NaiveDateTime::parse_from_str(trimmed, format) {
+            let utc = DateTime::<Utc>::from_naive_utc_and_offset(parsed, Utc);
+            if utc.year() >= 2000 {
+                return Some(utc);
+            }
+        }
+    }
+
+    None
+}
+
+fn normalize_process_name(raw: &str) -> String {
+    let trimmed = raw.trim().trim_matches('"').trim_matches('\'');
+    if trimmed.is_empty() {
+        return String::new();
+    }
+
+    trimmed
+        .rsplit(['\\', '/'])
+        .next()
+        .unwrap_or(trimmed)
+        .to_lowercase()
+}
+
+fn extract_ipv4_tokens(text: &str) -> Vec<String> {
+    let ip_re = Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").expect("valid ipv4 token regex");
+    let mut tokens = Vec::new();
+    for matched in ip_re.find_iter(text) {
+        let candidate = matched.as_str();
+        if candidate.parse::<std::net::Ipv4Addr>().is_ok() {
+            tokens.push(candidate.to_string());
+        }
+    }
+
+    tokens
+}
+
+fn connection_node_id(entity_type: &str, raw: &str) -> String {
+    format!("{}:{}", entity_type, raw.trim().to_lowercase())
+}
+
+fn upsert_connection_node(
+    nodes: &mut HashMap<String, Value>,
+    entity_type: &str,
+    raw_key: &str,
+    label: &str,
+    group: &str,
+    detail: &str,
+) -> Option<String> {
+    let trimmed_key = raw_key.trim();
+    let trimmed_label = label.trim();
+    if trimmed_key.is_empty() || trimmed_label.is_empty() {
+        return None;
+    }
+
+    let id = connection_node_id(entity_type, trimmed_key);
+    let entry = nodes.entry(id.clone()).or_insert_with(|| {
+        json!({
+            "id": id.clone(),
+            "label": trimmed_label,
+            "entity_type": entity_type,
+            "group": group,
+            "detail": truncate_chars(detail, 160),
+            "hits": 0u64,
+        })
+    });
+
+    let hits = entry
+        .get("hits")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        .saturating_add(1);
+    if let Some(object) = entry.as_object_mut() {
+        object.insert("hits".to_string(), json!(hits));
+
+        if object
+            .get("detail")
+            .and_then(Value::as_str)
+            .map(|value| value.trim().is_empty())
+            .unwrap_or(true)
+            && !detail.trim().is_empty()
+        {
+            object.insert("detail".to_string(), json!(truncate_chars(detail, 160)));
+        }
+    }
+
+    Some(id)
+}
+
+fn record_connection_link(
+    links: &mut HashMap<(String, String, String), u64>,
+    source: &str,
+    target: &str,
+    relationship: &str,
+) {
+    if source.is_empty() || target.is_empty() || source == target {
+        return;
+    }
+
+    let key = (
+        source.to_string(),
+        target.to_string(),
+        relationship.to_string(),
+    );
+    *links.entry(key).or_insert(0) += 1;
+}
+
+fn sort_and_trim_timeline_events(events: &mut Vec<Value>, limit: usize) {
+    events.sort_by(|a, b| {
+        as_u64(a.get("epoch_seconds"))
+            .cmp(&as_u64(b.get("epoch_seconds")))
+            .then_with(|| {
+                a.get("timestamp")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .cmp(b.get("timestamp").and_then(Value::as_str).unwrap_or(""))
+            })
+    });
+
+    if events.len() > limit {
+        let keep_from = events.len().saturating_sub(limit);
+        events.drain(0..keep_from);
+    }
+}
+
+fn macb_signature(flags: &[char]) -> String {
+    ['M', 'A', 'C', 'B']
+        .iter()
+        .map(|flag| if flags.contains(flag) { *flag } else { '.' })
+        .collect()
 }
 
 fn resolve_case_artifact_dir(roots: &[PathBuf]) -> Option<PathBuf> {
@@ -656,6 +822,1002 @@ fn build_srum_quickview(roots: &[PathBuf]) -> Value {
         "monitored_apps": json.get("app_statistics").and_then(Value::as_array).map(|items| items.len()).unwrap_or(0),
         "top_consumers": top_consumers,
         "critical_alerts": critical_alerts,
+    })
+}
+
+fn default_super_timeline(source: String) -> Value {
+    json!({
+        "source": source,
+        "reference_timestamp": "",
+        "total_events": 0,
+        "events": [],
+    })
+}
+
+fn build_super_timeline(roots: &[PathBuf]) -> Value {
+    let config = load_input_path_config(roots);
+    let mut source_paths = Vec::new();
+    let mut events: Vec<Value> = Vec::new();
+
+    if let Some(path) =
+        resolve_configured_path(roots, &config.ntfs_mft, &["ntfs_analyzer/output/mft.json"])
+    {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Ok(file) = fs::File::open(&path) {
+            for line in BufReader::new(file).lines().map_while(Result::ok) {
+                let line = line.trim();
+                if line.is_empty() {
+                    continue;
+                }
+
+                let record: Value = match serde_json::from_str(line) {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+
+                if record
+                    .get("IsDirectory")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+                    || record
+                        .get("IsAds")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                {
+                    continue;
+                }
+
+                let file_name = record
+                    .get("FileName")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim();
+                if file_name.is_empty() {
+                    continue;
+                }
+
+                let parent_path = record
+                    .get("ParentPath")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim();
+                let full_path = if parent_path.is_empty() || parent_path == "." {
+                    file_name.to_string()
+                } else {
+                    format!(
+                        "{}\\{}",
+                        parent_path.trim_end_matches(['\\', '/']),
+                        file_name
+                    )
+                };
+
+                let mut timestamp_flags: HashMap<String, Vec<char>> = HashMap::new();
+                for (field, flag) in [
+                    ("LastModified0x10", 'M'),
+                    ("LastAccess0x10", 'A'),
+                    ("LastRecordChange0x10", 'C'),
+                    ("Created0x10", 'B'),
+                ] {
+                    if let Some(parsed) = record
+                        .get(field)
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                    {
+                        timestamp_flags
+                            .entry(parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+                            .or_default()
+                            .push(flag);
+                    }
+                }
+
+                for (timestamp, flags) in timestamp_flags {
+                    let Some(parsed) = parse_event_timestamp(&timestamp) else {
+                        continue;
+                    };
+                    let size = as_u64(record.get("FileSize"));
+                    events.push(json!({
+                        "timestamp": timestamp,
+                        "epoch_seconds": parsed.timestamp(),
+                        "lane": "NTFS",
+                        "source": "$MFT",
+                        "event_type": "File MACB",
+                        "macb": macb_signature(&flags),
+                        "entity": full_path,
+                        "detail": format!("{} | {} bytes", full_path, size),
+                    }));
+                }
+            }
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.browser_report,
+        &["browser_forensics/report.json"],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            let mut browser_events: Vec<Value> = Vec::new();
+
+            if let Some(timeline) = json.get("timeline").and_then(Value::as_array) {
+                for item in timeline {
+                    let Some(parsed) = item
+                        .get("timestamp")
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                    else {
+                        continue;
+                    };
+
+                    let browser = item
+                        .get("source_browser")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Browser");
+                    let profile = item
+                        .get("profile")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Default");
+                    let title = item
+                        .get("title")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Untitled");
+                    browser_events.push(json!({
+                        "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                        "epoch_seconds": parsed.timestamp(),
+                        "lane": "Browser",
+                        "source": browser,
+                        "event_type": item.get("event_type").and_then(Value::as_str).unwrap_or("Timeline Event"),
+                        "macb": "",
+                        "entity": format!("{} / {}", browser, profile),
+                        "detail": truncate_chars(title, 180),
+                    }));
+                }
+            }
+
+            if browser_events.is_empty() {
+                if let Some(artifacts) = json.get("artifacts").and_then(Value::as_array) {
+                    for artifact in artifacts {
+                        let browser = artifact
+                            .get("browser")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Browser");
+
+                        if let Some(history_entries) =
+                            artifact.get("history").and_then(Value::as_array)
+                        {
+                            for entry in history_entries {
+                                let Some(parsed) = entry
+                                    .get("last_visit_time")
+                                    .and_then(Value::as_str)
+                                    .and_then(parse_event_timestamp)
+                                else {
+                                    continue;
+                                };
+
+                                let url = entry.get("url").and_then(Value::as_str).unwrap_or("");
+                                let title = entry
+                                    .get("title")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("Untitled");
+                                let domain = extract_domain(url);
+                                let entity = if domain.is_empty() {
+                                    let ip = extract_ipv4_tokens(url)
+                                        .into_iter()
+                                        .next()
+                                        .unwrap_or_default();
+                                    if ip.is_empty() { title.to_string() } else { ip }
+                                } else {
+                                    domain
+                                };
+
+                                browser_events.push(json!({
+                                    "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                                    "epoch_seconds": parsed.timestamp(),
+                                    "lane": "Browser",
+                                    "source": browser,
+                                    "event_type": "History Visit",
+                                    "macb": "",
+                                    "entity": entity,
+                                    "detail": truncate_chars(url, 180),
+                                }));
+                            }
+                        }
+                    }
+                }
+            }
+
+            sort_and_trim_timeline_events(&mut browser_events, 120);
+            events.extend(browser_events);
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.prefetch_report,
+        &[
+            "prefetch_analyzer/report_improved.json",
+            "prefetch_analyzer/report_fp_tuned.json",
+        ],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            let mut prefetch_events: Vec<Value> = Vec::new();
+            let mut entries = json
+                .get("entries")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+
+            entries.sort_by(|a, b| {
+                let a_ts = a
+                    .get("LastRun")
+                    .and_then(Value::as_str)
+                    .and_then(parse_event_timestamp)
+                    .map(|dt| dt.timestamp())
+                    .unwrap_or(0);
+                let b_ts = b
+                    .get("LastRun")
+                    .and_then(Value::as_str)
+                    .and_then(parse_event_timestamp)
+                    .map(|dt| dt.timestamp())
+                    .unwrap_or(0);
+                b_ts.cmp(&a_ts)
+            });
+
+            for entry in entries.into_iter().take(120) {
+                let executable = entry
+                    .get("ExecutableName")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown.exe");
+                let source_file = entry
+                    .get("SourceFilename")
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
+                let hash = entry.get("Hash").and_then(Value::as_str).unwrap_or("");
+
+                for (field, label) in [
+                    ("LastRun", "Last Run"),
+                    ("PreviousRun0", "Previous Run"),
+                    ("PreviousRun1", "Previous Run"),
+                    ("PreviousRun2", "Previous Run"),
+                ] {
+                    let Some(parsed) = entry
+                        .get(field)
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                    else {
+                        continue;
+                    };
+
+                    prefetch_events.push(json!({
+                        "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                        "epoch_seconds": parsed.timestamp(),
+                        "lane": "Prefetch",
+                        "source": "Prefetch",
+                        "event_type": label,
+                        "macb": "EXEC",
+                        "entity": executable,
+                        "detail": truncate_chars(&format!("{} | {}", hash, source_file), 180),
+                    }));
+                }
+            }
+
+            sort_and_trim_timeline_events(&mut prefetch_events, 120);
+            events.extend(prefetch_events);
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.network_events_csv,
+        &[
+            "network_forensics/output/live_ps_all_v1/forensic_events.csv",
+            "network_forensics/output/forensic_events.csv",
+        ],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Ok(file) = fs::File::open(&path) {
+            let mut header_map = HashMap::new();
+            let mut network_events: Vec<Value> = Vec::new();
+
+            for (idx, line_result) in BufReader::new(file).lines().enumerate() {
+                let Ok(line) = line_result else {
+                    continue;
+                };
+
+                if idx == 0 {
+                    for (col_idx, name) in parse_csv_line(&line).into_iter().enumerate() {
+                        header_map.insert(name, col_idx);
+                    }
+                    continue;
+                }
+
+                let cols = parse_csv_line(&line);
+                let field = |name: &str| -> String {
+                    header_map
+                        .get(name)
+                        .and_then(|index| cols.get(*index))
+                        .cloned()
+                        .unwrap_or_default()
+                };
+
+                let Some(parsed) = parse_event_timestamp(&field("timestamp")) else {
+                    continue;
+                };
+
+                let process_name = field("process_name");
+                let remote_addr = field("remote_addr");
+                let remote_port = field("remote_port");
+                let local_addr = field("local_addr");
+                let local_port = field("local_port");
+                let direction = field("direction");
+                let username = field("username");
+
+                if process_name.is_empty() && remote_addr.is_empty() {
+                    continue;
+                }
+
+                let detail = format!(
+                    "{}:{} -> {}:{}",
+                    if local_addr.is_empty() {
+                        "n/a"
+                    } else {
+                        &local_addr
+                    },
+                    if local_port.is_empty() {
+                        "n/a"
+                    } else {
+                        &local_port
+                    },
+                    if remote_addr.is_empty() {
+                        "n/a"
+                    } else {
+                        &remote_addr
+                    },
+                    if remote_port.is_empty() {
+                        "n/a"
+                    } else {
+                        &remote_port
+                    }
+                );
+
+                network_events.push(json!({
+                    "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                    "epoch_seconds": parsed.timestamp(),
+                    "lane": "Network",
+                    "source": if process_name.is_empty() { "Network" } else { &process_name },
+                    "event_type": if direction.is_empty() { "Connection" } else { &direction },
+                    "macb": "",
+                    "entity": if remote_addr.is_empty() {
+                        if username.is_empty() { process_name.clone() } else { username.clone() }
+                    } else {
+                        remote_addr.clone()
+                    },
+                    "detail": truncate_chars(&detail, 180),
+                }));
+            }
+
+            sort_and_trim_timeline_events(&mut network_events, 120);
+            events.extend(network_events);
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.srum_report,
+        &["srum_analysis/reports/srum_analysis_report.json"],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            let mut srum_events: Vec<Value> = Vec::new();
+
+            for source_name in ["findings", "anomalies"] {
+                if let Some(items) = json.get(source_name).and_then(Value::as_array) {
+                    for item in items {
+                        let severity = item.get("severity").and_then(Value::as_str).unwrap_or("");
+                        if !severity.eq_ignore_ascii_case("critical")
+                            && !severity.eq_ignore_ascii_case("high")
+                        {
+                            continue;
+                        }
+
+                        let Some(parsed) = item
+                            .get("timestamp")
+                            .and_then(Value::as_str)
+                            .and_then(parse_event_timestamp)
+                        else {
+                            continue;
+                        };
+
+                        let app_path = item.get("app_path").and_then(Value::as_str).unwrap_or("");
+                        let user = item
+                            .get("user")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Unknown");
+                        let app_label = srum_app_label(app_path);
+                        let title = item
+                            .get("title")
+                            .and_then(Value::as_str)
+                            .unwrap_or("SRUM alert");
+                        let evidence = srum_evidence_summary(item.get("evidence"));
+
+                        srum_events.push(json!({
+                            "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                            "epoch_seconds": parsed.timestamp(),
+                            "lane": "SRUM",
+                            "source": app_label,
+                            "event_type": if severity.eq_ignore_ascii_case("critical") { "Critical Alert" } else { "High Alert" },
+                            "macb": "",
+                            "entity": user,
+                            "detail": truncate_chars(&format!("{} | {}", title, evidence), 180),
+                        }));
+                    }
+                }
+            }
+
+            if let Some(app_statistics) = json.get("app_statistics").and_then(Value::as_array) {
+                let mut consumers = app_statistics.to_vec();
+                consumers.sort_by(|a, b| {
+                    let a_total = as_u64(a.get("total_foreground_bytes_read"))
+                        .saturating_add(as_u64(a.get("total_foreground_bytes_written")))
+                        .saturating_add(as_u64(a.get("total_background_bytes_read")))
+                        .saturating_add(as_u64(a.get("total_background_bytes_written")))
+                        .saturating_add(as_u64(a.get("total_bytes_sent")))
+                        .saturating_add(as_u64(a.get("total_bytes_received")));
+                    let b_total = as_u64(b.get("total_foreground_bytes_read"))
+                        .saturating_add(as_u64(b.get("total_foreground_bytes_written")))
+                        .saturating_add(as_u64(b.get("total_background_bytes_read")))
+                        .saturating_add(as_u64(b.get("total_background_bytes_written")))
+                        .saturating_add(as_u64(b.get("total_bytes_sent")))
+                        .saturating_add(as_u64(b.get("total_bytes_received")));
+                    b_total.cmp(&a_total)
+                });
+
+                for app in consumers.into_iter().take(8) {
+                    let Some(parsed) = app
+                        .get("last_seen")
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                    else {
+                        continue;
+                    };
+
+                    let app_path = app.get("app_path").and_then(Value::as_str).unwrap_or("");
+                    let app_label = srum_app_label(app_path);
+                    let user = app.get("user").and_then(Value::as_str).unwrap_or("Unknown");
+                    let usage_bytes = as_u64(app.get("total_foreground_bytes_read"))
+                        .saturating_add(as_u64(app.get("total_foreground_bytes_written")))
+                        .saturating_add(as_u64(app.get("total_background_bytes_read")))
+                        .saturating_add(as_u64(app.get("total_background_bytes_written")))
+                        .saturating_add(as_u64(app.get("total_bytes_sent")))
+                        .saturating_add(as_u64(app.get("total_bytes_received")));
+
+                    srum_events.push(json!({
+                        "timestamp": parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                        "epoch_seconds": parsed.timestamp(),
+                        "lane": "SRUM",
+                        "source": app_label,
+                        "event_type": "Usage Snapshot",
+                        "macb": "",
+                        "entity": user,
+                        "detail": format!("{} | {}", app_path, format_size(usage_bytes)),
+                    }));
+                }
+            }
+
+            sort_and_trim_timeline_events(&mut srum_events, 80);
+            events.extend(srum_events);
+        }
+    }
+
+    sort_and_trim_timeline_events(&mut events, MAX_SUPERTIMELINE_EVENTS);
+
+    if events.is_empty() {
+        return default_super_timeline(source_paths.join(" | "));
+    }
+
+    let reference_timestamp = events
+        .last()
+        .and_then(|event| event.get("timestamp").and_then(Value::as_str))
+        .unwrap_or("")
+        .to_string();
+
+    json!({
+        "source": source_paths.join(" | "),
+        "reference_timestamp": reference_timestamp,
+        "total_events": events.len() as u64,
+        "events": events,
+    })
+}
+
+fn default_connections_engine(source: String) -> Value {
+    json!({
+        "source": source,
+        "default_focus": "",
+        "nodes": [],
+        "links": [],
+        "focus_entities": [],
+    })
+}
+
+fn build_connections_engine(roots: &[PathBuf]) -> Value {
+    let config = load_input_path_config(roots);
+    let mut source_paths = Vec::new();
+    let mut nodes: HashMap<String, Value> = HashMap::new();
+    let mut links: HashMap<(String, String, String), u64> = HashMap::new();
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.browser_report,
+        &["browser_forensics/report.json"],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            if let Some(artifacts) = json.get("artifacts").and_then(Value::as_array) {
+                for artifact in artifacts {
+                    let browser = artifact
+                        .get("browser")
+                        .and_then(Value::as_str)
+                        .unwrap_or("Browser");
+                    let browser_id = upsert_connection_node(
+                        &mut nodes,
+                        "browser",
+                        browser,
+                        browser,
+                        "browser",
+                        "Browser profile evidence",
+                    );
+
+                    if let Some(history_entries) = artifact.get("history").and_then(Value::as_array)
+                    {
+                        for entry in history_entries {
+                            let url = entry.get("url").and_then(Value::as_str).unwrap_or("");
+                            let title = entry
+                                .get("title")
+                                .and_then(Value::as_str)
+                                .filter(|value| !value.trim().is_empty())
+                                .unwrap_or("Untitled");
+                            let domain = extract_domain(url);
+                            let ip_fallback = if domain.is_empty() {
+                                extract_ipv4_tokens(url)
+                                    .into_iter()
+                                    .next()
+                                    .unwrap_or_default()
+                            } else {
+                                String::new()
+                            };
+                            let entity_key = if !domain.is_empty() {
+                                domain.clone()
+                            } else if !ip_fallback.is_empty() {
+                                ip_fallback.clone()
+                            } else {
+                                title.to_string()
+                            };
+                            let entity_type = if !domain.is_empty() {
+                                "domain"
+                            } else if !ip_fallback.is_empty() {
+                                "ip"
+                            } else {
+                                "file"
+                            };
+
+                            if let Some(entity_id) = upsert_connection_node(
+                                &mut nodes,
+                                entity_type,
+                                &entity_key,
+                                &entity_key,
+                                entity_type,
+                                url,
+                            ) {
+                                if let Some(browser_id) = &browser_id {
+                                    record_connection_link(
+                                        &mut links, browser_id, &entity_id, "visited",
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.network_events_csv,
+        &[
+            "network_forensics/output/live_ps_all_v1/forensic_events.csv",
+            "network_forensics/output/forensic_events.csv",
+        ],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Ok(file) = fs::File::open(&path) {
+            let mut header_map = HashMap::new();
+
+            for (idx, line_result) in BufReader::new(file).lines().enumerate() {
+                let Ok(line) = line_result else {
+                    continue;
+                };
+
+                if idx == 0 {
+                    for (col_idx, name) in parse_csv_line(&line).into_iter().enumerate() {
+                        header_map.insert(name, col_idx);
+                    }
+                    continue;
+                }
+
+                let cols = parse_csv_line(&line);
+                let field = |name: &str| -> String {
+                    header_map
+                        .get(name)
+                        .and_then(|index| cols.get(*index))
+                        .cloned()
+                        .unwrap_or_default()
+                };
+
+                let process_name = field("process_name");
+                let username = field("username");
+                let remote_addr = field("remote_addr");
+                let local_addr = field("local_addr");
+                let local_port = field("local_port");
+                let remote_port = field("remote_port");
+
+                if process_name.is_empty() && remote_addr.is_empty() {
+                    continue;
+                }
+
+                let process_label = {
+                    let normalized = normalize_process_name(&process_name);
+                    if normalized.is_empty() {
+                        if process_name.is_empty() {
+                            "Unknown Process".to_string()
+                        } else {
+                            process_name.clone()
+                        }
+                    } else {
+                        normalized
+                    }
+                };
+                let process_id = upsert_connection_node(
+                    &mut nodes,
+                    "process",
+                    &process_label,
+                    &process_label,
+                    "process",
+                    &format!("{}:{}", field("source"), field("direction")),
+                );
+
+                if let Some(user_id) = upsert_connection_node(
+                    &mut nodes,
+                    "user",
+                    &username,
+                    &username,
+                    "user",
+                    "Observed network account",
+                ) {
+                    if let Some(process_id) = &process_id {
+                        record_connection_link(
+                            &mut links,
+                            &user_id,
+                            process_id,
+                            "observed_process",
+                        );
+                    }
+                }
+
+                if let Some(process_id) = &process_id {
+                    if !remote_addr.is_empty() {
+                        if let Some(ip_id) = upsert_connection_node(
+                            &mut nodes,
+                            "ip",
+                            &remote_addr,
+                            &remote_addr,
+                            "ip",
+                            &format!(
+                                "{}:{} -> {}:{}",
+                                local_addr, local_port, remote_addr, remote_port
+                            ),
+                        ) {
+                            record_connection_link(
+                                &mut links,
+                                process_id,
+                                &ip_id,
+                                "communicated_with",
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.prefetch_report,
+        &[
+            "prefetch_analyzer/report_improved.json",
+            "prefetch_analyzer/report_fp_tuned.json",
+        ],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            let mut entries = json
+                .get("entries")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            entries.sort_by(|a, b| {
+                let a_ts = a
+                    .get("LastRun")
+                    .and_then(Value::as_str)
+                    .and_then(parse_event_timestamp)
+                    .map(|dt| dt.timestamp())
+                    .unwrap_or(0);
+                let b_ts = b
+                    .get("LastRun")
+                    .and_then(Value::as_str)
+                    .and_then(parse_event_timestamp)
+                    .map(|dt| dt.timestamp())
+                    .unwrap_or(0);
+                b_ts.cmp(&a_ts)
+            });
+
+            for entry in entries.into_iter().take(120) {
+                let executable = entry
+                    .get("ExecutableName")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown.exe");
+                let source_file = entry
+                    .get("SourceFilename")
+                    .and_then(Value::as_str)
+                    .unwrap_or("");
+                let hash = entry.get("Hash").and_then(Value::as_str).unwrap_or("");
+
+                if let Some(process_id) = upsert_connection_node(
+                    &mut nodes,
+                    "process",
+                    executable,
+                    executable,
+                    "process",
+                    source_file,
+                ) {
+                    if let Some(file_id) = upsert_connection_node(
+                        &mut nodes,
+                        "file",
+                        source_file,
+                        executable,
+                        "file",
+                        source_file,
+                    ) {
+                        record_connection_link(
+                            &mut links,
+                            &process_id,
+                            &file_id,
+                            "prefetch_source",
+                        );
+                    }
+
+                    if !hash.is_empty() {
+                        if let Some(hash_id) = upsert_connection_node(
+                            &mut nodes,
+                            "hash",
+                            hash,
+                            hash,
+                            "hash",
+                            source_file,
+                        ) {
+                            record_connection_link(
+                                &mut links,
+                                &process_id,
+                                &hash_id,
+                                "prefetch_hash",
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(path) = resolve_configured_path(
+        roots,
+        &config.srum_report,
+        &["srum_analysis/reports/srum_analysis_report.json"],
+    ) {
+        source_paths.push(path.to_string_lossy().to_string());
+        if let Some(json) = read_json(&path) {
+            if let Some(app_statistics) = json.get("app_statistics").and_then(Value::as_array) {
+                let mut consumers = app_statistics.to_vec();
+                consumers.sort_by(|a, b| {
+                    let a_total = as_u64(a.get("total_foreground_bytes_read"))
+                        .saturating_add(as_u64(a.get("total_foreground_bytes_written")))
+                        .saturating_add(as_u64(a.get("total_background_bytes_read")))
+                        .saturating_add(as_u64(a.get("total_background_bytes_written")))
+                        .saturating_add(as_u64(a.get("total_bytes_sent")))
+                        .saturating_add(as_u64(a.get("total_bytes_received")));
+                    let b_total = as_u64(b.get("total_foreground_bytes_read"))
+                        .saturating_add(as_u64(b.get("total_foreground_bytes_written")))
+                        .saturating_add(as_u64(b.get("total_background_bytes_read")))
+                        .saturating_add(as_u64(b.get("total_background_bytes_written")))
+                        .saturating_add(as_u64(b.get("total_bytes_sent")))
+                        .saturating_add(as_u64(b.get("total_bytes_received")));
+                    b_total.cmp(&a_total)
+                });
+
+                for app in consumers.into_iter().take(12) {
+                    let app_path = app.get("app_path").and_then(Value::as_str).unwrap_or("");
+                    let app_label = srum_app_label(app_path);
+                    let user = app.get("user").and_then(Value::as_str).unwrap_or("Unknown");
+
+                    if let Some(process_id) = upsert_connection_node(
+                        &mut nodes, "process", &app_label, &app_label, "process", app_path,
+                    ) {
+                        if let Some(user_id) = upsert_connection_node(
+                            &mut nodes,
+                            "user",
+                            user,
+                            user,
+                            "user",
+                            "SRUM consumer",
+                        ) {
+                            record_connection_link(&mut links, &user_id, &process_id, "utilized");
+                        }
+
+                        if !app_path.is_empty() {
+                            if let Some(file_id) = upsert_connection_node(
+                                &mut nodes, "file", app_path, &app_label, "file", app_path,
+                            ) {
+                                record_connection_link(
+                                    &mut links,
+                                    &process_id,
+                                    &file_id,
+                                    "resolved_path",
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            for source_name in ["findings", "anomalies"] {
+                if let Some(items) = json.get(source_name).and_then(Value::as_array) {
+                    for item in items {
+                        let severity = item.get("severity").and_then(Value::as_str).unwrap_or("");
+                        if !severity.eq_ignore_ascii_case("critical") {
+                            continue;
+                        }
+
+                        let app_path = item.get("app_path").and_then(Value::as_str).unwrap_or("");
+                        let app_label = srum_app_label(app_path);
+                        let user = item
+                            .get("user")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Unknown");
+
+                        if let Some(process_id) = upsert_connection_node(
+                            &mut nodes, "process", &app_label, &app_label, "process", app_path,
+                        ) {
+                            if let Some(user_id) = upsert_connection_node(
+                                &mut nodes,
+                                "user",
+                                user,
+                                user,
+                                "user",
+                                item.get("title")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("SRUM alert"),
+                            ) {
+                                record_connection_link(
+                                    &mut links,
+                                    &user_id,
+                                    &process_id,
+                                    "alerted_app",
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut nodes_vec: Vec<Value> = nodes.into_values().collect();
+    nodes_vec.sort_by(|a, b| {
+        as_u64(b.get("hits"))
+            .cmp(&as_u64(a.get("hits")))
+            .then_with(|| {
+                a.get("label")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .cmp(b.get("label").and_then(Value::as_str).unwrap_or(""))
+            })
+    });
+    nodes_vec.truncate(MAX_CONNECTION_NODES);
+
+    let allowed_ids: std::collections::HashSet<String> = nodes_vec
+        .iter()
+        .filter_map(|node| {
+            node.get("id")
+                .and_then(Value::as_str)
+                .map(|value| value.to_string())
+        })
+        .collect();
+
+    let mut links_vec: Vec<Value> = links
+        .into_iter()
+        .filter(|((source, target, _), _)| {
+            allowed_ids.contains(source) && allowed_ids.contains(target)
+        })
+        .map(|((source, target, relationship), hits)| {
+            json!({
+                "source": source,
+                "target": target,
+                "relationship": relationship,
+                "hits": hits,
+            })
+        })
+        .collect();
+    links_vec.sort_by(|a, b| {
+        as_u64(b.get("hits"))
+            .cmp(&as_u64(a.get("hits")))
+            .then_with(|| {
+                a.get("relationship")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .cmp(b.get("relationship").and_then(Value::as_str).unwrap_or(""))
+            })
+    });
+    links_vec.truncate(MAX_CONNECTION_LINKS);
+
+    let mut focus_entities: Vec<Value> = nodes_vec
+        .iter()
+        .filter(|node| {
+            matches!(
+                node.get("entity_type")
+                    .and_then(Value::as_str)
+                    .unwrap_or(""),
+                "user" | "ip" | "hash"
+            )
+        })
+        .map(|node| {
+            json!({
+                "id": node.get("id").cloned().unwrap_or(Value::Null),
+                "label": node.get("label").cloned().unwrap_or(Value::Null),
+                "entity_type": node.get("entity_type").cloned().unwrap_or(Value::Null),
+            })
+        })
+        .collect();
+    if focus_entities.is_empty() {
+        focus_entities = nodes_vec
+            .iter()
+            .take(8)
+            .map(|node| {
+                json!({
+                    "id": node.get("id").cloned().unwrap_or(Value::Null),
+                    "label": node.get("label").cloned().unwrap_or(Value::Null),
+                    "entity_type": node.get("entity_type").cloned().unwrap_or(Value::Null),
+                })
+            })
+            .collect();
+    }
+    focus_entities.truncate(8);
+
+    let default_focus = focus_entities
+        .first()
+        .and_then(|entity| entity.get("id").and_then(Value::as_str))
+        .unwrap_or("")
+        .to_string();
+
+    if nodes_vec.is_empty() && links_vec.is_empty() {
+        return default_connections_engine(source_paths.join(" | "));
+    }
+
+    json!({
+        "source": source_paths.join(" | "),
+        "default_focus": default_focus,
+        "nodes": nodes_vec,
+        "links": links_vec,
+        "focus_entities": focus_entities,
     })
 }
 
@@ -1368,6 +2530,8 @@ fn main() {
     let browser_quickview = build_browser_quickview(&workspace_roots);
     let windows_event_quickview = build_windows_event_quickview(&workspace_roots);
     let srum_quickview = build_srum_quickview(&workspace_roots);
+    let super_timeline = build_super_timeline(&workspace_roots);
+    let connections_engine = build_connections_engine(&workspace_roots);
     let generated_at = Local::now().format("%Y-%m-%d %H:%M:%S %Z").to_string();
 
     let payload = json!({
@@ -1375,7 +2539,7 @@ fn main() {
             "generated_by": "dashboard_setter",
             "generated_at": generated_at,
             "output_path": output_path.to_string_lossy().to_string(),
-            "modules_processed": ["network", "memory", "ntfs", "browser", "windows-event", "srum"],
+            "modules_processed": ["network", "memory", "ntfs", "browser", "windows-event", "srum", "prefetch", "super_timeline", "connections_engine"],
         },
         "network_quickview": network_quickview,
         "memory_quickview": memory_quickview,
@@ -1383,6 +2547,8 @@ fn main() {
         "browser_quickview": browser_quickview,
         "windows_event_quickview": windows_event_quickview,
         "srum_quickview": srum_quickview,
+        "super_timeline": super_timeline,
+        "connections_engine": connections_engine,
     });
 
     if let Err(err) = write_json(&output_path, &payload) {

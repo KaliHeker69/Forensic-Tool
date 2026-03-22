@@ -1,0 +1,8 @@
+Install-WindowsFeature -Name WindowsPowerShellWebAccess -IncludeManagementTools
+Install-PswaWebApplication -UseTestCertificate
+Add-PswaAuthorizationRule -UserName * -ComputerName * -ConfigurationName *
+Enable-PSRemoting -Force
+Test-WSMan
+Get-Service -Name WinRM
+net localgroup "remote management users" t.minami /add
+net user t.minami

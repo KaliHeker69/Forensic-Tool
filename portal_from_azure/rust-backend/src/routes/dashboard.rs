@@ -1,5 +1,6 @@
 /// Dashboard route – mirrors app/routers/dashboard.py
 use axum::{Router, extract::State, response::Html, routing::get};
+use chrono::{DateTime, Datelike, NaiveDateTime, Utc};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -21,6 +22,11 @@ const LEGACY_DASHBOARD_QUICKVIEW_JSON_ENV: &str = "DASHBOARD_QUICKVIEW_JSON";
 const MAX_ARTIFACT_TYPES: usize = 10;
 const MAX_LIST_ITEMS: usize = 8;
 const MAX_TOP_VALUES: usize = 6;
+const MAX_TIMELINE_NTFS_EVENTS: usize = 180;
+const MAX_TIMELINE_BROWSER_EVENTS: usize = 80;
+const MAX_TIMELINE_PREFETCH_EVENTS: usize = 80;
+const MAX_TIMELINE_EXECUTION_EVENTS: usize = 40;
+const MAX_CONNECTION_FOCUS_ITEMS: usize = 8;
 const KNOWN_WINDOWS_EXECUTABLES: &[&str] = &[
     "audiodg.exe",
     "cmd.exe",
@@ -268,6 +274,60 @@ struct MaliciousProcessQuickView {
     summary: String,
 }
 
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct SuperTimelineEvent {
+    timestamp: String,
+    epoch_seconds: i64,
+    lane: String,
+    source: String,
+    event_type: String,
+    macb: String,
+    entity: String,
+    detail: String,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct SuperTimelineData {
+    source: String,
+    reference_timestamp: String,
+    total_events: u64,
+    events: Vec<SuperTimelineEvent>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct ConnectionNode {
+    id: String,
+    label: String,
+    entity_type: String,
+    group: String,
+    detail: String,
+    hits: u64,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct ConnectionLink {
+    source: String,
+    target: String,
+    relationship: String,
+    hits: u64,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct ConnectionFocusEntity {
+    id: String,
+    label: String,
+    entity_type: String,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+struct ConnectionsEngineData {
+    source: String,
+    default_focus: String,
+    nodes: Vec<ConnectionNode>,
+    links: Vec<ConnectionLink>,
+    focus_entities: Vec<ConnectionFocusEntity>,
+}
+
 #[derive(Deserialize, Default)]
 struct DashboardQuickviewData {
     #[serde(default)]
@@ -288,6 +348,10 @@ struct DashboardQuickviewData {
     malicious_process_quickview: MaliciousProcessQuickView,
     #[serde(default)]
     srum_quickview: SrumQuickView,
+    #[serde(default)]
+    super_timeline: SuperTimelineData,
+    #[serde(default)]
+    connections_engine: ConnectionsEngineData,
 }
 
 fn format_size(bytes: u64) -> String {
@@ -527,6 +591,136 @@ fn report_url(report_routes: &HashMap<String, String>, report_id: &str, fallback
         .get(report_id)
         .cloned()
         .unwrap_or_else(|| fallback.to_string())
+}
+
+fn parse_event_timestamp(raw: &str) -> Option<DateTime<Utc>> {
+    let trimmed = raw.trim().trim_matches('"');
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("unknown") {
+        return None;
+    }
+
+    if let Ok(parsed) = DateTime::parse_from_rfc3339(trimmed) {
+        let utc = parsed.with_timezone(&Utc);
+        return (2000..=2100).contains(&utc.year()).then_some(utc);
+    }
+
+    for format in [
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%d %H:%M",
+    ] {
+        if let Ok(parsed) = NaiveDateTime::parse_from_str(trimmed, format) {
+            let utc = DateTime::<Utc>::from_naive_utc_and_offset(parsed, Utc);
+            if (2000..=2100).contains(&utc.year()) {
+                return Some(utc);
+            }
+        }
+    }
+
+    None
+}
+
+fn normalize_event_timestamp(raw: &str) -> Option<String> {
+    parse_event_timestamp(raw).map(|value| value.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+}
+
+fn extract_ipv4_tokens(text: &str) -> Vec<String> {
+    let ip_re = Regex::new(r"\b(?:\d{1,3}\.){3}\d{1,3}\b").expect("valid ipv4 token regex");
+    let mut tokens = Vec::new();
+    for matched in ip_re.find_iter(text) {
+        let candidate = matched.as_str();
+        if candidate.parse::<std::net::Ipv4Addr>().is_ok() {
+            tokens.push(candidate.to_string());
+        }
+    }
+    tokens
+}
+
+fn push_recent_event(
+    events: &mut Vec<SuperTimelineEvent>,
+    event: SuperTimelineEvent,
+    max_items: usize,
+) {
+    events.push(event);
+    if events.len() > max_items * 3 {
+        events.sort_by(|a, b| b.epoch_seconds.cmp(&a.epoch_seconds));
+        events.truncate(max_items * 2);
+    }
+}
+
+fn finalize_recent_events(events: &mut Vec<SuperTimelineEvent>, max_items: usize) {
+    events.sort_by(|a, b| a.epoch_seconds.cmp(&b.epoch_seconds));
+    if events.len() > max_items {
+        let keep_from = events.len().saturating_sub(max_items);
+        events.drain(0..keep_from);
+    }
+}
+
+fn macb_signature(flags: &[char]) -> String {
+    let ordered = [('M', 'M'), ('A', 'A'), ('C', 'C'), ('B', 'B')];
+    ordered
+        .iter()
+        .map(|(flag, render)| if flags.contains(flag) { *render } else { '.' })
+        .collect()
+}
+
+fn resolve_prefetch_report() -> Option<PathBuf> {
+    resolve_existing_path("prefetch_analyzer/report_improved.json")
+        .or_else(|| resolve_existing_path("prefetch_analyzer/report_fp_tuned.json"))
+}
+
+fn connection_node_id(entity_type: &str, raw: &str) -> String {
+    format!("{}:{}", entity_type, raw.trim().to_lowercase())
+}
+
+fn upsert_connection_node(
+    nodes: &mut HashMap<String, ConnectionNode>,
+    entity_type: &str,
+    raw_key: &str,
+    label: &str,
+    group: &str,
+    detail: &str,
+) -> Option<String> {
+    let trimmed_key = raw_key.trim();
+    let trimmed_label = label.trim();
+    if trimmed_key.is_empty() || trimmed_label.is_empty() {
+        return None;
+    }
+
+    let id = connection_node_id(entity_type, trimmed_key);
+    let entry = nodes.entry(id.clone()).or_insert_with(|| ConnectionNode {
+        id: id.clone(),
+        label: trimmed_label.to_string(),
+        entity_type: entity_type.to_string(),
+        group: group.to_string(),
+        detail: truncate_chars(detail, 160),
+        hits: 0,
+    });
+    entry.hits = entry.hits.saturating_add(1);
+    if entry.detail.is_empty() && !detail.trim().is_empty() {
+        entry.detail = truncate_chars(detail, 160);
+    }
+    Some(id)
+}
+
+fn record_connection_link(
+    links: &mut HashMap<(String, String, String), u64>,
+    source: &str,
+    target: &str,
+    relationship: &str,
+) {
+    if source.is_empty() || target.is_empty() || source == target {
+        return;
+    }
+
+    let key = (
+        source.to_string(),
+        target.to_string(),
+        relationship.to_string(),
+    );
+    *links.entry(key).or_insert(0) += 1;
 }
 
 fn normalize_process_name(raw: &str) -> String {
@@ -1279,6 +1473,696 @@ fn collect_browser_quickview() -> BrowserQuickView {
     view
 }
 
+fn collect_super_timeline(
+    browser_quickview: &BrowserQuickView,
+    execution_quickview: &ExecutionQuickView,
+) -> SuperTimelineData {
+    let mut view = SuperTimelineData::default();
+    let mut sources = Vec::new();
+    let mut combined_events = Vec::new();
+
+    if let Some(ntfs_path) = resolve_existing_path("ntfs_analyzer/output/mft.json") {
+        sources.push(ntfs_path.to_string_lossy().into_owned());
+
+        if let Ok(file) = fs::File::open(&ntfs_path) {
+            let reader = BufReader::new(file);
+            let mut ntfs_events = Vec::new();
+
+            for line in reader.lines().map_while(Result::ok) {
+                let record: Value = match serde_json::from_str(&line) {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+
+                if record
+                    .get("IsDirectory")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false)
+                    || record
+                        .get("IsAds")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false)
+                {
+                    continue;
+                }
+
+                let file_name = record
+                    .get("FileName")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim();
+                if file_name.is_empty() || file_name.starts_with('$') {
+                    continue;
+                }
+
+                let parent_path = record
+                    .get("ParentPath")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .trim();
+                let full_path = if parent_path.is_empty() || parent_path == "." {
+                    file_name.to_string()
+                } else {
+                    format!(
+                        "{}\\{}",
+                        parent_path.trim_end_matches(['\\', '/']),
+                        file_name
+                    )
+                };
+
+                let mut timestamp_flags: HashMap<String, Vec<char>> = HashMap::new();
+                for (field, flag) in [
+                    ("LastModified0x10", 'M'),
+                    ("LastAccess0x10", 'A'),
+                    ("LastRecordChange0x10", 'C'),
+                    ("Created0x10", 'B'),
+                ] {
+                    let Some(raw_timestamp) = record.get(field).and_then(Value::as_str) else {
+                        continue;
+                    };
+                    let Some(normalized) = normalize_event_timestamp(raw_timestamp) else {
+                        continue;
+                    };
+                    timestamp_flags.entry(normalized).or_default().push(flag);
+                }
+
+                for (timestamp, flags) in timestamp_flags {
+                    let Some(parsed) = parse_event_timestamp(&timestamp) else {
+                        continue;
+                    };
+                    push_recent_event(
+                        &mut ntfs_events,
+                        SuperTimelineEvent {
+                            timestamp,
+                            epoch_seconds: parsed.timestamp(),
+                            lane: "NTFS".to_string(),
+                            source: "$MFT".to_string(),
+                            event_type: "File MACB".to_string(),
+                            macb: macb_signature(&flags),
+                            entity: full_path.clone(),
+                            detail: truncate_chars(&full_path, 180),
+                        },
+                        MAX_TIMELINE_NTFS_EVENTS,
+                    );
+                }
+            }
+
+            finalize_recent_events(&mut ntfs_events, MAX_TIMELINE_NTFS_EVENTS);
+            combined_events.extend(ntfs_events);
+        }
+    }
+
+    let mut browser_events = Vec::new();
+    if let Some(browser_path) = resolve_existing_path("browser_forensics/report.json") {
+        sources.push(browser_path.to_string_lossy().into_owned());
+
+        if let Some(raw) = read_text_file(&browser_path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&raw) {
+                if let Some(artifacts) = json.get("artifacts").and_then(Value::as_array) {
+                    for artifact in artifacts {
+                        let browser = artifact
+                            .get("browser")
+                            .and_then(Value::as_str)
+                            .unwrap_or("Browser");
+
+                        if let Some(history_entries) =
+                            artifact.get("history").and_then(Value::as_array)
+                        {
+                            for entry in history_entries {
+                                let Some(raw_timestamp) =
+                                    entry.get("last_visit_time").and_then(Value::as_str)
+                                else {
+                                    continue;
+                                };
+                                let Some(parsed) = parse_event_timestamp(raw_timestamp) else {
+                                    continue;
+                                };
+                                let url = entry
+                                    .get("url")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("")
+                                    .to_string();
+                                let domain = extract_domain(&url);
+                                let title = entry
+                                    .get("title")
+                                    .and_then(Value::as_str)
+                                    .unwrap_or("Untitled");
+                                let entity = if !domain.is_empty() {
+                                    domain
+                                } else {
+                                    title.to_string()
+                                };
+
+                                push_recent_event(
+                                    &mut browser_events,
+                                    SuperTimelineEvent {
+                                        timestamp: parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                                        epoch_seconds: parsed.timestamp(),
+                                        lane: "Browser".to_string(),
+                                        source: browser.to_string(),
+                                        event_type: "History Visit".to_string(),
+                                        macb: String::new(),
+                                        entity,
+                                        detail: truncate_chars(
+                                            if !url.is_empty() { &url } else { title },
+                                            180,
+                                        ),
+                                    },
+                                    MAX_TIMELINE_BROWSER_EVENTS,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if browser_events.is_empty() {
+        for item in &browser_quickview.recent_history {
+            let Some(parsed) = parse_event_timestamp(&item.last_visit) else {
+                continue;
+            };
+            let entity = if !item.domain.is_empty() {
+                item.domain.clone()
+            } else {
+                item.title.clone()
+            };
+            push_recent_event(
+                &mut browser_events,
+                SuperTimelineEvent {
+                    timestamp: parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                    epoch_seconds: parsed.timestamp(),
+                    lane: "Browser".to_string(),
+                    source: item.browser.clone(),
+                    event_type: "History Visit".to_string(),
+                    macb: String::new(),
+                    entity,
+                    detail: truncate_chars(&item.url, 180),
+                },
+                MAX_TIMELINE_BROWSER_EVENTS,
+            );
+        }
+    }
+    finalize_recent_events(&mut browser_events, MAX_TIMELINE_BROWSER_EVENTS);
+    combined_events.extend(browser_events);
+
+    if let Some(prefetch_path) = resolve_prefetch_report() {
+        sources.push(prefetch_path.to_string_lossy().into_owned());
+        if let Some(raw) = read_text_file(&prefetch_path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&raw) {
+                let mut prefetch_events = Vec::new();
+
+                if let Some(entries) = json.get("entries").and_then(Value::as_array) {
+                    for entry in entries {
+                        let executable = entry
+                            .get("ExecutableName")
+                            .and_then(Value::as_str)
+                            .unwrap_or("unknown.exe");
+                        let hash = entry.get("Hash").and_then(Value::as_str).unwrap_or("");
+                        let source_file = entry
+                            .get("SourceFilename")
+                            .and_then(Value::as_str)
+                            .unwrap_or("");
+
+                        for (field, label) in
+                            [("LastRun", "Last Run"), ("PreviousRun0", "Prior Run")]
+                        {
+                            let Some(raw_timestamp) = entry.get(field).and_then(Value::as_str)
+                            else {
+                                continue;
+                            };
+                            let Some(parsed) = parse_event_timestamp(raw_timestamp) else {
+                                continue;
+                            };
+                            let detail = if hash.is_empty() {
+                                source_file.to_string()
+                            } else {
+                                format!("Hash {} | {}", hash, source_file)
+                            };
+
+                            push_recent_event(
+                                &mut prefetch_events,
+                                SuperTimelineEvent {
+                                    timestamp: parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                                    epoch_seconds: parsed.timestamp(),
+                                    lane: "Prefetch".to_string(),
+                                    source: "Prefetch".to_string(),
+                                    event_type: label.to_string(),
+                                    macb: "EXEC".to_string(),
+                                    entity: executable.to_string(),
+                                    detail: truncate_chars(&detail, 180),
+                                },
+                                MAX_TIMELINE_PREFETCH_EVENTS,
+                            );
+                        }
+                    }
+                }
+
+                finalize_recent_events(&mut prefetch_events, MAX_TIMELINE_PREFETCH_EVENTS);
+                combined_events.extend(prefetch_events);
+            }
+        }
+    }
+
+    let mut execution_events = Vec::new();
+    for event in &execution_quickview.recent_powershell {
+        let Some(parsed) = parse_event_timestamp(&event.timestamp) else {
+            continue;
+        };
+        push_recent_event(
+            &mut execution_events,
+            SuperTimelineEvent {
+                timestamp: parsed.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                epoch_seconds: parsed.timestamp(),
+                lane: "Execution".to_string(),
+                source: event.source.clone(),
+                event_type: "PowerShell Execution".to_string(),
+                macb: "EXEC".to_string(),
+                entity: event.process.clone(),
+                detail: truncate_chars(&event.command, 180),
+            },
+            MAX_TIMELINE_EXECUTION_EVENTS,
+        );
+    }
+    finalize_recent_events(&mut execution_events, MAX_TIMELINE_EXECUTION_EVENTS);
+    combined_events.extend(execution_events);
+
+    combined_events.sort_by(|a, b| a.epoch_seconds.cmp(&b.epoch_seconds));
+    view.reference_timestamp = combined_events
+        .last()
+        .map(|event| event.timestamp.clone())
+        .unwrap_or_default();
+    view.total_events = combined_events.len() as u64;
+    view.events = combined_events;
+    view.source = sources.join(" | ");
+    view
+}
+
+fn collect_connections_engine(
+    browser_quickview: &BrowserQuickView,
+    network_quickview: &NetworkQuickView,
+    execution_quickview: &ExecutionQuickView,
+    malicious_process_quickview: &MaliciousProcessQuickView,
+    srum_quickview: &SrumQuickView,
+) -> ConnectionsEngineData {
+    let mut view = ConnectionsEngineData::default();
+    let mut sources = Vec::new();
+    let mut nodes_map: HashMap<String, ConnectionNode> = HashMap::new();
+    let mut links_map: HashMap<(String, String, String), u64> = HashMap::new();
+
+    if !browser_quickview.source.is_empty() {
+        sources.push(browser_quickview.source.clone());
+    }
+    if !network_quickview.source.is_empty() {
+        sources.push(network_quickview.source.clone());
+    }
+    if !execution_quickview.source.is_empty() {
+        sources.push(execution_quickview.source.clone());
+    }
+    if !srum_quickview.source.is_empty() {
+        sources.push(srum_quickview.source.clone());
+    }
+
+    let primary_user = srum_quickview
+        .top_consumers
+        .iter()
+        .map(|consumer| consumer.user.trim())
+        .find(|user| !user.is_empty() && !user.eq_ignore_ascii_case("unknown"))
+        .map(|user| user.to_string())
+        .or_else(|| {
+            srum_quickview
+                .critical_alerts
+                .iter()
+                .map(|alert| alert.user.trim())
+                .find(|user| !user.is_empty() && !user.eq_ignore_ascii_case("unknown"))
+                .map(|user| user.to_string())
+        });
+
+    for consumer in srum_quickview.top_consumers.iter().take(MAX_LIST_ITEMS) {
+        let Some(process_id) = upsert_connection_node(
+            &mut nodes_map,
+            "process",
+            &consumer.app_label,
+            &consumer.app_label,
+            "process",
+            &consumer.app_path,
+        ) else {
+            continue;
+        };
+
+        if let Some(user_id) = upsert_connection_node(
+            &mut nodes_map,
+            "user",
+            &consumer.user,
+            &consumer.user,
+            "user",
+            &format!("SRUM monitored app for {}", consumer.user),
+        ) {
+            record_connection_link(&mut links_map, &user_id, &process_id, "utilized");
+        }
+
+        if let Some(file_id) = upsert_connection_node(
+            &mut nodes_map,
+            "file",
+            &consumer.app_path,
+            &consumer.app_label,
+            "file",
+            &consumer.app_path,
+        ) {
+            record_connection_link(&mut links_map, &process_id, &file_id, "binary_path");
+        }
+    }
+
+    for alert in srum_quickview.critical_alerts.iter().take(MAX_LIST_ITEMS) {
+        let Some(process_id) = upsert_connection_node(
+            &mut nodes_map,
+            "process",
+            &alert.app_label,
+            &alert.app_label,
+            "process",
+            &alert.app_path,
+        ) else {
+            continue;
+        };
+
+        if let Some(user_id) = upsert_connection_node(
+            &mut nodes_map,
+            "user",
+            &alert.user,
+            &alert.user,
+            "user",
+            &alert.description,
+        ) {
+            record_connection_link(&mut links_map, &user_id, &process_id, "alerted_app");
+        }
+    }
+
+    for event in &execution_quickview.recent_powershell {
+        let Some(process_id) = upsert_connection_node(
+            &mut nodes_map,
+            "process",
+            &event.process,
+            &event.process,
+            "process",
+            &event.command,
+        ) else {
+            continue;
+        };
+
+        if let Some(user) = &primary_user {
+            if let Some(user_id) = upsert_connection_node(
+                &mut nodes_map,
+                "user",
+                user,
+                user,
+                "user",
+                "Primary SRUM user context",
+            ) {
+                record_connection_link(&mut links_map, &user_id, &process_id, "executed");
+            }
+        }
+
+        for executable in extract_executable_tokens(&event.command) {
+            if let Some(file_id) = upsert_connection_node(
+                &mut nodes_map,
+                "file",
+                &executable,
+                &executable,
+                "file",
+                &event.command,
+            ) {
+                record_connection_link(
+                    &mut links_map,
+                    &process_id,
+                    &file_id,
+                    "referenced_executable",
+                );
+            }
+        }
+
+        for ip in extract_ipv4_tokens(&event.command) {
+            if let Some(ip_id) =
+                upsert_connection_node(&mut nodes_map, "ip", &ip, &ip, "ip", &event.command)
+            {
+                record_connection_link(&mut links_map, &process_id, &ip_id, "targeted_ip");
+            }
+        }
+    }
+
+    for connection in &network_quickview.active_connections {
+        let Some(process_id) = upsert_connection_node(
+            &mut nodes_map,
+            "process",
+            &connection.process,
+            &connection.process,
+            "process",
+            &format!("PID {}", connection.pid),
+        ) else {
+            continue;
+        };
+
+        let remote_host = connection
+            .remote_endpoint
+            .rsplit_once(':')
+            .map(|(host, _)| host)
+            .unwrap_or(connection.remote_endpoint.as_str());
+        if let Some(ip_id) = upsert_connection_node(
+            &mut nodes_map,
+            "ip",
+            remote_host,
+            remote_host,
+            "ip",
+            &connection.remote_endpoint,
+        ) {
+            record_connection_link(&mut links_map, &process_id, &ip_id, "connected_to");
+        }
+    }
+
+    for history in browser_quickview.recent_history.iter().take(MAX_LIST_ITEMS) {
+        let Some(browser_id) = upsert_connection_node(
+            &mut nodes_map,
+            "browser",
+            &history.browser,
+            &history.browser,
+            "browser",
+            &history.url,
+        ) else {
+            continue;
+        };
+
+        if let Some(user) = &primary_user {
+            if let Some(user_id) = upsert_connection_node(
+                &mut nodes_map,
+                "user",
+                user,
+                user,
+                "user",
+                "Primary SRUM user context",
+            ) {
+                record_connection_link(&mut links_map, &user_id, &browser_id, "used_browser");
+            }
+        }
+
+        let domain = if !history.domain.is_empty() {
+            history.domain.clone()
+        } else {
+            extract_domain(&history.url)
+        };
+        if let Some(domain_id) = upsert_connection_node(
+            &mut nodes_map,
+            "domain",
+            &domain,
+            &domain,
+            "domain",
+            &history.url,
+        ) {
+            record_connection_link(&mut links_map, &browser_id, &domain_id, "visited");
+        }
+    }
+
+    if let Some(prefetch_path) = resolve_prefetch_report() {
+        sources.push(prefetch_path.to_string_lossy().into_owned());
+        if let Some(raw) = read_text_file(&prefetch_path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&raw) {
+                let mut entries = json
+                    .get("entries")
+                    .and_then(Value::as_array)
+                    .cloned()
+                    .unwrap_or_default();
+
+                entries.sort_by(|a, b| {
+                    let a_ts = a
+                        .get("LastRun")
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                        .map(|dt| dt.timestamp())
+                        .unwrap_or(0);
+                    let b_ts = b
+                        .get("LastRun")
+                        .and_then(Value::as_str)
+                        .and_then(parse_event_timestamp)
+                        .map(|dt| dt.timestamp())
+                        .unwrap_or(0);
+                    b_ts.cmp(&a_ts)
+                });
+
+                for entry in entries.into_iter().take(24) {
+                    let executable = entry
+                        .get("ExecutableName")
+                        .and_then(Value::as_str)
+                        .unwrap_or("unknown.exe");
+                    let Some(process_id) = upsert_connection_node(
+                        &mut nodes_map,
+                        "process",
+                        executable,
+                        executable,
+                        "process",
+                        entry
+                            .get("SourceFilename")
+                            .and_then(Value::as_str)
+                            .unwrap_or(""),
+                    ) else {
+                        continue;
+                    };
+
+                    if let Some(hash) = entry.get("Hash").and_then(Value::as_str) {
+                        if let Some(hash_id) = upsert_connection_node(
+                            &mut nodes_map,
+                            "hash",
+                            hash,
+                            hash,
+                            "hash",
+                            executable,
+                        ) {
+                            record_connection_link(
+                                &mut links_map,
+                                &process_id,
+                                &hash_id,
+                                "prefetch_hash",
+                            );
+                        }
+                    }
+
+                    if let Some(path) = entry.get("SourceFilename").and_then(Value::as_str) {
+                        if let Some(file_id) = upsert_connection_node(
+                            &mut nodes_map,
+                            "file",
+                            path,
+                            executable,
+                            "file",
+                            path,
+                        ) {
+                            record_connection_link(
+                                &mut links_map,
+                                &process_id,
+                                &file_id,
+                                "prefetch_artifact",
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    for node in &malicious_process_quickview.tree_nodes {
+        let detail = format!("PID {} | {}", node.pid, node.first_seen);
+        let _ = upsert_connection_node(
+            &mut nodes_map,
+            "process",
+            &node.process,
+            &node.label,
+            "process",
+            &detail,
+        );
+    }
+
+    for link in &malicious_process_quickview.tree_links {
+        let source_process = malicious_process_quickview
+            .tree_nodes
+            .iter()
+            .find(|node| node.id == link.source)
+            .map(|node| node.process.clone())
+            .unwrap_or_default();
+        let target_process = malicious_process_quickview
+            .tree_nodes
+            .iter()
+            .find(|node| node.id == link.target)
+            .map(|node| node.process.clone())
+            .unwrap_or_default();
+
+        if source_process.is_empty() || target_process.is_empty() {
+            continue;
+        }
+
+        let source_id = connection_node_id("process", &source_process);
+        let target_id = connection_node_id("process", &target_process);
+        if nodes_map.contains_key(&source_id) && nodes_map.contains_key(&target_id) {
+            record_connection_link(&mut links_map, &source_id, &target_id, &link.relationship);
+        }
+    }
+
+    let mut links: Vec<ConnectionLink> = links_map
+        .into_iter()
+        .map(|((source, target, relationship), hits)| ConnectionLink {
+            source,
+            target,
+            relationship,
+            hits,
+        })
+        .collect();
+    links.sort_by(|a, b| {
+        b.hits
+            .cmp(&a.hits)
+            .then_with(|| a.relationship.cmp(&b.relationship))
+    });
+
+    let referenced_ids: HashSet<String> = links
+        .iter()
+        .flat_map(|link| [link.source.clone(), link.target.clone()])
+        .collect();
+
+    let mut nodes: Vec<ConnectionNode> = nodes_map
+        .into_values()
+        .filter(|node| referenced_ids.contains(&node.id))
+        .collect();
+    nodes.sort_by(|a, b| b.hits.cmp(&a.hits).then_with(|| a.label.cmp(&b.label)));
+
+    let mut focus_entities: Vec<ConnectionFocusEntity> = nodes
+        .iter()
+        .filter(|node| matches!(node.entity_type.as_str(), "user" | "ip" | "hash"))
+        .map(|node| ConnectionFocusEntity {
+            id: node.id.clone(),
+            label: node.label.clone(),
+            entity_type: node.entity_type.clone(),
+        })
+        .collect();
+    focus_entities.truncate(MAX_CONNECTION_FOCUS_ITEMS);
+
+    if focus_entities.is_empty() {
+        focus_entities = nodes
+            .iter()
+            .take(MAX_CONNECTION_FOCUS_ITEMS)
+            .map(|node| ConnectionFocusEntity {
+                id: node.id.clone(),
+                label: node.label.clone(),
+                entity_type: node.entity_type.clone(),
+            })
+            .collect();
+    }
+
+    view.default_focus = focus_entities
+        .first()
+        .map(|entity| entity.id.clone())
+        .unwrap_or_default();
+    view.nodes = nodes;
+    view.links = links;
+    view.focus_entities = focus_entities;
+    view.source = sources.join(" | ");
+    view
+}
+
 fn srum_app_label(path: &str) -> String {
     let trimmed = path.trim();
     if trimmed.is_empty() {
@@ -1917,6 +2801,8 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
     let execution_quickview = collect_execution_quickview();
     let mut windows_event_quickview = collect_windows_event_quickview();
     let mut srum_quickview = collect_srum_quickview();
+    let mut super_timeline = SuperTimelineData::default();
+    let mut connections_engine = ConnectionsEngineData::default();
 
     if let Some(seed) = dashboard_seed {
         if !seed.network_quickview.source.is_empty()
@@ -1955,6 +2841,14 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
         {
             srum_quickview = seed.srum_quickview;
         }
+
+        if !seed.super_timeline.events.is_empty() {
+            super_timeline = seed.super_timeline;
+        }
+
+        if !seed.connections_engine.nodes.is_empty() || !seed.connections_engine.links.is_empty() {
+            connections_engine = seed.connections_engine;
+        }
     }
 
     ntfs_quickview.total_file_size_human = artifact_summary.total_size_human.clone();
@@ -1964,6 +2858,20 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
         &network_quickview,
         &windows_event_quickview,
     );
+
+    if super_timeline.events.is_empty() {
+        super_timeline = collect_super_timeline(&browser_quickview, &execution_quickview);
+    }
+
+    if connections_engine.nodes.is_empty() && connections_engine.links.is_empty() {
+        connections_engine = collect_connections_engine(
+            &browser_quickview,
+            &network_quickview,
+            &execution_quickview,
+            &malicious_process_quickview,
+            &srum_quickview,
+        );
+    }
 
     // Quick ipsum stats (non-blocking read)
     let (ioc_total, ioc_high, ioc_critical, ioc_updated) = {
@@ -2046,6 +2954,53 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
     ctx.insert("windows_event_quickview", &windows_event_quickview);
     ctx.insert("malicious_process_quickview", &malicious_process_quickview);
     ctx.insert("srum_quickview", &srum_quickview);
+    ctx.insert("super_timeline", &super_timeline);
+    ctx.insert("connections_engine", &connections_engine);
+    ctx.insert(
+        "artifact_type_data_json",
+        &serde_json::to_string(&artifact_summary.top_types).unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "memory_map_data_json",
+        &serde_json::to_string(&memory_quickview.severity_segments)
+            .unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "browser_domain_data_json",
+        &serde_json::to_string(&browser_quickview.top_domains).unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "process_tree_nodes_json",
+        &serde_json::to_string(&malicious_process_quickview.tree_nodes)
+            .unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "process_tree_links_json",
+        &serde_json::to_string(&malicious_process_quickview.tree_links)
+            .unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "super_timeline_events_json",
+        &serde_json::to_string(&super_timeline.events).unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "connection_nodes_json",
+        &serde_json::to_string(&connections_engine.nodes).unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "connection_links_json",
+        &serde_json::to_string(&connections_engine.links).unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "connection_focus_entities_json",
+        &serde_json::to_string(&connections_engine.focus_entities)
+            .unwrap_or_else(|_| "[]".to_string()),
+    );
+    ctx.insert(
+        "default_connection_focus_json",
+        &serde_json::to_string(&connections_engine.default_focus)
+            .unwrap_or_else(|_| "\"\"".to_string()),
+    );
 
     template_utils::render(&state.templates, "dashboard.html", &ctx)
 }
