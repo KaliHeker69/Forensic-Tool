@@ -514,14 +514,7 @@ impl<'a> GraphBuilder<'a> {
 
     fn add_connections(&mut self, data: &ParsedData) {
         for (i, conn) in data.connections.iter().enumerate() {
-            let is_external = conn.is_external();
-            let risk = if conn.is_suspicious_port() {
-                60
-            } else if is_external {
-                20
-            } else {
-                0
-            };
+            let risk = Self::connection_risk(conn);
 
             let state = conn.state.as_deref().unwrap_or("?");
             self.add_node(ArtifactNode {
@@ -546,6 +539,41 @@ impl<'a> GraphBuilder<'a> {
                     ("PID".into(), conn.pid.to_string()),
                 ],
             });
+        }
+    }
+
+    fn connection_risk(conn: &crate::models::network::NetworkConnection) -> u8 {
+        let owner_lower = conn.owner.as_deref().unwrap_or("").to_lowercase();
+
+        if conn.is_suspicious_port() {
+            return 70;
+        }
+
+        if !conn.is_external() {
+            return if conn.is_listening() { 10 } else { 0 };
+        }
+
+        if matches!(conn.foreign_port, 22 | 135 | 445 | 3389 | 5985 | 5986) {
+            return 60;
+        }
+
+        if conn.is_established()
+            && conn.is_common_web_port()
+            && ["firefox", "chrome", "msedge", "edge", "brave", "opera", "iexplore"]
+                .iter()
+                .any(|p| owner_lower.contains(p))
+        {
+            return 8;
+        }
+
+        if conn.is_established() && conn.is_common_web_port() {
+            return 20;
+        }
+
+        if conn.is_listening() {
+            35
+        } else {
+            15
         }
     }
 

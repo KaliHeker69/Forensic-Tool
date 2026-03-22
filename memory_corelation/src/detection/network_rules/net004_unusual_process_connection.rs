@@ -1,5 +1,4 @@
 //! NET004 – UnusualProcessConnectionRule
-use std::collections::HashSet;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
 use crate::parsers::ParsedData;
@@ -32,59 +31,71 @@ impl DetectionRule for UnusualProcessConnectionRule {
 
     fn detect(&self, data: &ParsedData, _engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
-        let mut seen: HashSet<u32> = HashSet::new();
-
-        // Processes that SHOULD have network connections
-        let expected_network_procs = [
-            "svchost", "firefox", "chrome", "msedge", "opera", "brave",
-            "iexplore", "teams", "onedrive", "outlook", "thunderbird",
-            "system", "lsass", "dns", "dhcp", "wuauclt", "msiexec",
-            "bits", "searchapp", "searchui", "msmpeng", "mssense",
-            "sysmon", "splunk", "elastic", "winlogbeat", "nxlog",
-            "vmtoolsd", "vmwaretray", "vboxtray",
-            "spoolsv", "w3wp", "sqlservr", "postgres", "mysqld",
-            "dropbox", "slack", "zoom", "skype", "discord",
-            "code", "code.exe", "devenv", "idea", "rider",
-            "git", "curl", "wget", "pip", "npm", "cargo",
-            "windowsupdate", "usoclient", "wusa",
-        ];
-
-        // Processes that are HIGHLY suspicious if they have network connections
-        let never_network_procs = [
-            "notepad", "calc", "mspaint", "wordpad", "write",
-            "dllhost", "consent", "fontdrvhost", "dwm",
-            "taskmgr", "regedit", "mmc",
-        ];
+        let tuning = crate::config::network_tuning();
+        let mut seen: std::collections::HashSet<(u32, String, u16)> = std::collections::HashSet::new();
 
         for conn in &data.connections {
             if !conn.is_external() {
                 continue;
             }
 
-            let owner = conn.owner.as_deref().unwrap_or("?");
-            let lower_owner = owner.to_lowercase();
-
-            // Skip already-reported PIDs
-            if seen.contains(&conn.pid) {
+            if tuning.is_ip_allowlisted(&conn.foreign_addr) {
                 continue;
             }
 
-            // Check if this is an unexpected network process
-            let is_expected = expected_network_procs.iter()
-                .any(|p| lower_owner.contains(p));
-            let is_never = never_network_procs.iter()
-                .any(|p| lower_owner.contains(p));
+            let owner = conn.owner.as_deref().unwrap_or("?");
+
+            // Skip already-reported process+endpoint combinations
+            let dedupe_key = (conn.pid, conn.foreign_addr.clone(), conn.foreign_port);
+            if !seen.insert(dedupe_key) {
+                continue;
+            }
+
+            let is_expected = tuning.is_expected_network_process(owner);
+            let is_never = tuning.is_never_network_process(owner);
 
             if is_expected && !is_never {
                 continue;
             }
 
-            seen.insert(conn.pid);
+            let cmdline = data
+                .cmdlines
+                .iter()
+                .find(|c| c.pid == conn.pid)
+                .map(|c| c.args.to_lowercase())
+                .unwrap_or_default();
+            let encoded_or_download = cmdline.contains("-enc")
+                || cmdline.contains("downloadstring")
+                || cmdline.contains("invoke-webrequest")
+                || cmdline.contains("bitsadmin");
 
-            let severity = if is_never {
+            let suspicious_port = tuning.is_suspicious_port(conn.foreign_port)
+                || tuning.is_suspicious_port(conn.local_port);
+            let high_risk_remote = tuning.is_high_risk_remote_port(conn.foreign_port);
+            let non_web_channel = !conn.is_common_web_port();
+
+            // Multi-attribute gating for medium/high.
+            let mut corroborating = 0u8;
+            if suspicious_port || high_risk_remote {
+                corroborating += 1;
+            }
+            if encoded_or_download {
+                corroborating += 1;
+            }
+            if non_web_channel {
+                corroborating += 1;
+            }
+
+            if !is_never && corroborating == 0 {
+                continue;
+            }
+
+            let severity = if is_never && corroborating >= 1 {
                 Severity::Critical
-            } else {
+            } else if corroborating >= 2 {
                 Severity::High
+            } else {
+                Severity::Medium
             };
 
             let state = conn.state.as_deref().unwrap_or("UNKNOWN");
@@ -112,7 +123,13 @@ impl DetectionRule for UnusualProcessConnectionRule {
             finding.related_pids = vec![conn.pid];
             finding.related_ips = vec![conn.foreign_addr.clone()];
             finding.timestamp = conn.created;
-            finding.confidence = if is_never { 0.95 } else { 0.75 };
+            finding.confidence = if is_never && corroborating >= 1 {
+                0.95
+            } else if corroborating >= 2 {
+                0.85
+            } else {
+                0.7
+            };
             findings.push(finding);
         }
 

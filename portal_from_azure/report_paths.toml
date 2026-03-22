@@ -9,7 +9,11 @@
 
 [reports.memory]
 name = "Memory Analysis"
-path = "/Users/kali/Codes/wsl/memory_corelation/report.html"
+path = "/Users/kali/Codes/wsl/memory_corelation/reports/report.html"
+
+[reports.srum]
+name = "System Resource Utilization"
+path = "/Users/kali/Codes/wsl/srum_analysis/reports/srum_analysis_report.html"
 
 [reports.shimcache-amcache]
 name = "Shimcache Amcache"

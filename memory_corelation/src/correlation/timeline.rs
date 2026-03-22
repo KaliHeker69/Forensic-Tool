@@ -107,13 +107,7 @@ impl<'a> TimelineBuilder<'a> {
                     EventType::NetworkConnection
                 };
 
-                let risk = if conn.is_suspicious_port() {
-                    60
-                } else if is_external {
-                    30
-                } else {
-                    10
-                };
+                let risk = self.network_event_risk(conn);
 
                 events.push(TimelineEvent {
                     timestamp: ts,
@@ -138,6 +132,53 @@ impl<'a> TimelineBuilder<'a> {
                     risk_score: risk,
                 });
             }
+        }
+    }
+
+    fn network_event_risk(&self, conn: &crate::models::network::NetworkConnection) -> u8 {
+        let owner = conn.owner.as_deref().unwrap_or("");
+        let owner_lower = owner.to_lowercase();
+        let active_state = is_active_network_state(conn.state.as_deref().unwrap_or(""));
+
+        if conn.is_suspicious_port() {
+            return 75;
+        }
+
+        if !conn.is_external() {
+            return if conn.is_listening() { 12 } else { 6 };
+        }
+
+        // External management/lateral movement ports are high signal.
+        if matches!(conn.foreign_port, 22 | 135 | 445 | 3389 | 5985 | 5986) {
+            return 65;
+        }
+
+        // Browsers making standard web connections should be low risk context.
+        if conn.is_established() && conn.is_common_web_port() && is_browser_process(&owner_lower) {
+            return 8;
+        }
+
+        // Common client apps making outbound web requests should stay low.
+        if conn.is_established()
+            && conn.is_common_web_port()
+            && is_common_network_client(&owner_lower)
+        {
+            return 14;
+        }
+
+        // Unknown process to web ports is mildly suspicious.
+        if conn.is_established() && conn.is_common_web_port() {
+            return 24;
+        }
+
+        if conn.is_listening() {
+            return 40;
+        }
+
+        if active_state {
+            20
+        } else {
+            12
         }
     }
 
@@ -738,4 +779,30 @@ fn truncate(s: &str, max_len: usize) -> String {
     } else {
         format!("{}...", &s[..max_len.saturating_sub(3)])
     }
+}
+
+fn is_active_network_state(state: &str) -> bool {
+    let state_upper = state.to_uppercase();
+    state_upper.contains("ESTABLISHED")
+        || state_upper.contains("CLOSE_WAIT")
+        || state_upper.contains("TIME_WAIT")
+        || state_upper.contains("SYN_SENT")
+        || state_upper.contains("FIN_WAIT")
+}
+
+fn is_browser_process(process_lower: &str) -> bool {
+    ["firefox", "chrome", "msedge", "edge", "brave", "opera", "iexplore"]
+        .iter()
+        .any(|p| process_lower.contains(p))
+}
+
+fn is_common_network_client(process_lower: &str) -> bool {
+    [
+        "firefox", "chrome", "msedge", "edge", "brave", "opera", "iexplore",
+        "teams", "onedrive", "outlook", "thunderbird", "slack", "zoom", "discord",
+        "svchost", "wuauclt", "usoclient", "msmpeng", "mssense", "searchapp",
+        "code", "devenv", "git", "curl", "wget", "pip", "npm", "cargo",
+    ]
+    .iter()
+    .any(|p| process_lower.contains(p))
 }

@@ -602,7 +602,7 @@
                     </header>
                     <div class="compact-resource-grid">
                         {% for resource in resources %}
-                        {% if loop.index <= 8 and (resource.special is not defined or resource.special == false) %}
+                        {% if loop.index <= 11 and (resource.special is not defined or resource.special == false) %}
                         <a href="{{ resource.url }}" class="compact-resource {% if resource.status == 'coming-soon' %}is-coming-soon{% endif %}">
                             <i class="{{ resource.icon }}" aria-hidden="true"></i>
                             <span>{{ resource.name }}</span>

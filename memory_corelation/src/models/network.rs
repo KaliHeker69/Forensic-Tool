@@ -101,13 +101,18 @@ impl NetworkConnection {
     /// Check if connection is to a common C2 port
     pub fn is_suspicious_port(&self) -> bool {
         let suspicious_ports = [
-            4444, 4445, 5555, 6666, 7777, 8888, 9999, // Common RAT ports
+            4444, 4445, 5555, 6666, 7777, 8888, 9999, // Common RAT/backdoor ports
             1337, 31337, // "Elite" ports
-            443, 8443, 8080, // Web (can be legitimate but often C2)
-            53,   // DNS (suspicious when not from known DNS processes)
+            12345, 54321, // Legacy trojan/backdoor ports
+            2323, // Alternate telnet commonly abused
         ];
         suspicious_ports.contains(&self.foreign_port)
             || suspicious_ports.contains(&self.local_port)
+    }
+
+    /// Check if this is common web traffic port
+    pub fn is_common_web_port(&self) -> bool {
+        matches!(self.foreign_port, 80 | 443 | 8080 | 8443)
     }
 
     /// Get the foreign address as a formatted string

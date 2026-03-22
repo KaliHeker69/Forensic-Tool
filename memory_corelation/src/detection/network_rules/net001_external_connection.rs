@@ -30,9 +30,14 @@ impl DetectionRule for ExternalConnectionRule {
 
     fn detect(&self, _data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
+        let tuning = crate::config::network_tuning();
 
         for link in engine.network_process_correlation() {
             if !link.connection.is_external() {
+                continue;
+            }
+
+            if tuning.is_ip_allowlisted(&link.connection.foreign_addr) {
                 continue;
             }
 
@@ -57,18 +62,62 @@ impl DetectionRule for ExternalConnectionRule {
                 .map(|p| p.name.as_str())
                 .unwrap_or("?");
 
-            // Only suppress well-known browsers — all other processes are notable
-            if !link.is_suspicious() && is_browser_process(process_name) {
+            if tuning.is_allowlisted_process(process_name) {
                 continue;
             }
 
-            let severity = if link.is_suspicious() {
+            let is_browser_web = tuning.is_browser_process(process_name)
+                && link.connection.is_established()
+                && link.connection.is_common_web_port();
+
+            let suspicious_cmdline = link
+                .cmdline
+                .as_ref()
+                .map(|cmd| {
+                    let lower = cmd.to_lowercase();
+                    lower.contains("-enc")
+                        || lower.contains("-e ")
+                        || lower.contains("-w hidden")
+                        || lower.contains("downloadstring")
+                })
+                .unwrap_or(false);
+
+            // Benign browsing should remain contextual, not an alert.
+            if is_browser_web && !suspicious_cmdline {
+                continue;
+            }
+
+            let suspicious_port = tuning.is_suspicious_port(link.connection.foreign_port)
+                || tuning.is_suspicious_port(link.connection.local_port);
+            let high_risk_remote = tuning.is_high_risk_remote_port(link.connection.foreign_port);
+            let unusual_process = !tuning.is_expected_network_process(process_name);
+            let non_web_channel = !link.connection.is_common_web_port();
+
+            let mut signal_count = 0u8;
+            if unusual_process {
+                signal_count += 1;
+            }
+            if suspicious_port || high_risk_remote {
+                signal_count += 1;
+            }
+            if suspicious_cmdline {
+                signal_count += 1;
+            }
+            if non_web_channel {
+                signal_count += 1;
+            }
+
+            // Multi-attribute gating: don't raise medium/high without corroboration.
+            if signal_count == 0 {
+                continue;
+            }
+
+            let severity = if signal_count >= 3 {
                 Severity::High
-            } else if is_os_telemetry_process(process_name) {
-                Severity::Low
-            } else {
-                // Non-browser, non-OS process with external connection
+            } else if signal_count >= 2 {
                 Severity::Medium
+            } else {
+                Severity::Low
             };
 
             let mut finding = create_finding(
@@ -103,28 +152,14 @@ impl DetectionRule for ExternalConnectionRule {
             finding.related_pids = vec![link.connection.pid];
             finding.related_ips = vec![link.connection.foreign_addr.clone()];
             finding.timestamp = link.connection.created;
+            finding.confidence = match severity {
+                Severity::High => 0.9,
+                Severity::Medium => 0.75,
+                _ => 0.55,
+            };
             findings.push(finding);
         }
 
         findings
     }
-}
-
-/// Only suppress well-known web browsers
-fn is_browser_process(process_name: &str) -> bool {
-    let lower = process_name.to_lowercase();
-    let browsers = [
-        "firefox", "chrome", "msedge", "opera", "brave", "iexplore",
-    ];
-    browsers.iter().any(|p| lower.contains(p))
-}
-
-/// OS telemetry / update processes that make expected external connections
-fn is_os_telemetry_process(process_name: &str) -> bool {
-    let lower = process_name.to_lowercase();
-    let telemetry = [
-        "svchost", "wuauclt", "msmpeng", "mssense", "onedrive",
-        "teams", "searchapp",
-    ];
-    telemetry.iter().any(|p| lower.contains(p))
 }

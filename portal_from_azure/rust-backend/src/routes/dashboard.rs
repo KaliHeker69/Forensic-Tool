@@ -492,6 +492,43 @@ fn load_dashboard_quickview_data() -> Option<DashboardQuickviewData> {
     serde_json::from_str::<DashboardQuickviewData>(&raw).ok()
 }
 
+fn load_report_route_links() -> HashMap<String, String> {
+    let explicit = std::env::var("REPORT_PATHS_FILE").ok().map(PathBuf::from);
+    let config_path = explicit
+        .or_else(|| resolve_existing_path("portal_from_azure/report_paths.toml"))
+        .or_else(|| resolve_existing_path("report_paths.toml"));
+
+    let Some(path) = config_path else {
+        return HashMap::new();
+    };
+
+    let Ok(raw) = fs::read_to_string(&path) else {
+        return HashMap::new();
+    };
+
+    let Ok(value) = raw.parse::<toml::Value>() else {
+        return HashMap::new();
+    };
+
+    value
+        .get("reports")
+        .and_then(toml::Value::as_table)
+        .map(|reports| {
+            reports
+                .keys()
+                .map(|report_id| (report_id.clone(), format!("/reports/{report_id}")))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn report_url(report_routes: &HashMap<String, String>, report_id: &str, fallback: &str) -> String {
+    report_routes
+        .get(report_id)
+        .cloned()
+        .unwrap_or_else(|| fallback.to_string())
+}
+
 fn normalize_process_name(raw: &str) -> String {
     let trimmed = raw.trim().trim_matches('"').trim_matches('\'');
     if trimmed.is_empty() {
@@ -1942,21 +1979,23 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
         )
     };
 
+    let report_routes = load_report_route_links();
+
     let resources = serde_json::json!([
         {"id":"timeline","name":"Timeline Explorer","description":"View csv exported forensic outputs","icon":"fa-solid fa-chart-line","url":"/tools/timeline/","status":"active"},
-        {"id":"registry","name":"Registry","description":"Windows Registry analysis and investigation","icon":"fa-solid fa-folder-open","url":"#registry","status":"active"},
-        {"id":"ntfs","name":"NTFS Data","description":"NTFS file system and metadata analysis","icon":"fa-solid fa-hdd","url":"#ntfs-section","status":"active"},
-        {"id":"memory","name":"Memory Analysis","description":"Volatile memory capture & analysis","icon":"fa-solid fa-brain","url":"#memory-section","status":"active"},
-        {"id":"srum","name":"System Resource Utilization","description":"SRUM application activity, utilization totals, and critical alerts","icon":"fa-solid fa-gauge-high","url":"#srum-section","status":"active"},
-        {"id":"windows-event","name":"Windows Event","description":"Windows Event Log viewer and analyzer","icon":"fa-solid fa-scroll","url":"/reports/windows-event","status":"active"},
-        {"id":"shimcache-amcache-report","name":"Shimcache Amcache Report","description":"Open the latest shimcache/amcache report","icon":"fa-solid fa-clipboard-check","url":"/reports/shimcache-amcache","status":"active"},
-        {"id":"prefetch-report","name":"Prefetch Report","description":"Open the latest prefetch analysis report","icon":"fa-solid fa-list-check","url":"/reports/prefetch","status":"active"},
+        {"id":"registry","name":"Registry Viewer","description":"Windows Registry analysis and investigation","icon":"fa-solid fa-folder-open","url":"/tools/registry","status":"active"},
+        {"id":"ntfs","name":"NTFS Data","description":"NTFS file system and metadata analysis","icon":"fa-solid fa-hdd","url":report_url(&report_routes, "ntfs", "#ntfs-section"),"status":"active"},
+        {"id":"memory","name":"Memory Analysis","description":"Volatile memory capture & analysis","icon":"fa-solid fa-brain","url":report_url(&report_routes, "memory", "#memory-section"),"status":"active"},
+        {"id":"browser-forensics","name":"Browser Analysis","description":"Browser history, downloads, cookies & session analysis","icon":"fa-solid fa-globe","url":report_url(&report_routes, "browser-forensics", "#browser-section"),"status":"active"},
+        {"id":"srum","name":"System Resource Utilization","description":"SRUM application activity, utilization totals, and critical alerts","icon":"fa-solid fa-gauge-high","url":report_url(&report_routes, "srum", "#srum-section"),"status":"active"},
+        {"id":"windows-event","name":"Windows Event","description":"Windows Event Log viewer and analyzer","icon":"fa-solid fa-scroll","url":report_url(&report_routes, "windows-event", "/reports/windows-event"),"status":"active"},
+        {"id":"shimcache-amcache-report","name":"Shimcache Amcache Report","description":"Open the latest shimcache/amcache report","icon":"fa-solid fa-clipboard-check","url":report_url(&report_routes, "shimcache-amcache", "/reports/shimcache-amcache"),"status":"active"},
+        {"id":"prefetch-report","name":"Prefetch Viewer","description":"Open the latest prefetch analysis report","icon":"fa-solid fa-list-check","url":report_url(&report_routes, "prefetch", "/reports/prefetch"),"status":"active"},
         {"id":"timesketch","name":"Timesketch","description":"Collaborative forensic timeline analysis","icon":"fa-solid fa-clock","url":"/tools/timesketch/","status":"active"},
-        {"id":"ioc-scan","name":"IOC Scan","description":"Scan results for indicators of compromise","icon":"fa-solid fa-magnifying-glass","url":"/reports/ioc-scan","status":"active"},
+        {"id":"ioc-scan","name":"IOC Scan","description":"Scan results for indicators of compromise","icon":"fa-solid fa-magnifying-glass","url":report_url(&report_routes, "ioc-scan", "/reports/ioc-scan"),"status":"active"},
         {"id":"ioc-hash-scan","name":"IOC/Hash Scan","description":"Cross-check IOCs and file hashes against known indicators","icon":"fa-solid fa-fingerprint","url":"/reports/ioc-scan","status":"active"},
-        {"id":"network-forensics","name":"Network Forensics","description":"Investigate network artifacts, flows, and communication patterns","icon":"fa-solid fa-network-wired","url":"#network-section","status":"active"},
+        {"id":"network-forensics","name":"Network Forensics","description":"Investigate network artifacts, flows, and communication patterns","icon":"fa-solid fa-network-wired","url":report_url(&report_routes, "network-forensics", "#network-section"),"status":"active"},
         {"id":"data-theft","name":"Data Theft","description":"Review exfiltration indicators and data theft investigation findings","icon":"fa-solid fa-file-export","url":"/reports/data-theft","status":"active"},
-        {"id":"browser-forensics","name":"Browser Forensics","description":"Browser history, downloads, cookies & session analysis","icon":"fa-solid fa-globe","url":"#browser-section","status":"active"},
         {"id":"fetched-files","name":"Fetched Files","description":"Browse and download files fetched from the share","icon":"fa-solid fa-file-arrow-down","url":"/fetched-files","status":"active"},
         {"id":"pe-entropy","name":"PE Entropy","description":"Analyze selected PE files from fetched files using entropy scoring","icon":"fa-solid fa-file-shield","url":"/fetched-files?tool=pe-entropy","status":"active"},
         {"id":"iocs","name":"IOCs","description":"Indicators of Compromise tracker","icon":"fa-solid fa-bullseye","url":"/tools/iocs","status":"active","special":true},

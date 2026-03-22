@@ -98,6 +98,7 @@ fn is_suspicious_envar(name: &str, value: &str) -> bool {
 /// Extract interesting handles from parsed data
 fn extract_interesting_handles(data: &ParsedData) -> Vec<HandleSummary> {
     let mut handles = Vec::new();
+    let mut seen: HashSet<(u32, String, String)> = HashSet::new();
 
     for handle in &data.handles {
         let name = handle.name.as_deref().unwrap_or("");
@@ -105,16 +106,27 @@ fn extract_interesting_handles(data: &ParsedData) -> Vec<HandleSummary> {
             continue;
         }
 
-        let (is_suspicious, reason) = analyze_handle(handle);
+        let decision = classify_handle(handle);
+        if let Some((signal_level, category, is_suspicious, reason)) = decision {
+            let dedupe_key = (
+                handle.pid,
+                handle.handle_type.to_lowercase(),
+                name.to_lowercase(),
+            );
 
-        // Include interesting handles (limited to 50)
-        if is_interesting_handle(handle) || is_suspicious {
-            if handles.len() < 50 {
+            if !seen.insert(dedupe_key) {
+                continue;
+            }
+
+            // Include highest-value handles first, then medium/context (limited to 40)
+            if handles.len() < 40 {
                 handles.push(HandleSummary {
                     pid: handle.pid,
                     process_name: handle.process.clone(),
                     handle_type: handle.handle_type.clone(),
                     name: name.to_string(),
+                    signal_level: signal_level.to_string(),
+                    category: category.to_string(),
                     is_suspicious,
                     reason,
                 });
@@ -122,88 +134,188 @@ fn extract_interesting_handles(data: &ParsedData) -> Vec<HandleSummary> {
         }
     }
 
+    handles.sort_by_key(|h| {
+        let rank = match h.signal_level.as_str() {
+            "high" => 0,
+            "medium" => 1,
+            _ => 2,
+        };
+        (rank, h.process_name.to_lowercase(), h.name.to_lowercase())
+    });
+
     handles
 }
 
-/// Check if a handle is interesting for forensic purposes
-fn is_interesting_handle(handle: &crate::models::files::HandleInfo) -> bool {
+/// Classify handle for report output.
+/// Returns (signal_level, category, is_suspicious, reason) when the handle should be included.
+fn classify_handle(
+    handle: &crate::models::files::HandleInfo,
+) -> Option<(&'static str, &'static str, bool, Option<String>)> {
     let handle_type_lower = handle.handle_type.to_lowercase();
     let name_lower = handle.name.as_deref().unwrap_or("").to_lowercase();
+    let process_lower = handle.process.to_lowercase();
 
-    // Interesting handle types
-    if handle_type_lower == "mutant" || handle_type_lower == "mutex" {
-        return true;
+    // 1) Process handles to sensitive targets: high signal only when source process is not expected.
+    if handle_type_lower == "process" && name_lower.contains("lsass") {
+        if !is_expected_lsass_accessor(&process_lower) {
+            return Some((
+                "high",
+                "process_access",
+                true,
+                Some("Non-system process handle to LSASS (possible credential access)".to_string()),
+            ));
+        }
+
+        // Keep legitimate LSASS access as low-noise context instead of suspicious.
+        return None;
     }
 
-    // Registry keys related to persistence
+    // 2) Persistence-relevant registry paths.
     if handle_type_lower == "key" {
-        if name_lower.contains("\\run")
-            || name_lower.contains("\\services")
-            || name_lower.contains("\\currentversion")
-        {
-            return true;
+        if let Some((signal, category, reason)) = classify_registry_key(&name_lower) {
+            return Some((signal, category, signal == "high", Some(reason.to_string())));
         }
     }
 
-    // Files in suspicious locations
+    // 3) Mutexes: include only suspicious/custom names and suppress common Windows internals.
+    if handle_type_lower == "mutant" || handle_type_lower == "mutex" {
+        if is_common_windows_mutex(&name_lower) {
+            return None;
+        }
+
+        if let Some(reason) = suspicious_mutex_reason(&name_lower) {
+            return Some((
+                "medium",
+                "suspicious_mutex",
+                true,
+                Some(reason.to_string()),
+            ));
+        }
+
+        return None;
+    }
+
+    // 4) Files: keep script/executable handles in suspicious user-writeable paths.
     if handle_type_lower == "file" {
-        if name_lower.contains("\\temp\\")
-            || name_lower.contains("\\downloads\\")
-            || name_lower.contains("\\appdata\\local\\temp")
-        {
-            return true;
+        if let Some(reason) = suspicious_file_reason(&name_lower) {
+            return Some(("medium", "suspicious_file", true, Some(reason.to_string())));
         }
     }
 
-    false
+    None
 }
 
-/// Analyze a handle for suspicious characteristics
-fn analyze_handle(
-    handle: &crate::models::files::HandleInfo,
-) -> (bool, Option<String>) {
-    let handle_type_lower = handle.handle_type.to_lowercase();
-    let name_lower = handle.name.as_deref().unwrap_or("").to_lowercase();
+fn is_expected_lsass_accessor(process_lower: &str) -> bool {
+    // Baseline OS processes that frequently and legitimately reference LSASS.
+    let trusted = [
+        "system",
+        "lsass.exe",
+        "csrss.exe",
+        "wininit.exe",
+        "services.exe",
+        "winlogon.exe",
+        "smss.exe",
+        "svchost.exe",
+        "taskmgr.exe",
+    ];
+    trusted.iter().any(|p| process_lower == *p)
+}
 
-    // Check for sensitive process handles (credential dumping indicator)
-    if handle_type_lower == "process" && name_lower.contains("lsass") {
-        return (
-            true,
-            Some("Handle to LSASS process - potential credential access".to_string()),
-        );
+fn classify_registry_key(name_lower: &str) -> Option<(&'static str, &'static str, &'static str)> {
+    // High-signal persistence and execution artifacts.
+    if name_lower.contains("\\software\\microsoft\\windows nt\\currentversion\\image file execution options") {
+        return Some((
+            "high",
+            "persistence_key",
+            "IFEO path accessed (review Debugger/SilentProcessExit hijack values)",
+        ));
     }
 
-    // Check for suspicious mutex names (malware indicators)
-    if handle_type_lower == "mutant" || handle_type_lower == "mutex" {
-        let suspicious_mutexes = [
-            "global\\", "dce", "rat", "bot", "shell", "inject", "hook",
-        ];
-        for pattern in suspicious_mutexes {
-            if name_lower.contains(pattern) {
-                return (
-                    true,
-                    Some(format!("Suspicious mutex name containing '{}'", pattern)),
-                );
-            }
+    if name_lower.contains("\\software\\microsoft\\windows\\currentversion\\run")
+        || name_lower.contains("\\software\\microsoft\\windows\\currentversion\\runonce")
+        || name_lower.contains("\\software\\microsoft\\windows nt\\currentversion\\winlogon")
+    {
+        return Some((
+            "high",
+            "persistence_key",
+            "Autostart/logon key path accessed",
+        ));
+    }
+
+    if name_lower.contains("\\services\\bam\\state\\usersettings") {
+        return Some((
+            "medium",
+            "execution_artifact",
+            "BAM user execution artifact path accessed",
+        ));
+    }
+
+    if name_lower.contains("\\services\\tcpip\\parameters\\persistentroutes") {
+        return Some((
+            "medium",
+            "execution_artifact",
+            "Persistent route configuration key accessed",
+        ));
+    }
+
+    None
+}
+
+fn is_common_windows_mutex(name_lower: &str) -> bool {
+    let benign_patterns = [
+        "bcdsyncmutant",
+        "wilstaging_",
+        "wilerror_",
+        "sm0:",
+        "basenamedobjects\\wmi",
+        "basenamedobjects\\windows",
+    ];
+
+    benign_patterns.iter().any(|pattern| name_lower.contains(pattern))
+}
+
+fn suspicious_mutex_reason(name_lower: &str) -> Option<&'static str> {
+    let suspicious_mutexes = [
+        ("global\\", "Global namespace mutex (check for malware lock pattern)"),
+        ("inject", "Mutex name suggests injection tooling"),
+        ("mimikatz", "Mutex name suggests credential theft tooling"),
+        ("meterpreter", "Mutex name suggests C2 payload tooling"),
+        ("cobalt", "Mutex name suggests C2 framework artifact"),
+        ("psexec", "Mutex name suggests remote execution tooling"),
+        ("remcom", "Mutex name suggests remote command tooling"),
+    ];
+
+    for (pattern, reason) in suspicious_mutexes {
+        if name_lower.contains(pattern) {
+            return Some(reason);
         }
     }
 
-    // Check for suspicious file handles
-    if handle_type_lower == "file" {
-        if name_lower.ends_with(".ps1")
-            || name_lower.ends_with(".vbs")
-            || name_lower.ends_with(".bat")
-        {
-            if name_lower.contains("\\temp\\") || name_lower.contains("\\downloads\\") {
-                return (
-                    true,
-                    Some("Script file in suspicious location".to_string()),
-                );
-            }
-        }
+    None
+}
+
+fn suspicious_file_reason(name_lower: &str) -> Option<&'static str> {
+    let suspicious_ext = [".ps1", ".vbs", ".js", ".bat", ".cmd", ".exe", ".dll", ".hta"];
+    let has_suspicious_ext = suspicious_ext.iter().any(|ext| name_lower.ends_with(ext));
+
+    if !has_suspicious_ext {
+        return None;
     }
 
-    (false, None)
+    let suspicious_paths = [
+        "\\temp\\",
+        "\\tmp\\",
+        "\\downloads\\",
+        "\\appdata\\local\\temp\\",
+        "\\users\\public\\",
+        "\\programdata\\",
+    ];
+
+    if suspicious_paths.iter().any(|p| name_lower.contains(p)) {
+        return Some("Executable/script handle in user-writable staging path");
+    }
+
+    None
 }
 
 /// Extract session information from process data

@@ -1,6 +1,6 @@
 {
   "analysis_metadata": {
-    "generated_at": "2026-03-21 17:25:15 +05:30",
+    "generated_at": "2026-03-21 23:28:50 +05:30",
     "generated_by": "dashboard_setter",
     "modules_processed": [
       "network",
@@ -111,7 +111,7 @@
   },
   "memory_quickview": {
     "analysis_metadata": {
-      "analysis_time": "2026-03-20T15:40:13.238221+00:00",
+      "analysis_time": "2026-03-21T17:56:34.720546+00:00",
       "input_path": "jsonl",
       "plugins_used": [
         "cachedump",
@@ -158,7 +158,7 @@
               "source_plugin": "certificates"
             }
           ],
-          "id": "CERT005_5536c02c",
+          "id": "CERT005_e22bfbb9",
           "mitre_attack": "T1562.001",
           "related_files": [],
           "related_ips": [],
@@ -190,7 +190,7 @@
               "source_plugin": "pslist"
             }
           ],
-          "id": "CRED001_4e58dca4",
+          "id": "CRED001_dcbbc961",
           "mitre_attack": "T1003",
           "related_files": [],
           "related_ips": [],
@@ -222,7 +222,7 @@
               "source_plugin": "pslist"
             }
           ],
-          "id": "CRED006_4e62df24",
+          "id": "CRED006_dcc552c9",
           "mitre_attack": "T1003.001",
           "related_files": [],
           "related_ips": [],
@@ -249,7 +249,7 @@
               "source_plugin": "cmdscan+consoles"
             }
           ],
-          "id": "CRED004_4e604afc",
+          "id": "CRED004_dcbfe811",
           "mitre_attack": "T1059.003",
           "related_files": [],
           "related_ips": [],
@@ -277,7 +277,7 @@
               "source_plugin": "malfind"
             }
           ],
-          "id": "INJ001_4d9f8b3c",
+          "id": "INJ001_dc1a8051",
           "mitre_attack": "T1055",
           "related_files": [],
           "related_ips": [],
@@ -303,7 +303,7 @@
               "source_plugin": "malfind"
             }
           ],
-          "id": "INJ003_4d9fe12c",
+          "id": "INJ003_dc1aedb1",
           "mitre_attack": "T1620",
           "related_files": [],
           "related_ips": [],
@@ -329,7 +329,7 @@
               "source_plugin": "cmdline"
             }
           ],
-          "id": "INJ004_4da3ffdc",
+          "id": "INJ004_dc225051",
           "mitre_attack": "T1055",
           "related_files": [],
           "related_ips": [],
@@ -356,7 +356,7 @@
               "source_plugin": "vadinfo"
             }
           ],
-          "id": "INJ005_4df3aa64",
+          "id": "INJ005_dc68bba9",
           "mitre_attack": "T1055.012",
           "related_files": [],
           "related_ips": [],
@@ -382,7 +382,7 @@
               "source_plugin": "vadinfo"
             }
           ],
-          "id": "INJ005_4df3b61c",
+          "id": "INJ005_dc68b3d9",
           "mitre_attack": "T1055.012",
           "related_files": [],
           "related_ips": [],
@@ -410,7 +410,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d95fdec",
+          "id": "NET001_dc0a72f1",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -438,7 +438,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d95a7fc",
+          "id": "NET001_dc0a4029",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -466,7 +466,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d95e294",
+          "id": "NET001_dc0a5f69",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -494,7 +494,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d962114",
+          "id": "NET001_dc0a8a61",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -522,7 +522,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d95bb84",
+          "id": "NET001_dc0a4be1",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -550,7 +550,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d95d2f4",
+          "id": "NET001_dc0a5799",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -578,7 +578,7 @@
               "source_plugin": "netscan"
             }
           ],
-          "id": "NET001_4d9609a4",
+          "id": "NET001_dc0a7ac1",
           "mitre_attack": "T1071",
           "related_files": [],
           "related_ips": [
@@ -608,7 +608,7 @@
               "source_plugin": "printkey"
             }
           ],
-          "id": "PERS001_4df5254c",
+          "id": "PERS001_dc6ca791",
           "mitre_attack": "T1547.001",
           "related_files": [
             ""
@@ -636,7 +636,7 @@
               "source_plugin": "privileges"
             }
           ],
-          "id": "PRIV001_542b4b6c",
+          "id": "PRIV001_e1274d59",
           "mitre_attack": "T1134.001",
           "related_files": [],
           "related_ips": [],
@@ -662,7 +662,7 @@
               "source_plugin": "privileges"
             }
           ],
-          "id": "PRIV005_551bcdbc",
+          "id": "PRIV005_e2127879",
           "mitre_attack": "T1134.003",
           "related_files": [],
           "related_ips": [],
@@ -688,7 +688,7 @@
               "source_plugin": "privileges"
             }
           ],
-          "id": "PRIV005_552a835c",
+          "id": "PRIV005_e2204f71",
           "mitre_attack": "T1134.003",
           "related_files": [],
           "related_ips": [],
@@ -716,7 +716,7 @@
               "source_plugin": "thrdscan"
             }
           ],
-          "id": "THRD002_53fadcfc",
+          "id": "THRD002_e0f5e101",
           "mitre_attack": "T1055.003",
           "related_files": [],
           "related_ips": [],

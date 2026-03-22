@@ -173,6 +173,10 @@ pub struct HandleSummary {
     pub process_name: String,
     pub handle_type: String,
     pub name: String,
+    /// high | medium | context
+    pub signal_level: String,
+    /// process_access | persistence_key | execution_artifact | suspicious_mutex | suspicious_file
+    pub category: String,
     pub is_suspicious: bool,
     pub reason: Option<String>,
 }

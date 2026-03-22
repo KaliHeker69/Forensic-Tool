@@ -1,3 +1,9 @@
+---
+noteId: "2993a050255311f1b5128960de97133a"
+tags: []
+
+---
+
 # Configuration Files
 
 This directory contains external configuration files used by the Memory Correlation Engine to reduce false positives and improve detection accuracy.
@@ -50,3 +56,31 @@ This file defines legitimate paths and files that should strictly **NOT** be fla
 This file defines patterns that are inherently suspicious for specific operations (like DLL loading).
 
 *   **`suspicious_paths`**: A simple list of substrings. If a DLL path contains any of these strings (e.g., `\temp\`, `\downloads\`), and is *not* whitelisted, it is flagged as suspicious.
+
+## `network_tuning.json`
+
+This file centralizes network-related allowlists/watchlists and role-aware exclusions used by rules:
+
+- `NET001` External network connection
+- `NET004` Unusual process network activity
+- `NET005` Listening port analysis
+
+Fields:
+
+* `host_role`: Baseline profile (`workstation`, `server`, `domain_controller`).
+* `allowlisted_processes`: Processes always treated as expected network actors for your environment.
+* `browser_processes`: Browser process names used to suppress normal web browsing alerts.
+* `common_client_processes`: Collaboration/dev/update clients expected to use outbound network.
+* `expected_listener_processes`: Processes expected to bind listening sockets.
+* `never_network_processes`: High-sensitivity processes that should rarely make outbound connections.
+* `expected_listener_ports`: Standard ports considered normal for listeners.
+* `suspicious_ports`: Ports strongly associated with backdoor/C2 behavior.
+* `high_risk_remote_ports`: Remote admin/lateral movement ports.
+* `allowlisted_ips`: Exact IP allowlist for known benign destinations.
+* `allowlisted_subnets`: CIDR subnet allowlist for benign/expected network ranges.
+
+This config enables:
+
+* Centralized tuning instead of hardcoded arrays in rule files.
+* Subnet-aware exclusions to reduce repetitive false positives.
+* Role-aware behavior so workstation/server/DC hosts are scored differently.
