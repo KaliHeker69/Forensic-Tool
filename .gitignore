@@ -54,3 +54,13 @@ portal.pid
 portal.log*
 
 forensic_correlation
+
+# Artefacts folder
+Transfer
+
+# Hives
+*.hve
+*LOG1
+*LOG2
+
+stitch*

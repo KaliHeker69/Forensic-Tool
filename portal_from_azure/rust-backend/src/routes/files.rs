@@ -1,7 +1,7 @@
 /// File browser API – mirrors app/routers/files.py
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::Query,
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::get,
@@ -201,10 +201,10 @@ async fn get_file_content(Query(q): Query<PathQuery>) -> Response {
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
-    if ext != "csv" && ext != "txt" {
+    if ext != "csv" && ext != "txt" && ext != "tsv" && ext != "json" && ext != "jsonl" {
         return err(
             StatusCode::BAD_REQUEST,
-            "Only CSV and TXT files are allowed",
+            "Only CSV, TSV, TXT, JSON, and JSONL files are allowed",
         );
     }
     let meta = fp.metadata().unwrap();

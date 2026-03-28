@@ -4,7 +4,7 @@ use axum::{
     extract::{Path as AxPath, State},
     http::StatusCode,
     response::{Html, IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{get, post},
 };
 use serde_json::Value;
 use std::collections::HashMap;

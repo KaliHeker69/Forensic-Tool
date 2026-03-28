@@ -17,6 +17,10 @@
                 <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
                 <span>Dashboard</span>
             </a>
+            <a href="/host-information" class="rail-link">
+                <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
+                <span>HostInfo</span>
+            </a>
             <a href="#ntfs-section" class="rail-link">
                 <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
                 <span>NTFS</span>
@@ -120,6 +124,11 @@
                     <span class="card-value">{{ metrics.security_score }}%</span>
                     <span class="card-foot positive">Readiness nominal</span>
                 </article>
+                <article class="forensic-card actionable" onclick="location.href='/host-information'">
+                    <span class="card-label">Host</span>
+                    <span class="card-value card-value-small">{% if host_information_quickview.hostname %}{{ host_information_quickview.hostname }}{% else %}n/a{% endif %}</span>
+                    <span class="card-foot muted">{% if host_information_quickview.os_product_name %}{{ host_information_quickview.os_product_name }}{% else %}Registry host profile{% endif %}</span>
+                </article>
                 <article class="forensic-card">
                     <span class="card-label">Active Connections</span>
                     <span class="card-value">{{ network_quickview.external_established_connections }}</span>
@@ -141,9 +150,9 @@
                     <span class="card-foot muted">{{ browser_quickview.total_history_entries }} history events</span>
                 </article>
                 <article class="forensic-card">
-                    <span class="card-label">PowerShell Events</span>
-                    <span class="card-value">{{ execution_quickview.powershell_events }}</span>
-                    <span class="card-foot {% if execution_quickview.powershell_events > 0 %}warning{% else %}muted{% endif %}">Recent execution traces</span>
+                    <span class="card-label">User Commands</span>
+                    <span class="card-value">{{ execution_quickview.command_count }}</span>
+                    <span class="card-foot {% if execution_quickview.command_count > 0 %}warning{% else %}muted{% endif %}">Recent commands</span>
                 </article>
                 <article class="forensic-card">
                     <span class="card-label">SRUM Critical</span>
@@ -166,9 +175,10 @@
                 <header class="endpoint-quickview-header">
                     <div>
                         <h2>Endpoint Artifact Explorer Quick View</h2>
-                        <p>Sections aligned to Windows Event, NTFS, Network, SRUM, User Execution, Browser, and Memory artifacts.</p>
+                        <p>Sections aligned to Host Information, Windows Event, NTFS, Network, SRUM, User Execution, Browser, and Memory artifacts.</p>
                     </div>
                     <nav class="endpoint-tab-nav" aria-label="Artifact sections">
+                        <a href="/host-information">Host Information</a>
                         <a href="#windows-event-section">Windows Event</a>
                         <a href="#ntfs-section">NTFS</a>
                         <a href="#network-section">Network</a>
@@ -181,6 +191,7 @@
                 </header>
 
                 <div class="endpoint-quickview-grid">
+
                     <article class="obs-panel windows-event-quickview" id="windows-event-section">
                         <header class="windows-event-head">
                             <div class="windows-event-icon-wrap">
@@ -451,15 +462,15 @@
                         <header class="panel-header">
                             <div>
                                 <h2><i class="fa-solid fa-terminal" aria-hidden="true"></i> User Execution</h2>
-                                <p>Recent PowerShell execution traces from execution artifacts</p>
+                                <p>Recent commands extracted from RunMRU and ConsoleHost history</p>
                             </div>
                         </header>
                         <div class="endpoint-stat-grid">
-                            <div class="endpoint-stat"><span>PowerShell Events</span><strong>{{ execution_quickview.powershell_events }}</strong></div>
-                            <div class="endpoint-stat"><span>Source</span><strong>{% if execution_quickview.source %}live_ps{% else %}n/a{% endif %}</strong></div>
+                            <div class="endpoint-stat"><span>Commands</span><strong>{{ execution_quickview.command_count }}</strong></div>
+                            <div class="endpoint-stat"><span>Source</span><strong>{% if execution_quickview.source %}{{ execution_quickview.source }}{% else %}n/a{% endif %}</strong></div>
                         </div>
                         <ul class="endpoint-exec-list">
-                            {% for evt in execution_quickview.recent_powershell %}
+                            {% for evt in execution_quickview.recent_commands %}
                             <li>
                                 <div class="exec-head">
                                     <span>{{ evt.timestamp }}</span>
@@ -468,10 +479,10 @@
                                 <div class="exec-cmd">{{ evt.command }}</div>
                             </li>
                             {% endfor %}
-                            {% if execution_quickview.recent_powershell | length == 0 %}
+                            {% if execution_quickview.recent_commands | length == 0 %}
                             <li>
-                                <div class="exec-head"><span>No recent PowerShell execution found.</span><strong>idle</strong></div>
-                                <div class="exec-cmd">PowerShell execution evidence not present in current artifacts.</div>
+                                <div class="exec-head"><span>No recent commands found.</span><strong>idle</strong></div>
+                                <div class="exec-cmd">RunMRU and ConsoleHost history were not available in current artifacts.</div>
                             </li>
                             {% endif %}
                         </ul>
@@ -629,7 +640,7 @@
                             <span class="event-dot muted"></span>
                             <div>
                                 <strong>User Execution</strong>
-                                <small>{{ execution_quickview.powershell_events }} recent PowerShell events extracted from execution artifacts</small>
+                                <small>{{ execution_quickview.command_count }} recent commands extracted from registry and shell history</small>
                             </div>
                         </li>
                     </ul>
@@ -648,7 +659,7 @@
                     </header>
                     <div class="compact-resource-grid">
                         {% for resource in resources %}
-                        {% if loop.index <= 11 and (resource.special is not defined or resource.special == false) %}
+                        {% if loop.index <= 12 and (resource.special is not defined or resource.special == false) %}
                         <a href="{{ resource.url }}" class="compact-resource {% if resource.status == 'coming-soon' %}is-coming-soon{% endif %}">
                             <i class="{{ resource.icon }}" aria-hidden="true"></i>
                             <span>{{ resource.name }}</span>
@@ -746,6 +757,7 @@
 
 <div class="bottom-status-bar" role="status" aria-live="polite">
     <span><i class="fa-solid fa-circle-check" aria-hidden="true"></i> System: Nominal</span>
+    <span><i class="fa-solid fa-fingerprint" aria-hidden="true"></i> Host: <strong>{% if host_information_quickview.hostname %}{{ host_information_quickview.hostname }}{% else %}Unknown{% endif %}</strong></span>
     <span><i class="fa-solid fa-network-wired" aria-hidden="true"></i> Active Node: {{ user.username | upper }}</span>
     <span><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i> External Active: <strong>{{ network_quickview.external_established_connections }}</strong></span>
     <span><i class="fa-solid fa-memory" aria-hidden="true"></i> Memory Risk: <strong>{{ memory_quickview.risk_level }}</strong></span>

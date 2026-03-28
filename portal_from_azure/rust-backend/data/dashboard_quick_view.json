@@ -1,12 +1,14 @@
 {
   "analysis_metadata": {
-    "generated_at": "2026-03-22 13:09:48 +05:30",
+    "generated_at": "2026-03-27 16:13:55 +05:30",
     "generated_by": "dashboard_setter",
     "modules_processed": [
+      "host-information",
       "network",
       "memory",
       "ntfs",
       "browser",
+      "execution",
       "windows-event",
       "srum",
       "prefetch",
@@ -79,7 +81,7 @@
         "url": "https://www.google.com/search?q=what+is+kali+test1&oq=what+is+kali+test1&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQIRgKGKABMgcIAhAhGI8CMgcIAxAhGI8C0gEINDk0OGowajeoAgCwAgA&sourceid=chrome&ie=UTF-8&sei=0vmaafvjILSUseMPtdqjyAc"
       }
     ],
-    "source": "/Users/kali/Codes/wsl/browser_forensics/report.json",
+    "source": "browser_forensics/report.json",
     "top_domains": [
       {
         "count": 10,
@@ -196,8 +198,26 @@
       {
         "hits": 2,
         "relationship": "communicated_with",
+        "source": "process:startmenuexperiencehost",
+        "target": "ip:52.110.16.163"
+      },
+      {
+        "hits": 2,
+        "relationship": "communicated_with",
         "source": "process:unknown process",
-        "target": "ip:ff02::16"
+        "target": "ip:52.110.16.163"
+      },
+      {
+        "hits": 2,
+        "relationship": "communicated_with",
+        "source": "process:unknown process",
+        "target": "ip:192.168.180.2"
+      },
+      {
+        "hits": 2,
+        "relationship": "communicated_with",
+        "source": "process:unknown process",
+        "target": "ip:224.0.0.22"
       },
       {
         "hits": 2,
@@ -209,31 +229,13 @@
         "hits": 2,
         "relationship": "communicated_with",
         "source": "process:unknown process",
-        "target": "ip:52.110.16.163"
-      },
-      {
-        "hits": 2,
-        "relationship": "communicated_with",
-        "source": "process:unknown process",
         "target": "ip:ff02::1:2"
       },
       {
         "hits": 2,
         "relationship": "communicated_with",
         "source": "process:unknown process",
-        "target": "ip:224.0.0.22"
-      },
-      {
-        "hits": 2,
-        "relationship": "communicated_with",
-        "source": "process:startmenuexperiencehost",
-        "target": "ip:52.110.16.163"
-      },
-      {
-        "hits": 2,
-        "relationship": "communicated_with",
-        "source": "process:unknown process",
-        "target": "ip:192.168.180.2"
+        "target": "ip:ff02::16"
       },
       {
         "hits": 1,
@@ -251,7 +253,13 @@
         "hits": 1,
         "relationship": "communicated_with",
         "source": "process:idle",
-        "target": "ip:52.110.16.164"
+        "target": "ip:40.126.18.32"
+      },
+      {
+        "hits": 1,
+        "relationship": "communicated_with",
+        "source": "process:mpdefendercoreservice",
+        "target": "ip:52.123.128.14"
       },
       {
         "hits": 1,
@@ -268,7 +276,7 @@
       {
         "hits": 1,
         "relationship": "communicated_with",
-        "source": "process:unknown process",
+        "source": "process:idle",
         "target": "ip:52.110.16.164"
       },
       {
@@ -280,20 +288,20 @@
       {
         "hits": 1,
         "relationship": "communicated_with",
-        "source": "process:mpdefendercoreservice",
-        "target": "ip:52.123.128.14"
+        "source": "process:unknown process",
+        "target": "ip:52.110.16.164"
       },
       {
         "hits": 1,
-        "relationship": "communicated_with",
-        "source": "process:idle",
-        "target": "ip:40.126.18.32"
+        "relationship": "utilized",
+        "source": "user:s-1-5-18",
+        "target": "process:system"
       },
       {
         "hits": 1,
         "relationship": "utilized",
         "source": "user:s-1-5-21-1491582332-726934267-1684091681-1001",
-        "target": "process:svchost.exe"
+        "target": "process:chrome.exe"
       },
       {
         "hits": 1,
@@ -310,20 +318,14 @@
       {
         "hits": 1,
         "relationship": "utilized",
+        "source": "user:s-1-5-21-1491582332-726934267-1684091681-1001",
+        "target": "process:svchost.exe"
+      },
+      {
+        "hits": 1,
+        "relationship": "utilized",
         "source": "user:s-1-5-18",
         "target": "process:lsass.exe"
-      },
-      {
-        "hits": 1,
-        "relationship": "utilized",
-        "source": "user:s-1-5-18",
-        "target": "process:system"
-      },
-      {
-        "hits": 1,
-        "relationship": "utilized",
-        "source": "user:s-1-5-21-1491582332-726934267-1684091681-1001",
-        "target": "process:chrome.exe"
       },
       {
         "hits": 1,
@@ -846,7 +848,537 @@
         "label": "support.google.com"
       }
     ],
-    "source": "/Users/kali/Codes/wsl/browser_forensics/report.json | /Users/kali/Codes/wsl/network_forensics/output/live_ps_all_v1/forensic_events.csv | /Users/kali/Codes/wsl/prefetch_analyzer/report_improved.json | /Users/kali/Codes/wsl/srum_analysis/reports/srum_analysis_report.json"
+    "source": "browser_forensics/report.json | network_forensics/output/live_ps_all_v1/forensic_events.csv | prefetch_analyzer/report_improved.json | srum_analysis/reports/srum_analysis_report.json"
+  },
+  "execution_quickview": {
+    "command_count": 8,
+    "recent_commands": [
+      {
+        "command": "Add-PswaAuthorizationRule -UserName * -ComputerName * -ConfigurationName *",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "Enable-PSRemoting -Force",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "Get-Service -Name WinRM",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "Install-PswaWebApplication -UseTestCertificate",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "Install-WindowsFeature -Name WindowsPowerShellWebAccess -IncludeManagementTools",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "Test-WSMan",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "net localgroup \"remote management users\" t.minami /add",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      },
+      {
+        "command": "net user t.minami",
+        "pid": "n/a",
+        "process": "ConsoleHost",
+        "source": "ConsoleHost_history.txt",
+        "timestamp": "2026-03-22T16:49:04Z"
+      }
+    ],
+    "source": "ConsoleHost_history.txt"
+  },
+  "host_information_quickview": {
+    "active_hardware_profile": "Undocked Profile",
+    "bios_vendor": "",
+    "bios_version": "",
+    "bitlocker_status": "Not Detected",
+    "connected_devices": [
+      {
+        "category": "Display",
+        "first_seen": "2025-06-11 14:44:51 UTC",
+        "identifier": "1&1f0c3c2f&0&UID256",
+        "last_seen": "2025-06-11 14:44:47 UTC",
+        "name": "@monitor.inf,%nonpnpmonitor.devicedesc%;Generic Non-PnP Monitor",
+        "source": "SYSTEM\\Enum\\DISPLAY"
+      },
+      {
+        "category": "Display",
+        "first_seen": "2025-06-11 14:44:51 UTC",
+        "identifier": "1&31c5ecd4&0&UID256",
+        "last_seen": "2025-06-11 14:43:24 UTC",
+        "name": "@monitor.inf,%nonpnpmonitor.devicedesc%;Generic Non-PnP Monitor",
+        "source": "SYSTEM\\Enum\\DISPLAY"
+      },
+      {
+        "category": "Display",
+        "first_seen": "2025-06-11 14:44:51 UTC",
+        "identifier": "1&8713bca&0&UID0",
+        "last_seen": "2025-04-26 18:02:26 UTC",
+        "name": "@monitor.inf,%nonpnpmonitor.devicedesc%;Generic Non-PnP Monitor",
+        "source": "SYSTEM\\Enum\\DISPLAY"
+      },
+      {
+        "category": "Display",
+        "first_seen": "2025-06-11 14:44:51 UTC",
+        "identifier": "1&c528b8a&0&UID256",
+        "last_seen": "2025-06-11 14:44:54 UTC",
+        "name": "@monitor.inf,%nonpnpmonitor.devicedesc%;Generic Non-PnP Monitor",
+        "source": "SYSTEM\\Enum\\DISPLAY"
+      },
+      {
+        "category": "Display",
+        "first_seen": "2025-06-11 14:44:51 UTC",
+        "identifier": "4&427137e&0&UID0",
+        "last_seen": "2025-04-26 18:02:27 UTC",
+        "name": "@monitor.inf,%nonpnpmonitor.devicedesc%;Generic Non-PnP Monitor",
+        "source": "SYSTEM\\Enum\\DISPLAY"
+      },
+      {
+        "category": "Printer",
+        "first_seen": "",
+        "identifier": "PORTPROMPT:",
+        "last_seen": "2025-06-11 14:44:53 UTC",
+        "name": "Microsoft Print to PDF",
+        "source": "SOFTWARE\\...\\Print\\Printers"
+      },
+      {
+        "category": "Printer",
+        "first_seen": "",
+        "identifier": "PORTPROMPT:",
+        "last_seen": "2025-06-11 14:44:53 UTC",
+        "name": "Microsoft XPS Document Writer",
+        "source": "SOFTWARE\\...\\Print\\Printers"
+      }
+    ],
+    "country_code": "",
+    "cpu_count": 0,
+    "cpu_name": "",
+    "current_control_set": "ControlSet001",
+    "defender_status": "Active",
+    "defender_tamper_protection": "Off",
+    "domain": "localdomain",
+    "firewall_domain": "On",
+    "firewall_public": "On",
+    "firewall_standard": "On",
+    "forensic_note": "Identity derived from SOFTWARE, SYSTEM, SAM, parsed filesystem metadata, and optional per-user parsed artifacts. The HARDWARE hive was not available in this case, so CPU/BIOS inventory remains blank; hardware-profile state is still taken directly from SYSTEM\\CurrentControlSet\\Control\\IDConfigDB and SYSTEM\\CurrentControlSet\\Hardware Profiles.",
+    "hardware_profiles": [
+      {
+        "friendly_name": "Undocked Profile",
+        "last_seen": "2025-04-27 08:54:08 UTC",
+        "preference_order": "0",
+        "profile_guid": "{2e2580fe-2345-11f0-9425-806e6f6e6963}",
+        "profile_id": "0001",
+        "source": "SYSTEM\\CurrentControlSet\\Control\\IDConfigDB\\Hardware Profiles + SYSTEM\\CurrentControlSet\\Hardware Profiles",
+        "status": "Active Preference · Cloned · Undocked · Unknown Flag Present · Attach.ToDesktop"
+      },
+      {
+        "friendly_name": "New Hardware Profile",
+        "last_seen": "2021-05-08 08:20:41 UTC",
+        "preference_order": "Fallback",
+        "profile_guid": "",
+        "profile_id": "0000",
+        "source": "SYSTEM\\CurrentControlSet\\Control\\IDConfigDB\\Hardware Profiles + SYSTEM\\CurrentControlSet\\Hardware Profiles",
+        "status": "Pristine · Unknown Flag Present"
+      }
+    ],
+    "hostname": "LIBERYSV08",
+    "input_method_hints": [],
+    "install_date": "2025-04-26 17:58:50 UTC",
+    "installation_type": "Server",
+    "installed_software": [
+      {
+        "architecture": "x64",
+        "install_date": "2025-06-07 22:53:09 UTC",
+        "name": "7-Zip 24.09 (x64)",
+        "publisher": "Igor Pavlov",
+        "version": "24.09"
+      },
+      {
+        "architecture": "x86",
+        "install_date": "2025-06-08",
+        "name": "Microsoft Edge",
+        "publisher": "Microsoft Corporation",
+        "version": "137.0.3296.68"
+      },
+      {
+        "architecture": "x86",
+        "install_date": "2025-04-26 18:01:14 UTC",
+        "name": "Microsoft Visual C++ 2015-2022 Redistributable (x64) - 14.36.32532",
+        "publisher": "Microsoft Corporation",
+        "version": "14.36.32532.0"
+      },
+      {
+        "architecture": "x86",
+        "install_date": "2025-04-26 18:01:09 UTC",
+        "name": "Microsoft Visual C++ 2015-2022 Redistributable (x86) - 14.36.32532",
+        "publisher": "Microsoft Corporation",
+        "version": "14.36.32532.0"
+      },
+      {
+        "architecture": "x64",
+        "install_date": "2025-04-26",
+        "name": "VMware Tools",
+        "publisher": "VMware, Inc.",
+        "version": "12.4.5.23787635"
+      }
+    ],
+    "installed_software_count": 5,
+    "keyboard_layouts": [
+      "Arabic (101)",
+      "Bulgarian (Typewriter)",
+      "Chinese (Traditional) - US Keyboard",
+      "Czech"
+    ],
+    "last_shutdown_time": "2025-06-07 14:07:33 UTC",
+    "machine_guid": "fb6426da-47da-4883-a5a7-4d6b53fd6e1a",
+    "network_interfaces": [
+      {
+        "adapter": "Intel(R) 82574L Gigabit Network Connection",
+        "dhcp": "DHCP",
+        "dns": "192.168.189.2",
+        "gateway": "192.168.189.2",
+        "ip_address": "192.168.189.131",
+        "status": "Connected"
+      }
+    ],
+    "network_profiles": [
+      {
+        "category": "Private",
+        "dns_suffix": "<none>",
+        "first_connected": "2025-04-26 10:58:13",
+        "gateway_mac": "00:50:56:F9:91:91",
+        "last_connected": "2025-06-11 07:09:49",
+        "profile_name": "Network"
+      }
+    ],
+    "os_architecture": "AMD64",
+    "os_build": "20348.587",
+    "os_display_version": "21H2",
+    "os_product_name": "Windows Server 2022 Standard Evaluation",
+    "physical_memory_human": "",
+    "product_id": "00454-40000-00001-AA533",
+    "registered_organization": "",
+    "registered_owner": "Windows User",
+    "remote_desktop_nla": "Disabled",
+    "remote_desktop_port": "3389",
+    "remote_desktop_status": "Allowed",
+    "source": "registry_parser/output/SYSTEM.json | registry_parser/output/SOFTWARE.json | registry_parser/output/SAM.json | Transfer/Parsed/FileSystem | Transfer/Parsed | Transfer/Parsed/FileFolderAccess | Transfer/Parsed/EventLogs/20260327071823_EvtxECmd_Output.csv",
+    "storage_volumes": [
+      {
+        "bitlocker_status": "Not Detected",
+        "drive_letter": "C:",
+        "partition_layout": "512 B/sector · 4096 B cluster · 153239551 sectors · serial 18 E0 F9 DE F1 F9 DE C0",
+        "serial_number": "18 E0 F9 DE F1 F9 DE C0",
+        "shadow_copies": "Not Observed",
+        "source": "C:\\KAPE\\Collected\\C\\$Boot",
+        "volume_guid": "",
+        "volume_label": "NTFS Volume"
+      }
+    ],
+    "system_locale": "0409",
+    "system_manufacturer": "",
+    "system_model": "",
+    "system_root": "C:\\Windows",
+    "third_party_encryption": [],
+    "time_zone": "Pacific Standard Time",
+    "timeline_anchors": [
+      {
+        "accent": "primary",
+        "label": "System Install",
+        "timestamp": "2025-04-26 17:58:50 UTC"
+      },
+      {
+        "accent": "neutral",
+        "label": "Last Shutdown",
+        "timestamp": "2025-06-07 14:07:33 UTC"
+      },
+      {
+        "accent": "primary",
+        "label": "Latest Profile Activity",
+        "timestamp": "2025-06-08 10:33:33 UTC"
+      },
+      {
+        "accent": "success",
+        "label": "Registry Parsed",
+        "timestamp": "2026-03-24 19:06:08 UTC"
+      }
+    ],
+    "uac_level": "Default",
+    "uac_status": "Enabled",
+    "usb_storage_devices": [
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000000100000\\{53f5630d-b6bf-11...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000006500000\\{53f5630d-b6bf-11...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000007500000\\{53f5630d-b6bf-11...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{6ead3d82-25ec-46bc-b7fd-c1f0df8f5037}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000000100000\\{6ead3d82-25ec-46...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{6ead3d82-25ec-46bc-b7fd-c1f0df8f5037}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000006500000\\{6ead3d82-25ec-46...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{6ead3d82-25ec-46bc-b7fd-c1f0df8f5037}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000007500000\\{6ead3d82-25ec-46...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{7f108a28-9833-4b3b-b780-2c6b5fa5c062}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000000100000\\{7f108a28-9833-4b...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{7f108a28-9833-4b3b-b780-2c6b5fa5c062}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000006500000\\{7f108a28-9833-4b...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{7f108a28-9833-4b3b-b780-2c6b5fa5c062}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\STORAGE\\Volume\\{2e258121-2345-11f0-9425-806e6f6e6963}\\0000000007500000\\{7f108a28-9833-4b...",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{a5dcbf10-6530-11d2-901f-00c04fb951ed}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\USB\\VID_0E0F&PID_0003\\6&39d724fe&0&5\\{a5dcbf10-6530-11d2-901f-00c04fb951ed}",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "last_seen": "2025-04-27 07:54:22 UTC",
+        "name": "\\\\?\\USB\\ROOT_HUB\\5&2891968b&0\\{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\USB\\ROOT_HUB20\\5&36a4b5d6&0\\{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Device Class",
+        "first_seen": "",
+        "identifier": "{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "last_seen": "2025-04-27 07:54:15 UTC",
+        "name": "\\\\?\\USB\\ROOT_HUB30\\5&11106705&0&0\\{f18a0e88-c30c-11d0-8815-00a0c906bed8}",
+        "source": "SYSTEM\\Control\\DeviceClasses"
+      },
+      {
+        "category": "Storage Volume",
+        "first_seen": "2025-04-27 07:54:15 UTC",
+        "identifier": "{2e258121-2345-11f0-9425-806e6f6e6963}#0000000000100000",
+        "last_seen": "2025-04-27 07:54:31 UTC",
+        "name": "@volume.inf,%volumedevicedesc%;Volume",
+        "source": "SYSTEM\\Enum\\STORAGE"
+      }
+    ],
+    "usb_supporting_evidence": [
+      "SYSTEM\\Select resolved the active hardware context to ControlSet001.",
+      "SYSTEM\\Services exposed USB stack services: USBHUB3, USBSTOR, USBXHCI, Usb4DeviceRouter, Usb4HostRouter, usbaudio, usbaudio2, usbccgp.",
+      "SOFTWARE\\Microsoft\\Windows Portable Devices\\Devices contained 0 device entries.",
+      "SOFTWARE policy controls were present for removable storage: RemovableDiskDenyWriteAccess, WPDDevicesDenyReadAccessPerDevice, WPDDevicesDenyReadAccessPerUser, WPDDevicesDenyWriteAccessPerDevice, WPDDevicesDenyWriteAccessPerUser."
+    ],
+    "usb_user_attribution": [
+      {
+        "artifact": "Shellbags",
+        "detail": "Desktop\\D:\\ · D:\\ · Users property view: Drive letter",
+        "first_seen": "2026-02-19 16:48:50 UTC",
+        "last_seen": "2026-03-27 19:43:12 UTC",
+        "observed_item": "D:",
+        "source": "Transfer/Parsed/FileFolderAccess/kaliheker_UsrClass.csv",
+        "username": "kaliheker"
+      },
+      {
+        "artifact": "Shellbags",
+        "detail": "Desktop\\My Computer\\E: · E: · Drive letter",
+        "first_seen": "",
+        "last_seen": "2026-02-22 20:20:45 UTC",
+        "observed_item": "E:",
+        "source": "Transfer/Parsed/FileFolderAccess/kaliheker_UsrClass.csv",
+        "username": "kaliheker"
+      },
+      {
+        "artifact": "Shellbags",
+        "detail": "Desktop\\My Computer\\E:\\C · C · Directory · NTFS file system",
+        "first_seen": "2025-09-13 08:37:42 UTC",
+        "last_seen": "2025-09-13 08:37:42 UTC",
+        "observed_item": "E:",
+        "source": "Transfer/Parsed/FileFolderAccess/kaliheker_UsrClass.csv",
+        "username": "kaliheker"
+      }
+    ],
+    "user_accounts": [
+      {
+        "failed_logons": 0,
+        "is_admin": true,
+        "last_activity": "2025-06-08 10:33:33 UTC",
+        "last_logon": "2025-06-11 15:29:34 UTC",
+        "logon_count": 5,
+        "password_last_set": "2025-04-26 17:58:49 UTC",
+        "profile_path": "C:\\Users\\Administrator",
+        "sid": "S-1-5-21-3473629566-4134604280-926640063-500",
+        "state": "Administrator · Builtin Admin · State 0x100 · Profile · Locked/Restricted · Normal",
+        "username": "Administrator"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-04-26 17:58:11 UTC",
+        "last_logon": "",
+        "logon_count": 0,
+        "password_last_set": "",
+        "profile_path": "",
+        "sid": "",
+        "state": "SAM only",
+        "username": "DefaultAccount"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-04-26 17:58:11 UTC",
+        "last_logon": "",
+        "logon_count": 0,
+        "password_last_set": "",
+        "profile_path": "",
+        "sid": "",
+        "state": "SAM only",
+        "username": "Guest"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-04-26 17:58:11 UTC",
+        "last_logon": "",
+        "logon_count": 0,
+        "password_last_set": "",
+        "profile_path": "",
+        "sid": "",
+        "state": "SAM only",
+        "username": "WDAGUtilityAccount"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-06-11 14:18:04 UTC",
+        "last_logon": "2025-06-11 14:44:48 UTC",
+        "logon_count": 6,
+        "password_last_set": "2025-06-07 13:52:19 UTC",
+        "profile_path": "C:\\Users\\k.texus",
+        "sid": "S-1-5-21-3473629566-4134604280-926640063-1002",
+        "state": "Healthy · Profile · Locked/Restricted · Normal",
+        "username": "k.texus"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-06-07 13:52:03 UTC",
+        "last_logon": "",
+        "logon_count": 0,
+        "password_last_set": "",
+        "profile_path": "",
+        "sid": "",
+        "state": "SAM only",
+        "username": "n.nokoda"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": false,
+        "last_activity": "2025-06-07 13:50:06 UTC",
+        "last_logon": "",
+        "logon_count": 0,
+        "password_last_set": "",
+        "profile_path": "",
+        "sid": "",
+        "state": "SAM only",
+        "username": "t.miami"
+      },
+      {
+        "failed_logons": 0,
+        "is_admin": true,
+        "last_activity": "2025-06-11 14:55:40 UTC",
+        "last_logon": "2025-06-11 14:55:40 UTC",
+        "logon_count": 0,
+        "password_last_set": "2025-06-11 14:48:17 UTC",
+        "profile_path": "C:\\Users\\t.minami",
+        "sid": "S-1-5-21-3473629566-4134604280-926640063-1005",
+        "state": "Administrator · Temp · State 0x204 · Profile · Locked/Restricted",
+        "username": "t.minami"
+      }
+    ],
+    "user_locale_hints": [],
+    "volume_shadow_copies_present": false
   },
   "memory_quickview": {
     "analysis_metadata": {
@@ -1335,7 +1867,7 @@
         "percent": 0.0
       }
     ],
-    "source": "/Users/kali/Codes/wsl/memory_corelation/reports/analysis.json",
+    "source": "memory_corelation/reports/analysis.json",
     "top_categories": [
       {
         "count": 5,
@@ -1414,7 +1946,7 @@
     "established_connections": 30,
     "external_established_connections": 13,
     "listening_ports": 13,
-    "source": "/Users/kali/Codes/wsl/network_forensics/output/live_ps_all_v1/forensic_report.json",
+    "source": "network_forensics/output/live_ps_all_v1/forensic_report.json",
     "top_remote_hosts": [
       {
         "count": 4,
@@ -1444,54 +1976,13 @@
     "total_connections": 661
   },
   "ntfs_quickview": {
-    "active_entries": 171015,
-    "ads_entries": 8136,
-    "directories": 35713,
-    "files": 135302,
-    "source": "/Users/kali/Codes/wsl/ntfs_analyzer/output/mft.json",
-    "top_extensions": [
-      {
-        "count": 29602,
-        "label": ".dll"
-      },
-      {
-        "count": 18445,
-        "label": ".manifest"
-      },
-      {
-        "count": 17017,
-        "label": ".png"
-      },
-      {
-        "count": 9801,
-        "label": ".mui"
-      },
-      {
-        "count": 4224,
-        "label": ".exe"
-      },
-      {
-        "count": 3595,
-        "label": ".cat"
-      },
-      {
-        "count": 2346,
-        "label": ".inf"
-      },
-      {
-        "count": 2331,
-        "label": ".cdf-ms"
-      },
-      {
-        "count": 2298,
-        "label": ".xml"
-      },
-      {
-        "count": 2226,
-        "label": "[no-ext]"
-      }
-    ],
-    "total_entries": 171015,
+    "active_entries": 0,
+    "ads_entries": 0,
+    "directories": 0,
+    "files": 0,
+    "source": "",
+    "top_extensions": [],
+    "total_entries": 0,
     "total_file_size_human": "0 B"
   },
   "srum_quickview": {
@@ -1566,7 +2057,7 @@
     "monitored_apps": 998,
     "network_human": "345.7 GB",
     "network_percent": 6.5,
-    "source": "/Users/kali/Codes/wsl/srum_analysis/reports/srum_analysis_report.json",
+    "source": "srum_analysis/reports/srum_analysis_report.json",
     "top_consumers": [
       {
         "app_label": "lsass.exe",
@@ -1624,1806 +2115,6 @@
   },
   "super_timeline": {
     "events": [
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_1280.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_1280.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_1920.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_1920.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_2560.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_2560.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_sr.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_sr.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_wide.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_wide.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_exif.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_exif.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_wide_alternate.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_wide_alternate.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_custom_stream.db | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_custom_stream.db",
-        "epoch_seconds": 1756153284,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:24Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250824-224427-00000003-fffffffeffffffff.bin | 909312 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250824-224427-00000003-fffffffeffffffff.bin",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250824-231418-00000003-fffffffeffffffff.bin | 155648 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250824-231418-00000003-fffffffeffffffff.bin",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.5.gthr | 490 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.5.gthr",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.5.Crwl | 2 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.5.Crwl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppCoreTracing-20250820-094743-00000003-100000000.bin | 32768 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppCoreTracing-20250820-094743-00000003-100000000.bin",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\ulib.dll | 185656 bytes",
-        "entity": ".\\Windows\\System32\\ulib.dll",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Windows\\WinSxS\\amd64_microsoft-windows-f..temutilitylibraries_31bf3856ad364e35_10.0.19041.1266_none_5e5c2b5da4deafc1\\ulib.dll | 185656 bytes",
-        "entity": ".\\Windows\\WinSxS\\amd64_microsoft-windows-f..temutilitylibraries_31bf3856ad364e35_10.0.19041.1266_none_5e5c2b5da4deafc1\\ulib.dll",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\en-US\\ulib.dll.mui | 280064 bytes",
-        "entity": ".\\Windows\\System32\\en-US\\ulib.dll.mui",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Windows\\WinSxS\\amd64_microsoft-windows-f..libraries.resources_31bf3856ad364e35_10.0.19041.1023_en-us_a8bc7abd93d5cd5d\\ulib.dll.mui | 280064 bytes",
-        "entity": ".\\Windows\\WinSxS\\amd64_microsoft-windows-f..libraries.resources_31bf3856ad364e35_10.0.19041.1023_en-us_a8bc7abd93d5cd5d\\ulib.dll.mui",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.3.gthr | 6500 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.3.gthr",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.3.Crwl | 416 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.3.Crwl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppCoreTracing-20250820-101110-00000003-100000000.bin | 40960 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppCoreTracing-20250820-101110-00000003-100000000.bin",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250820-171136-00000003-fffffffeffffffff.bin | 352256 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Windows Defender\\Support\\MpWppTracing-20250820-171136-00000003-fffffffeffffffff.bin",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Windows\\Temp\\MpCmdRun.log | 53264 bytes",
-        "entity": ".\\Windows\\Temp\\MpCmdRun.log",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-500\\275cad93-d3d0-4a44-bbb3-62366bf077e4 | 468 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-500\\275cad93-d3d0-4a44-bbb3-62366bf077e4",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2122.6376.1.odl | 1170 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2122.6376.1.odl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.2.gthr | 11080 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.2.gthr",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2122.6376.2.odl | 2725 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2122.6376.2.odl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2106.1464.1.odl | 9809 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2106.1464.1.odl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2106.1464.2.odl | 1175 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-15.2106.1464.2.odl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-1002\\abceede9-fb3c-4a7e-b6e8-094d87f6fbbd | 468 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-1002\\abceede9-fb3c-4a7e-b6e8-094d87f6fbbd",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-1002\\Preferred | 24 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Roaming\\Microsoft\\Protect\\S-1-5-21-3871582759-1638593395-315824688-1002\\Preferred",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.4.gthr | 1056 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.4.gthr",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.4.Crwl | 2 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\GatherLogs\\SystemIndex\\SystemIndex.4.Crwl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1657.9712.1.odl | 1170 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1657.9712.1.odl",
-        "epoch_seconds": 1756153285,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:25Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1714.2544.1.odl | 1170 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1714.2544.1.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1714.2544.2.odl | 42815 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1714.2544.2.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1714.2544.2.odlgz | 6834 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1714.2544.2.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1714.2544.1.odlgz | 710 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1714.2544.1.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1657.9712.2.odlgz | 1072 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1657.9712.2.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb0000E.jtx | 1048576 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb0000E.jtx",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": "MAC.",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb.jtx | 1048576 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb.jtx",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": "MAC.",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb.jcp | 8192 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edb.jcp",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": "MAC.",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edbtmp.jtx | 1048576 bytes",
-        "entity": ".\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\edbtmp.jtx",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": "..C.",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealth.json | 569 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealth.json",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2122.6376.2.odlgz | 1065 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2122.6376.2.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\OneDriveLauncher-2025-08-15.2132.5732.1.odl | 1170 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\OneDriveLauncher-2025-08-15.2132.5732.1.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\OneDriveLauncher-2025-08-15.2132.5732.2.odl | 9885 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\OneDriveLauncher-2025-08-15.2132.5732.2.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileSyncConfig-2025-08-15.2106.2416.1.odl | 4741 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileSyncConfig-2025-08-15.2106.2416.1.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2122.6376.1.odlgz | 703 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2122.6376.1.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealthSummaryConfiguration.ini | 77 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealthSummaryConfiguration.ini",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2106.1464.2.odlgz | 716 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2106.1464.2.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2106.1464.1.odlgz | 1810 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-15.2106.1464.1.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-15.2107.3308.1.odl | 82614 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-15.2107.3308.1.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1657.9712.1.odlgz | 706 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1657.9712.1.odlgz",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1657.9712.2.odl | 2725 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1657.9712.2.odl",
-        "epoch_seconds": 1756153286,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:26Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1657.8856.2.odlgz | 74230 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1657.8856.2.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-14_163000_114-368.loggz | 4865 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-14_163000_114-368.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1630.276.1.odlgz | 1714 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1630.276.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-14.1630.7772.1.odlgz | 23518 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-14.1630.7772.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1630.3760.1.odlgz | 3405 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1630.3760.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-14_163058_3760-1908.loggz | 5465 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-14_163058_3760-1908.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-14_163107_2312-5112.loggz | 16482 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-14_163107_2312-5112.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1631.3760.1.odlgz | 1814 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-14.1631.3760.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-14.1631.2312.1.odlgz | 675 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-14.1631.2312.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2122.2604.2.odlgz | 71862 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2122.2604.2.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-14.1631.756.1.odlgz | 39796 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-14.1631.756.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2107.3780.2.odlgz | 45921 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2107.3780.2.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-15_210723_3308-3888.loggz | 1448 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-15_210723_3308-3888.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-15.2107.3308.1.odlgz | 7990 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-15.2107.3308.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2122.2604.1.odlgz | 706 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2122.2604.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-14.1630.2100.1.odlgz | 446 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-14.1630.2100.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-14_163017_834-8bc.loggz | 10623 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-14_163017_834-8bc.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2105.7096.1.odlgz | 51987 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2105.7096.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2106.7060.1.odlgz | 5098 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2106.7060.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2106.7224.1.odlgz | 545 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2106.7224.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-15_210641_7224-7228.loggz | 25556 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-15_210641_7224-7228.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_210641_7060-7056.loggz | 5476 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_210641_7060-7056.loggz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileSyncConfig-2025-08-15.2106.2416.1.odlgz | 1706 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileSyncConfig-2025-08-15.2106.2416.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2106.3780.1.odlgz | 30295 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2106.3780.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\OneDriveLauncher-2025-08-15.2132.5732.1.odlgz | 703 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\OneDriveLauncher-2025-08-15.2132.5732.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1657.8856.1.odlgz | 712 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1657.8856.1.odlgz",
-        "epoch_seconds": 1756153287,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:27Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1734.9624.1.odlgz | 707 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1734.9624.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1713.6640.1.odlgz | 712 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1713.6640.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-15.2106.1784.1.odl | 2415 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-15.2106.1784.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1734.9624.1.odl | 1171 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1734.9624.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1734.9624.2.odl | 2725 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1734.9624.2.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_210534_7096-7100.loggz | 3147 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_210534_7096-7100.loggz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetryCache.otc.session | 20480 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetryCache.otc.session",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_212259_2604-436.loggz | 1791 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_212259_2604-436.loggz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-14_163046_1e5c-1bbc.loggz | 3677 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-14_163046_1e5c-1bbc.loggz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-15.2106.1784.2.odl | 566 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-15.2106.1784.2.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\TraceCurrent.0304.0013.etl | 8192 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\TraceCurrent.0304.0013.etl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-15.2106.1784.1.odlgz | 18927 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-15.2106.1784.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1656.8780.1.odlgz | 1863 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1656.8780.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealthSummaryConfiguration.ini | 77 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealthSummaryConfiguration.ini",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealth.json | 569 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\DeviceHealth.json",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2125.9700.1.odlgz | 1715 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2125.9700.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1656.8780.1.odl | 9944 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1656.8780.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\general.keystore | 113 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\general.keystore",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1656.8780.2.odl | 1175 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileCoAuth-2025-08-20.1656.8780.2.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\general.keystore | 112 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\general.keystore",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileSyncConfig-2025-08-20.1655.8044.1.odlgz | 928 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileSyncConfig-2025-08-20.1655.8044.1.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1656.8780.2.odlgz | 720 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FileCoAuth-2025-08-20.1656.8780.2.odlgz",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileSyncConfig-2025-08-20.1655.8044.1.odl | 1686 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\FileSyncConfig-2025-08-20.1655.8044.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-20.1654.7556.1.odl | 40206 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-20.1654.7556.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\DeviceHealthSummaryConfiguration.ini | 77 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\DeviceHealthSummaryConfiguration.ini",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-20.1654.7564.1.odl | 33586 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\StandaloneUpdater-2025-08-20.1654.7564.1.odl",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\telemetry-dll-ramp-value.txt | 12 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Common\\telemetry-dll-ramp-value.txt",
-        "epoch_seconds": 1756153288,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:28Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1734.7588.2.aodl | 476446 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1734.7588.2.aodl",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1649.3016.1.odlgz | 51138 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1649.3016.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-20_164947_3016-4652.loggz | 3170 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-20_164947_3016-4652.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\assertInformation.ini | 308 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\assertInformation.ini",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2125.1252.1.odlgz | 41777 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2125.1252.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_212507_25e4-12a0.loggz | 5324 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_212507_25e4-12a0.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2125.8296.1.odlgz | 23698 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-15.2125.8296.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_212512_2068-2130.loggz | 3675 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Update_2025-08-15_212512_2068-2130.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_212525_9808-9804.loggz | 5461 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-15_212525_9808-9804.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2125.9808.1.odlgz | 3404 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-15.2125.9808.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2125.7420.1.odlgz | 679 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2125.7420.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-15_212534_7420-5740.loggz | 16425 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-15_212534_7420-5740.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetryCache.otc.session | 20480 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetryCache.otc.session",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\TraceCurrent.0304.0013.etl | 8192 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\TraceCurrent.0304.0013.etl",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FeedbackHub\\SubmissionPayload.json | 88 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\FeedbackHub\\SubmissionPayload.json",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2125.6912.1.odlgz | 445 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-15.2125.6912.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-20.1655.8636.1.aodl | 2725 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\NucleusLocal-2025-08-20.1655.8636.1.aodl",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\general.keystore | 112 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Local\\general.keystore",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\general.keystore | 112 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\general.keystore",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-20.1656.8636.2.aodl | 19090 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-20.1656.8636.2.aodl",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-20.1650.4816.1.odlgz | 5135 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-2025-08-20.1650.4816.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-20_165044_4816-1360.loggz | 5517 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-20_165044_4816-1360.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-20.1655.8636.1.odlgz | 18857 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\Nucleus-2025-08-20.1655.8636.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-20_165046_2320-2608.loggz | 31034 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser_2025-08-20_165046_2320-2608.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-20.1650.2320.1.odlgz | 546 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install-PerUser-2025-08-20.1650.2320.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-20.1654.7556.1.odlgz | 5918 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-20.1654.7556.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-20_165434_7564-7568.loggz | 1917 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-20_165434_7564-7568.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-20_165434_7556-7560.loggz | 1927 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdate_2025-08-20_165434_7556-7560.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-20.1654.7564.1.odlgz | 5429 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\StandaloneUpdater-2025-08-20.1654.7564.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-20_165505_7240-7360.loggz | 1089 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\Install_2025-08-20_165505_7240-7360.loggz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1655.7272.1.odlgz | 32121 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\SyncEngine-2025-08-20.1655.7272.1.odlgz",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetry-dll-ramp-value.txt | 12 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\Personal\\telemetry-dll-ramp-value.txt",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\telemetry-dll-ramp-value.txt | 12 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\telemetry-dll-ramp-value.txt",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\microsoftNucleusTelemetryCache.otc | 24576 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\microsoftNucleusTelemetryCache.otc",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\DeviceHealthSummaryConfiguration.ini | 77 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\logs\\ListSync\\Business1\\DeviceHealthSummaryConfiguration.ini",
-        "epoch_seconds": 1756153289,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:29Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\LogFiles\\WdiContextLog.etl.003 | 294912 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\LogFiles\\WdiContextLog.etl.003",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\global.ini | 3686 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\global.ini",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\S-1-5-21-3871582759-1638593395-315824688-1001_UserData.bin | 304 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\S-1-5-21-3871582759-1638593395-315824688-1001_UserData.bin",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{024525de-dbe4-4b29-9948-674682cbff61}\\snapshot.etl | 262144 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{024525de-dbe4-4b29-9948-674682cbff61}\\snapshot.etl",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\S-1-5-21-3871582759-1638593395-315824688-500_UserData.bin | 2426 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\S-1-5-21-3871582759-1638593395-315824688-500_UserData.bin",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\LogFiles\\ShutdownPerfDiagLogger.etl | 3670016 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\LogFiles\\ShutdownPerfDiagLogger.etl",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\PreSignInSettingsConfig.json | 64854 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\PreSignInSettingsConfig.json",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\ECSConfig.json | 475 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\ECSConfig.json",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\logUploaderSettings_temp.ini | 108 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\logUploaderSettings_temp.ini",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\logUploaderSettings.ini | 108 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\logUploaderSettings.ini",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db | 12288 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db-wal | 86552 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db-wal",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db-shm | 32768 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\CxP.db-shm",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db-wal | 20632 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db-wal",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db | 12288 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db-shm | 32768 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SettingsDatabase.db-shm",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SyncEngineDatabase.db | 135168 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SyncEngineDatabase.db",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\OCSI.db | 24576 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\OCSI.db",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{67144949-5132-4859-8036-a737b43825d8}\\{7279a32a-2acb-41b6-84fe-926d65b9f283}\\snapshot.etl | 212992 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{67144949-5132-4859-8036-a737b43825d8}\\{7279a32a-2acb-41b6-84fe-926d65b9f283}\\snapshot.etl",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\assertInformation.ini | 308 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\assertInformation.ini",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SurveyManagerState.json | 1844 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\OneDrive\\settings\\Personal\\SurveyManagerState.json",
-        "epoch_seconds": 1756153290,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:30Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\SleepStudy\\ScreenOn\\ScreenOnPowerStudyTraceSession-2025-08-25-12-50-27.etl | 327680 bytes",
-        "entity": ".\\Windows\\System32\\SleepStudy\\ScreenOn\\ScreenOnPowerStudyTraceSession-2025-08-25-12-50-27.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{7367e702-93ef-4430-8264-c72cb4b964cb}\\snapshot.etl | 458752 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{7367e702-93ef-4430-8264-c72cb4b964cb}\\snapshot.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_211435_096.etl | 98304 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_211435_096.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_212351_064.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_212351_064.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{6222cfad-9a32-4ade-aaa8-a8da3274858b}\\snapshot.etl | 294912 bytes",
-        "entity": ".\\Windows\\System32\\WDI\\{86432a0b-3c7d-4ddf-a89c-172faa90485d}\\{6222cfad-9a32-4ade-aaa8-a8da3274858b}\\snapshot.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250820_165449_024.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250820_165449_024.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250824_225010_773.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250824_225010_773.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250825_195610_790.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\domgmt.20250825_195610_790.etl",
-        "epoch_seconds": 1756153291,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:31Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250820_171359_555.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250820_171359_555.etl",
-        "epoch_seconds": 1756153292,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:32Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_213331_377.etl | 1409024 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_213331_377.etl",
-        "epoch_seconds": 1756153292,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:32Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250824_231618_893.etl | 65536 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250824_231618_893.etl",
-        "epoch_seconds": 1756153292,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:32Z"
-      },
-      {
-        "detail": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_214219_970.etl | 3637248 bytes",
-        "entity": ".\\Windows\\ServiceProfiles\\NetworkService\\AppData\\Local\\Microsoft\\Windows\\DeliveryOptimization\\Logs\\dosvc.20250815_214219_970.etl",
-        "epoch_seconds": 1756153292,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:32Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Preferences | 37309 bytes",
-        "entity": ".\\Users\\Administrator\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Preferences",
-        "epoch_seconds": 1756153292,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:32Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbtmp.log | 524288 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbtmp.log",
-        "epoch_seconds": 1756153293,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:33Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbres00001.jrs | 524288 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbres00001.jrs",
-        "epoch_seconds": 1756153293,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:33Z"
-      },
-      {
-        "detail": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbres00002.jrs | 524288 bytes",
-        "entity": ".\\Users\\Werni\\AppData\\Local\\Microsoft\\Internet Explorer\\CacheStorage\\edbres00002.jrs",
-        "epoch_seconds": 1756153293,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": ".A..",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:33Z"
-      },
-      {
-        "detail": ".\\Users\\Administrator\\Downloads\\kape\\KAPE\\2025-08-25T20_20_59_5246365_ConsoleLog.txt | 40537 bytes",
-        "entity": ".\\Users\\Administrator\\Downloads\\kape\\KAPE\\2025-08-25T20_20_59_5246365_ConsoleLog.txt",
-        "epoch_seconds": 1756153293,
-        "event_type": "File MACB",
-        "lane": "NTFS",
-        "macb": "MAC.",
-        "source": "$MFT",
-        "timestamp": "2025-08-25T20:21:33Z"
-      },
       {
         "detail": "C:\\Users\\kaliheker\\Downloads\\BraveBrowserSetup-BRV011.exe",
         "entity": "Microsoft Edge / Default",
@@ -7626,8 +6317,8 @@
       }
     ],
     "reference_timestamp": "2026-03-17T18:47:00Z",
-    "source": "/Users/kali/Codes/wsl/ntfs_analyzer/output/mft.json | /Users/kali/Codes/wsl/browser_forensics/report.json | /Users/kali/Codes/wsl/prefetch_analyzer/report_improved.json | /Users/kali/Codes/wsl/network_forensics/output/live_ps_all_v1/forensic_events.csv | /Users/kali/Codes/wsl/srum_analysis/reports/srum_analysis_report.json",
-    "total_events": 600
+    "source": "browser_forensics/report.json | prefetch_analyzer/report_improved.json | network_forensics/output/live_ps_all_v1/forensic_events.csv | srum_analysis/reports/srum_analysis_report.json",
+    "total_events": 420
   },
   "windows_event_quickview": {
     "category": "POLICY_TAMPERING",
@@ -7635,7 +6326,7 @@
     "event_id": "N/A",
     "host": "LiberySV08",
     "priority": "HIGH PRIORITY",
-    "source": "/Users/kali/Codes/wsl/portal_from_azure/tools/win_event_analysis/liberty.html",
+    "source": "portal_from_azure/tools/win_event_analysis/liberty.html",
     "source_label": "Firewall Rule Modified",
     "summary": "Firewall Rule Modified on '@{Microsoft.Win32WebViewHost_10.0.20348.1_neutral_neutral_cw5n1h2txyewy?ms-resource://Windows.Win32WebViewHost/resources/DisplayName}' by '-'. Observed 10 time(s).",
     "timestamp": "2025-06-07T14:30:24.773250Z",

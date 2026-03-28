@@ -107,9 +107,11 @@ cmd_start() {
         fi
     fi
 
-    # Build if binary outdated or missing
+    # Build if binary outdated or missing.
+    # Templates/static assets are embedded with include_dir!, so asset changes
+    # must also invalidate the release binary.
     if [[ ! -x "$BINARY_RELEASE" ]] || \
-       find "$RUST_DIR/src" -newer "$BINARY_RELEASE" -name '*.rs' 2>/dev/null | grep -q .; then
+       find "$RUST_DIR/src" "$RUST_DIR/assets" -type f -newer "$BINARY_RELEASE" 2>/dev/null | grep -q .; then
         build_release
     else
         info "Release binary is up to date."

@@ -4,7 +4,7 @@ use axum::{
     extract::{Form, Path as AxPath, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect, Response},
-    routing::{delete, get, patch, post},
+    routing::{delete, get, post},
 };
 use serde::Deserialize;
 use std::sync::Arc;

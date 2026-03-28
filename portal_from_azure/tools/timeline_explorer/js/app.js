@@ -10,8 +10,19 @@
 
 const CONFIG = {
     defaultDataDirectory: '/home/kali_arch/Computed_Data',
-    apiBaseUrl: '/api/files'  // Backend API endpoint for file browsing
+    apiBaseUrl: '/api/files',  // Backend API endpoint for file browsing
+    timelineFilesConfigPath: 'timeline_files.json',
+    columnProfileSampleSize: 5000,
+    postLoadTaskDelayMs: 30
 };
+
+const SUPPORTED_EXTENSIONS = new Set(['csv', 'tsv', 'txt', 'json', 'jsonl']);
+const DELIMITED_EXTENSIONS = new Set(['csv', 'tsv', 'txt']);
+const JSON_EXTENSIONS = new Set(['json', 'jsonl']);
+const JSON_WRAPPER_KEYS = ['records', 'events', 'data', 'results', 'items', 'rows', 'timeline', 'entries', 'artifacts', 'logs'];
+
+let timelineFileBrowserConfigCache = null;
+let timelineFileBrowserConfigPromise = null;
 
 // ============================================
 // State Management
@@ -36,6 +47,10 @@ const state = {
     columnUniqueValues: {},  // Store unique values for multi-select
     fileName: '',
     fileSize: '',
+    fileType: null,
+    fileFormatLabel: '',
+    fileStructure: '',
+    fileSignals: [],
     dateColumn: null,
     loadStartTime: null,
     // Enhanced filter state
@@ -46,7 +61,12 @@ const state = {
     },
     currentSort: null,
     contextMenuTarget: null,
-    sidebarVisible: true
+    sidebarVisible: true,
+    loadGeneration: 0,
+    fileBrowserFilter: {
+        search: '',
+        type: 'all'
+    }
 };
 
 // Expose globally for features.js
@@ -118,6 +138,8 @@ function initElements() {
     elements.refreshDirBtn = document.getElementById('refreshDirBtn');
     elements.goUpBtn = document.getElementById('goUpBtn');
     elements.editPathBtn = document.getElementById('editPathBtn');
+    elements.fileBrowserSearch = document.getElementById('fileBrowserSearch');
+    elements.fileBrowserTypeFilters = document.getElementById('fileBrowserTypeFilters');
 
     // Tab elements
     elements.tabsContainer = document.getElementById('tabsContainer');
@@ -130,6 +152,12 @@ function initElements() {
     elements.toggleBookmarkedBtn = document.getElementById('toggleBookmarkedBtn');
     elements.detailPanel = document.getElementById('detailPanel');
     elements.bookmarkCount = document.getElementById('bookmarkCount');
+    elements.datasetOverview = document.getElementById('datasetOverview');
+    elements.datasetFormat = document.getElementById('datasetFormat');
+    elements.datasetStructure = document.getElementById('datasetStructure');
+    elements.datasetFieldCount = document.getElementById('datasetFieldCount');
+    elements.datasetDateField = document.getElementById('datasetDateField');
+    elements.datasetSignals = document.getElementById('datasetSignals');
 
     window.APP_ELEMENTS = elements;
 }
@@ -139,7 +167,10 @@ function initElements() {
 // ============================================
 
 function initUploadHandlers() {
-    elements.uploadZone.addEventListener('click', () => {
+    elements.uploadZone.addEventListener('click', (e) => {
+        if (e.target.closest('button') || e.target.closest('input')) {
+            return;
+        }
         elements.fileInput.click();
     });
 
@@ -172,7 +203,7 @@ function initUploadHandlers() {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) {
             const file = e.dataTransfer.files[0];
-            if (file.name.toLowerCase().endsWith('.csv') || file.name.toLowerCase().endsWith('.txt')) {
+            if (isSupportedFileName(file.name)) {
                 handleFile(file);
             }
         }
@@ -191,6 +222,286 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+function getFileExtension(name) {
+    const parts = String(name || '').toLowerCase().split('.');
+    return parts.length > 1 ? parts.pop() : '';
+}
+
+function isDelimitedFileName(name) {
+    return DELIMITED_EXTENSIONS.has(getFileExtension(name));
+}
+
+function isJsonFileName(name) {
+    return JSON_EXTENSIONS.has(getFileExtension(name));
+}
+
+function isSupportedFileName(name) {
+    return SUPPORTED_EXTENSIONS.has(getFileExtension(name));
+}
+
+function getFileTypeBadge(type, extension) {
+    const normalizedExtension = String(extension || '').toLowerCase();
+
+    if (type === 'folder') {
+        return { badge: 'FOLDER', className: 'folder', icon: 'fa-folder', infoIcon: 'fa-folder-open' };
+    }
+    if (normalizedExtension === '.json' || normalizedExtension === 'json') {
+        return { badge: 'JSON', className: 'json', icon: 'fa-file-code', infoIcon: 'fa-file-code' };
+    }
+    if (normalizedExtension === '.jsonl' || normalizedExtension === 'jsonl') {
+        return { badge: 'JSONL', className: 'json', icon: 'fa-file-code', infoIcon: 'fa-file-code' };
+    }
+    if (['.csv', '.tsv', '.txt', 'csv', 'tsv', 'txt'].includes(normalizedExtension)) {
+        return { badge: normalizedExtension.replace('.', '').toUpperCase(), className: 'delimited', icon: 'fa-file-csv', infoIcon: 'fa-file-csv' };
+    }
+    return { badge: 'FILE', className: '', icon: 'fa-file', infoIcon: 'fa-file' };
+}
+
+function inferFormatLabel(fileName, structureLabel = '') {
+    const ext = getFileExtension(fileName);
+    if (ext === 'jsonl') return 'JSONL';
+    if (ext === 'json') {
+        return structureLabel === 'NDJSON Stream' ? 'NDJSON' : 'JSON';
+    }
+    if (ext === 'tsv') return 'TSV';
+    if (ext === 'txt') return 'TXT';
+    return 'CSV';
+}
+
+function flattenJsonRecord(value, prefix = '', output = {}) {
+    if (value === null || value === undefined) {
+        output[prefix || 'value'] = '';
+        return output;
+    }
+
+    if (Array.isArray(value)) {
+        output[prefix || 'value'] = value.every(item => typeof item !== 'object' || item === null)
+            ? value.join(' | ')
+            : JSON.stringify(value);
+        return output;
+    }
+
+    if (typeof value !== 'object') {
+        output[prefix || 'value'] = value;
+        return output;
+    }
+
+    const entries = Object.entries(value);
+    if (entries.length === 0 && prefix) {
+        output[prefix] = '';
+        return output;
+    }
+
+    entries.forEach(([key, nested]) => {
+        const nextPrefix = prefix ? `${prefix}.${key}` : key;
+        if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+            flattenJsonRecord(nested, nextPrefix, output);
+        } else if (Array.isArray(nested)) {
+            output[nextPrefix] = nested.every(item => typeof item !== 'object' || item === null)
+                ? nested.join(' | ')
+                : JSON.stringify(nested);
+        } else {
+            output[nextPrefix] = nested;
+        }
+    });
+
+    return output;
+}
+
+function findJsonRecordArray(value, path = '$', depth = 0) {
+    if (depth > 4 || value === null || value === undefined) return null;
+
+    if (Array.isArray(value)) {
+        if (value.length === 0) return { records: [], structure: 'Empty JSON Array', sourcePath: path };
+        if (value.every(item => item !== null && typeof item === 'object' && !Array.isArray(item))) {
+            return { records: value, structure: 'JSON Array', sourcePath: path };
+        }
+        return {
+            records: value.map((item, index) => ({ _index: index, value: typeof item === 'object' ? JSON.stringify(item) : item })),
+            structure: 'Primitive Array',
+            sourcePath: path
+        };
+    }
+
+    if (typeof value !== 'object') {
+        return { records: [{ value }], structure: 'Scalar JSON Value', sourcePath: path };
+    }
+
+    for (const key of JSON_WRAPPER_KEYS) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) {
+            const found = findJsonRecordArray(value[key], `${path}.${key}`, depth + 1);
+            if (found) return found;
+        }
+    }
+
+    for (const [key, nested] of Object.entries(value)) {
+        if (Array.isArray(nested)) {
+            const found = findJsonRecordArray(nested, `${path}.${key}`, depth + 1);
+            if (found) return found;
+        }
+    }
+
+    const objectEntries = Object.entries(value);
+    if (objectEntries.length > 0 && objectEntries.every(([, nested]) => nested && typeof nested === 'object' && !Array.isArray(nested))) {
+        return {
+            records: objectEntries.map(([key, nested]) => ({ _key: key, ...nested })),
+            structure: 'Object Map',
+            sourcePath: path
+        };
+    }
+
+    return { records: [value], structure: 'Single JSON Object', sourcePath: path };
+}
+
+function parseJsonTimeline(text) {
+    const trimmed = text.trim();
+    if (!trimmed) {
+        return { records: [], structure: 'Empty JSON Document', sourcePath: '$' };
+    }
+
+    try {
+        const parsed = JSON.parse(trimmed);
+        return findJsonRecordArray(parsed);
+    } catch (jsonError) {
+        const lines = trimmed.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        if (lines.length === 0) throw jsonError;
+
+        const records = lines.map((line, index) => {
+            const parsedLine = JSON.parse(line);
+            if (parsedLine && typeof parsedLine === 'object' && !Array.isArray(parsedLine)) {
+                return parsedLine;
+            }
+            return { _line: index + 1, value: parsedLine };
+        });
+
+        return { records, structure: 'NDJSON Stream', sourcePath: '$' };
+    }
+}
+
+function buildFileSignals(columns, dateColumn) {
+    const priorityPatterns = ['timestamp', 'time', 'date', 'user', 'process', 'path', 'source', 'event', 'action', 'severity', 'level', 'ip', 'host'];
+    const picked = [];
+
+    if (dateColumn) {
+        picked.push({ icon: 'fa-clock', label: dateColumn });
+    }
+
+    columns.forEach(col => {
+        const lower = col.toLowerCase();
+        if (picked.length >= 6) return;
+        if (col === dateColumn) return;
+        if (priorityPatterns.some(pattern => lower.includes(pattern))) {
+            picked.push({ icon: 'fa-signal', label: col });
+        }
+    });
+
+    if (picked.length === 0) {
+        columns.slice(0, 5).forEach(col => picked.push({ icon: 'fa-table-columns', label: col }));
+    }
+
+    return picked;
+}
+
+function isNumericValue(value) {
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    return trimmed !== '' && /^-?\d+(?:\.\d+)?$/.test(trimmed);
+}
+
+function getSampleRows(rows, maxSamples) {
+    if (!Array.isArray(rows) || rows.length <= maxSamples) {
+        return rows;
+    }
+
+    const sample = [];
+    const step = Math.max(1, Math.floor(rows.length / maxSamples));
+    for (let i = 0; i < rows.length && sample.length < maxSamples; i += step) {
+        sample.push(rows[i]);
+    }
+    return sample;
+}
+
+function schedulePostLoadTask(task) {
+    const runner = () => {
+        try {
+            task();
+        } catch (error) {
+            console.error('Deferred timeline task failed:', error);
+        }
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(runner, { timeout: 250 });
+    } else {
+        window.setTimeout(runner, CONFIG.postLoadTaskDelayMs);
+    }
+}
+
+function showDeferredEnhancementState() {
+    elements.columnFilters.innerHTML = `
+        <div class="filter-section expanded filter-loading-state">
+            <div class="filter-section-header">
+                <span class="filter-section-title">
+                    <i class="fa-solid fa-spinner fa-spin type-icon" aria-hidden="true"></i>
+                    Preparing Filters
+                </span>
+            </div>
+            <div class="filter-section-body">
+                Sampling large-file values and building filter controls in the background.
+            </div>
+        </div>
+    `;
+}
+
+function finalizePostLoadEnhancements(loadGeneration, loadTime) {
+    schedulePostLoadTask(() => {
+        if (loadGeneration !== state.loadGeneration || !state.rawData.length) return;
+
+        createColumnFilters();
+        populateColumnSelector();
+        elements.loadTime.textContent = `Loaded in ${loadTime}s · filters ready`;
+
+        schedulePostLoadTask(() => {
+            if (loadGeneration !== state.loadGeneration || !state.rawData.length) return;
+
+            if (typeof window.onTimelineDataLoaded === 'function') {
+                window.onTimelineDataLoaded();
+            }
+
+            elements.loadTime.textContent = `Loaded in ${loadTime}s · indexed`;
+        });
+    });
+}
+
+function parseJsonTimelineInWorker(file) {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker('js/parser-worker.js?v=4.3');
+
+        worker.onmessage = (event) => {
+            const { type, payload, error } = event.data || {};
+            if (type === 'success') {
+                worker.terminate();
+                resolve(payload);
+                return;
+            }
+
+            worker.terminate();
+            reject(new Error(error || 'Worker parsing failed'));
+        };
+
+        worker.onerror = (event) => {
+            worker.terminate();
+            reject(new Error(event.message || 'Worker parsing failed'));
+        };
+
+        worker.postMessage({
+            file,
+            fileName: file.name
+        });
+    });
+}
+
 // ============================================
 // Data Processing
 // ============================================
@@ -207,21 +518,19 @@ function processData() {
 
     detectColumnTypes();
     detectDateColumn();
+    state.fileSignals = buildFileSignals(state.columns, state.dateColumn);
     createTable();
-    createColumnFilters();
     showMainContent();
     updateFileInfo();
-    populateColumnSelector();
+    showDeferredEnhancementState();
     hideLoading();
 
     const loadTime = ((performance.now() - state.loadStartTime) / 1000).toFixed(2);
     elements.loadTime.textContent = `Loaded in ${loadTime}s`;
     showNotification(`Loaded ${state.rawData.length.toLocaleString()} rows in ${loadTime}s`, 'success');
 
-    // Hook for features.js
-    if (typeof window.onTimelineDataLoaded === 'function') {
-        window.onTimelineDataLoaded();
-    }
+    const loadGeneration = ++state.loadGeneration;
+    finalizePostLoadEnhancements(loadGeneration, loadTime);
 }
 
 function detectColumnTypes() {
@@ -235,7 +544,7 @@ function detectColumnTypes() {
             const value = state.rawData[i][col];
             if (value === null || value === undefined || value === '') continue;
 
-            if (typeof value === 'number') {
+            if (isNumericValue(value)) {
                 numCount++;
             } else if (isDateString(String(value))) {
                 dateCount++;
@@ -380,10 +689,11 @@ function createTable() {
  */
 function extractUniqueValues() {
     state.columnUniqueValues = {};
+    const sampledRows = getSampleRows(state.rawData, CONFIG.columnProfileSampleSize);
 
     state.columns.forEach(col => {
         const values = new Map();
-        state.rawData.forEach(row => {
+        sampledRows.forEach(row => {
             const val = row[col];
             if (val !== null && val !== undefined && val !== '') {
                 const key = String(val);
@@ -1378,12 +1688,18 @@ function resetApp() {
     state.columnTypes = {};
     state.fileName = '';
     state.fileSize = '';
+    state.fileType = null;
+    state.fileFormatLabel = '';
+    state.fileStructure = '';
+    state.fileSignals = [];
     state.dateColumn = null;
     state.filters = { search: { value: '', caseSensitive: false }, dateRange: { from: null, to: null }, columns: {} };
     state.currentSort = null;
     state.tabs = [];
     state.activeTabId = null;
     state.tabIdCounter = 0;
+    state.loadGeneration++;
+    state.fileBrowserFilter = { search: '', type: 'all' };
 
     elements.uploadZone.style.display = 'flex';
     elements.mainWrapper.style.display = 'none';
@@ -1396,12 +1712,17 @@ function resetApp() {
     elements.fileInfo.querySelector('.file-size').textContent = '';
     const filePathEl = elements.fileInfo.querySelector('.file-path');
     if (filePathEl) filePathEl.textContent = '';
+    const fileIconEl = elements.fileInfo.querySelector('.file-icon');
+    if (fileIconEl) fileIconEl.className = 'fa-solid fa-file-csv file-icon';
     elements.globalSearch.value = '';
     elements.dateFrom.value = '';
     elements.dateTo.value = '';
     elements.loadTime.textContent = '';
     elements.columnFilters.innerHTML = '';
     elements.tabsList.innerHTML = '';
+    if (elements.datasetOverview) {
+        elements.datasetOverview.style.display = 'none';
+    }
     localStorage.removeItem('timelineExplorerLastFile');
 }
 
@@ -1433,7 +1754,33 @@ function updateProgress(percent) {
 
 function updateFileInfo() {
     elements.fileInfo.querySelector('.file-name').textContent = state.fileName;
-    elements.fileInfo.querySelector('.file-size').textContent = `(${state.fileSize})`;
+    elements.fileInfo.querySelector('.file-size').textContent = state.fileSize ? `(${state.fileSize})` : '';
+    const fileIconEl = elements.fileInfo.querySelector('.file-icon');
+    if (fileIconEl) {
+        fileIconEl.className = `fa-solid ${getFileTypeBadge('file', state.fileType).infoIcon} file-icon`;
+    }
+    updateDatasetOverview();
+}
+
+function updateDatasetOverview() {
+    if (!elements.datasetOverview) return;
+
+    if (!state.fileName || state.columns.length === 0) {
+        elements.datasetOverview.style.display = 'none';
+        return;
+    }
+
+    elements.datasetOverview.style.display = 'grid';
+    elements.datasetFormat.textContent = state.fileFormatLabel || inferFormatLabel(state.fileName, state.fileStructure);
+    elements.datasetStructure.textContent = state.fileStructure || 'Tabular Records';
+    elements.datasetFieldCount.textContent = state.columns.length.toLocaleString();
+    elements.datasetDateField.textContent = state.dateColumn || 'Not detected';
+    elements.datasetSignals.innerHTML = (state.fileSignals || []).map(signal => `
+        <span class="dataset-signal-chip">
+            <i class="fa-solid ${signal.icon}" aria-hidden="true"></i>
+            ${escapeHtml(signal.label)}
+        </span>
+    `).join('');
 }
 
 function updateStatusBar() {
@@ -1507,6 +1854,21 @@ function initFileBrowser() {
         elements.currentPathInput.value = state.currentPath;
     });
 
+    elements.fileBrowserSearch?.addEventListener('input', (e) => {
+        state.fileBrowserFilter.search = e.target.value.trim();
+        renderDirectoryContents();
+    });
+
+    elements.fileBrowserTypeFilters?.querySelectorAll('.type-filter-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.fileBrowserFilter.type = btn.dataset.filter || 'all';
+            elements.fileBrowserTypeFilters.querySelectorAll('.type-filter-chip').forEach(chip => {
+                chip.classList.toggle('active', chip === btn);
+            });
+            renderDirectoryContents();
+        });
+    });
+
     // Open selected file button
     elements.openSelectedFile?.addEventListener('click', () => {
         if (state.selectedFile) {
@@ -1515,12 +1877,142 @@ function initFileBrowser() {
     });
 }
 
-function openFileBrowser() {
+function getDefaultTimelineBrowserConfig(basePath = CONFIG.defaultDataDirectory) {
+    const path = (segment) => `${basePath}/${segment}`;
+
+    return {
+        basePath,
+        entriesByPath: {
+            [basePath]: [
+                { name: 'NTFS', type: 'folder', path: path('NTFS'), modified: '2026-01-28' },
+                { name: 'Registries', type: 'folder', path: path('Registries'), modified: '2026-01-28' },
+                { name: 'Event Logs', type: 'folder', path: path('Event_Logs'), modified: '2026-01-28' },
+                { name: 'Prefetch', type: 'folder', path: path('Prefetch'), modified: '2026-01-28' },
+                { name: 'Amcache', type: 'folder', path: path('Amcache'), modified: '2026-01-28' },
+                { name: 'Browser Artifacts', type: 'folder', path: path('Browser_Artifacts'), modified: '2026-01-28' },
+                { name: 'LNK and Jump Lists', type: 'folder', path: path('LNK_JumpLists'), modified: '2026-01-28' },
+            ],
+            [path('NTFS')]: [
+                { name: 'mft_timeline.csv', type: 'file', path: path('NTFS/mft_timeline.csv'), size: '12.3 MB', modified: '2026-01-28' },
+                { name: 'usnjrnl_timeline.csv', type: 'file', path: path('NTFS/usnjrnl_timeline.csv'), size: '8.7 MB', modified: '2026-01-28' },
+                { name: 'ntfs_metadata.jsonl', type: 'file', path: path('NTFS/ntfs_metadata.jsonl'), size: '1.3 MB', modified: '2026-01-28' },
+            ],
+            [path('Registries')]: [
+                { name: 'registry_timeline.csv', type: 'file', path: path('Registries/registry_timeline.csv'), size: '1.1 MB', modified: '2026-01-28' },
+                { name: 'run_keys.json', type: 'file', path: path('Registries/run_keys.json'), size: '220 KB', modified: '2026-01-28' },
+                { name: 'userassist.jsonl', type: 'file', path: path('Registries/userassist.jsonl'), size: '470 KB', modified: '2026-01-28' },
+            ],
+            [path('Event_Logs')]: [
+                { name: 'security_events.csv', type: 'file', path: path('Event_Logs/security_events.csv'), size: '3.7 MB', modified: '2026-01-28' },
+                { name: 'sysmon_events.csv', type: 'file', path: path('Event_Logs/sysmon_events.csv'), size: '4.1 MB', modified: '2026-01-28' },
+                { name: 'windows_eventlog.jsonl', type: 'file', path: path('Event_Logs/windows_eventlog.jsonl'), size: '2.0 MB', modified: '2026-01-28' },
+            ],
+            [path('Prefetch')]: [
+                { name: 'prefetch_analysis.csv', type: 'file', path: path('Prefetch/prefetch_analysis.csv'), size: '980 KB', modified: '2026-01-28' },
+            ],
+            [path('Amcache')]: [
+                { name: 'amcache_entries.csv', type: 'file', path: path('Amcache/amcache_entries.csv'), size: '1.2 MB', modified: '2026-01-28' },
+            ],
+            [path('Browser_Artifacts')]: [
+                { name: 'browser_history.csv', type: 'file', path: path('Browser_Artifacts/browser_history.csv'), size: '450 KB', modified: '2026-01-28' },
+                { name: 'browser_session_events.json', type: 'file', path: path('Browser_Artifacts/browser_session_events.json'), size: '680 KB', modified: '2026-01-28' },
+            ],
+            [path('LNK_JumpLists')]: [
+                { name: 'jump_list_entries.csv', type: 'file', path: path('LNK_JumpLists/jump_list_entries.csv'), size: '320 KB', modified: '2026-01-28' },
+                { name: 'lnk_artifacts.json', type: 'file', path: path('LNK_JumpLists/lnk_artifacts.json'), size: '260 KB', modified: '2026-01-28' },
+            ]
+        }
+    };
+}
+
+function normalizeTimelineBrowserConfig(rawConfig) {
+    if (!rawConfig || typeof rawConfig !== 'object') {
+        return getDefaultTimelineBrowserConfig();
+    }
+
+    const basePath = typeof rawConfig.basePath === 'string' && rawConfig.basePath.trim()
+        ? rawConfig.basePath.trim()
+        : CONFIG.defaultDataDirectory;
+    const fallback = getDefaultTimelineBrowserConfig(basePath);
+    const sourceMap = rawConfig.entriesByPath;
+
+    if (!sourceMap || typeof sourceMap !== 'object' || Array.isArray(sourceMap)) {
+        return fallback;
+    }
+
+    const entriesByPath = {};
+
+    Object.entries(sourceMap).forEach(([dirPath, entries]) => {
+        if (!Array.isArray(entries)) return;
+
+        entriesByPath[dirPath] = entries
+            .filter(entry => entry && typeof entry === 'object' && typeof entry.name === 'string' && typeof entry.type === 'string')
+            .map(entry => {
+                const type = entry.type === 'folder' ? 'folder' : 'file';
+                const path = typeof entry.path === 'string' && entry.path.trim()
+                    ? entry.path.trim()
+                    : `${dirPath.replace(/\/$/, '')}/${entry.name}`;
+
+                return {
+                    name: entry.name,
+                    type,
+                    path,
+                    size: typeof entry.size === 'string' ? entry.size : undefined,
+                    modified: typeof entry.modified === 'string' ? entry.modified : undefined,
+                    extension: typeof entry.extension === 'string' ? entry.extension : undefined
+                };
+            });
+    });
+
+    if (!entriesByPath[basePath]) {
+        entriesByPath[basePath] = fallback.entriesByPath[basePath];
+    }
+
+    return {
+        basePath,
+        entriesByPath
+    };
+}
+
+async function getTimelineBrowserConfig() {
+    if (timelineFileBrowserConfigCache) {
+        return timelineFileBrowserConfigCache;
+    }
+
+    if (!timelineFileBrowserConfigPromise) {
+        timelineFileBrowserConfigPromise = (async () => {
+            try {
+                const response = await fetch(CONFIG.timelineFilesConfigPath, { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`Unable to load ${CONFIG.timelineFilesConfigPath}`);
+                }
+
+                const rawConfig = await response.json();
+                timelineFileBrowserConfigCache = normalizeTimelineBrowserConfig(rawConfig);
+                return timelineFileBrowserConfigCache;
+            } catch (error) {
+                console.warn('timeline_files.json was not available, using built-in defaults', error);
+                timelineFileBrowserConfigCache = getDefaultTimelineBrowserConfig();
+                return timelineFileBrowserConfigCache;
+            }
+        })();
+    }
+
+    return timelineFileBrowserConfigPromise;
+}
+
+async function openFileBrowser() {
     elements.fileBrowserModal.classList.add('visible');
-    state.currentPath = CONFIG.defaultDataDirectory;
+    const config = await getTimelineBrowserConfig();
+    state.currentPath = config.basePath || CONFIG.defaultDataDirectory;
     state.selectedFile = null;
+    state.fileBrowserFilter = { search: '', type: 'all' };
     elements.selectedFileDisplay.textContent = 'No file selected';
     elements.openSelectedFile.disabled = true;
+    if (elements.fileBrowserSearch) elements.fileBrowserSearch.value = '';
+    elements.fileBrowserTypeFilters?.querySelectorAll('.type-filter-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === 'all');
+    });
     loadDirectory(state.currentPath);
 }
 
@@ -1558,7 +2050,7 @@ async function loadFileFromServerPath(path, name) {
         }
 
         const text = await response.text();
-        const file = new File([text], name, { type: 'text/csv' });
+        const file = new File([text], name, { type: isJsonFileName(name) ? 'application/json' : 'text/plain' });
         handleFileWithPath(file, path);
     } catch (error) {
         showNotification('Saved file could not be restored. Please re-open.', 'warning');
@@ -1584,6 +2076,18 @@ async function loadDirectory(path) {
     `;
 
     try {
+        const config = await getTimelineBrowserConfig();
+        const configuredContents = config.entriesByPath[path];
+
+        if (Array.isArray(configuredContents) && configuredContents.length > 0) {
+            state.directoryContents = configuredContents.map(entry => ({
+                ...entry,
+                path: entry.path || `${path.replace(/\/$/, '')}/${entry.name}`
+            }));
+            renderDirectoryContents();
+            return;
+        }
+
         // Try to fetch from API first
         const response = await fetch(`${CONFIG.apiBaseUrl}?path=${encodeURIComponent(path)}`);
 
@@ -1593,90 +2097,70 @@ async function loadDirectory(path) {
             renderDirectoryContents();
         } else {
             // API not available - show mock data for demo
-            showMockDirectoryContents(path);
+            await showMockDirectoryContents(path);
         }
     } catch (error) {
         // API not available - show mock data for demo
         console.log('File API not available, using mock data');
-        showMockDirectoryContents(path);
+        await showMockDirectoryContents(path);
     }
 }
 
-function showMockDirectoryContents(path) {
-    // Generate mock directory structure for demonstration
-    const basePath = CONFIG.defaultDataDirectory;
+async function showMockDirectoryContents(path) {
+    const config = await getTimelineBrowserConfig();
+    const targetPath = path || config.basePath;
+    const entries = config.entriesByPath[targetPath] || [];
 
-    if (path === basePath) {
-        state.directoryContents = [
-            { name: 'Case_001_2026', type: 'folder', modified: '2026-01-28' },
-            { name: 'Case_002_Network', type: 'folder', modified: '2026-01-27' },
-            { name: 'Case_003_Malware', type: 'folder', modified: '2026-01-26' },
-            { name: 'Windows_Timeline', type: 'folder', modified: '2026-01-25' },
-            { name: 'master_timeline.csv', type: 'file', size: '2.5 MB', modified: '2026-01-28' },
-            { name: 'combined_events.csv', type: 'file', size: '1.8 MB', modified: '2026-01-27' },
-        ];
-    } else if (path.includes('Case_001')) {
-        state.directoryContents = [
-            { name: 'filesystem_timeline.csv', type: 'file', size: '5.2 MB', modified: '2026-01-28' },
-            { name: 'registry_timeline.csv', type: 'file', size: '1.1 MB', modified: '2026-01-28' },
-            { name: 'browser_history.csv', type: 'file', size: '450 KB', modified: '2026-01-28' },
-            { name: 'event_logs.csv', type: 'file', size: '3.7 MB', modified: '2026-01-28' },
-        ];
-    } else if (path.includes('Case_002')) {
-        state.directoryContents = [
-            { name: 'network_connections.csv', type: 'file', size: '890 KB', modified: '2026-01-27' },
-            { name: 'dns_queries.csv', type: 'file', size: '2.1 MB', modified: '2026-01-27' },
-            { name: 'firewall_logs.csv', type: 'file', size: '4.5 MB', modified: '2026-01-27' },
-        ];
-    } else if (path.includes('Case_003')) {
-        state.directoryContents = [
-            { name: 'process_execution.csv', type: 'file', size: '1.5 MB', modified: '2026-01-26' },
-            { name: 'persistence_mechanisms.csv', type: 'file', size: '320 KB', modified: '2026-01-26' },
-            { name: 'network_iocs.csv', type: 'file', size: '180 KB', modified: '2026-01-26' },
-        ];
-    } else if (path.includes('Windows_Timeline')) {
-        state.directoryContents = [
-            { name: 'mft_timeline.csv', type: 'file', size: '12.3 MB', modified: '2026-01-25' },
-            { name: 'usnjrnl_timeline.csv', type: 'file', size: '8.7 MB', modified: '2026-01-25' },
-            { name: 'prefetch_analysis.csv', type: 'file', size: '980 KB', modified: '2026-01-25' },
-            { name: 'amcache_entries.csv', type: 'file', size: '1.2 MB', modified: '2026-01-25' },
-        ];
-    } else {
-        state.directoryContents = [];
-    }
+    state.directoryContents = entries.map(entry => ({
+        ...entry,
+        path: entry.path || `${targetPath.replace(/\/$/, '')}/${entry.name}`
+    }));
 
     renderDirectoryContents();
 }
 
 function renderDirectoryContents() {
-    if (state.directoryContents.length === 0) {
+    const searchTerm = state.fileBrowserFilter.search.toLowerCase();
+    const filterType = state.fileBrowserFilter.type;
+    const visibleContents = state.directoryContents.filter(item => {
+        const extension = item.extension || `.${getFileExtension(item.name)}`;
+        const matchesSearch = !searchTerm || item.name.toLowerCase().includes(searchTerm);
+        if (!matchesSearch) return false;
+        if (filterType === 'all') return true;
+        if (filterType === 'folder') return item.type === 'folder';
+        if (filterType === 'json') return item.type === 'file' && (extension === '.json' || extension === '.jsonl');
+        if (filterType === 'delimited') return item.type === 'file' && ['.csv', '.tsv', '.txt'].includes(extension);
+        return true;
+    });
+
+    if (visibleContents.length === 0) {
         elements.fileBrowserList.innerHTML = `
             <div class="empty-directory">
-                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-                <span>This directory is empty</span>
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span>${state.directoryContents.length === 0 ? 'This directory is empty' : 'No files match the current browser filter'}</span>
             </div>
         `;
         return;
     }
 
     // Sort: folders first, then files
-    const sorted = [...state.directoryContents].sort((a, b) => {
+    const sorted = [...visibleContents].sort((a, b) => {
         if (a.type === 'folder' && b.type !== 'folder') return -1;
         if (a.type !== 'folder' && b.type === 'folder') return 1;
         return a.name.localeCompare(b.name);
     });
 
     elements.fileBrowserList.innerHTML = sorted.map(item => {
-        const isFolder = item.type === 'folder';
-        const isCsv = !isFolder && (item.name.endsWith('.csv') || item.name.endsWith('.txt'));
-        const icon = isFolder ? 'fa-folder' : (isCsv ? 'fa-file-csv' : 'fa-file');
-        const typeClass = isFolder ? 'folder' : (isCsv ? 'csv' : 'file');
+        const itemPath = item.path || `${state.currentPath.replace(/\/$/, '')}/${item.name}`;
+        const badge = getFileTypeBadge(item.type, item.extension || `.${getFileExtension(item.name)}`);
+        const typeClass = item.type === 'folder' ? 'folder' : (badge.className || 'file');
 
         return `
-            <div class="file-item ${typeClass}" data-name="${escapeHtml(item.name)}" data-type="${item.type}">
-                <i class="fa-solid ${icon} file-item-icon" aria-hidden="true"></i>
+            <div class="file-item ${typeClass}" data-name="${escapeHtml(item.name)}" data-type="${item.type}" data-path="${escapeHtml(itemPath)}">
+                <i class="fa-solid ${badge.icon} file-item-icon ${typeClass}" aria-hidden="true"></i>
                 <span class="file-item-name">${escapeHtml(item.name)}</span>
                 <div class="file-item-meta">
+                    <span class="file-type-badge ${badge.className}">${badge.badge}</span>
                     ${item.size ? `<span>${item.size}</span>` : ''}
                     ${item.modified ? `<span>${item.modified}</span>` : ''}
                 </div>
@@ -1698,21 +2182,23 @@ function handleFileItemClick(item) {
     item.classList.add('selected');
     const name = item.dataset.name;
     const type = item.dataset.type;
+    const path = item.dataset.path || `${state.currentPath.replace(/\/$/, '')}/${name}`;
 
     if (type === 'folder') {
         state.selectedFile = null;
         elements.selectedFileDisplay.textContent = `Folder: ${name}`;
         elements.openSelectedFile.disabled = true;
-    } else if (name.endsWith('.csv') || name.endsWith('.txt')) {
+    } else if (isSupportedFileName(name)) {
         state.selectedFile = {
             name: name,
-            path: `${state.currentPath}/${name}`
+            path
         };
-        elements.selectedFileDisplay.innerHTML = `<i class="fa-solid fa-file-csv" style="color: var(--accent-primary);"></i> ${name}`;
+        const badge = getFileTypeBadge('file', `.${getFileExtension(name)}`);
+        elements.selectedFileDisplay.innerHTML = `<i class="fa-solid ${badge.icon}" style="color: var(--accent-primary);"></i> ${name}`;
         elements.openSelectedFile.disabled = false;
     } else {
         state.selectedFile = null;
-        elements.selectedFileDisplay.textContent = `${name} (not a CSV file)`;
+        elements.selectedFileDisplay.textContent = `${name} (unsupported file type)`;
         elements.openSelectedFile.disabled = true;
     }
 }
@@ -1720,13 +2206,14 @@ function handleFileItemClick(item) {
 function handleFileItemDoubleClick(item) {
     const name = item.dataset.name;
     const type = item.dataset.type;
+    const path = item.dataset.path || `${state.currentPath.replace(/\/$/, '')}/${name}`;
 
     if (type === 'folder') {
-        loadDirectory(`${state.currentPath}/${name}`);
-    } else if (name.endsWith('.csv') || name.endsWith('.txt')) {
+        loadDirectory(path);
+    } else if (isSupportedFileName(name)) {
         state.selectedFile = {
             name: name,
-            path: `${state.currentPath}/${name}`
+            path
         };
         openFileFromBrowser(state.selectedFile);
     }
@@ -1772,7 +2259,7 @@ async function openFileFromBrowser(fileInfo) {
         if (response.ok) {
             const text = await response.text();
             // Create a File object from the content
-            const file = new File([text], fileInfo.name, { type: 'text/csv' });
+            const file = new File([text], fileInfo.name, { type: isJsonFileName(fileInfo.name) ? 'application/json' : 'text/plain' });
             handleFileWithPath(file, fileInfo.path);
         } else {
             // API not available - for demo, use local file input
@@ -1835,7 +2322,7 @@ function initTabs() {
     elements.addNewTabBtn?.addEventListener('click', () => openFileBrowser());
 }
 
-function createTab(fileName, filePath, fileSize) {
+function createTab(fileName, filePath, fileSize, meta = {}) {
     const tabId = ++state.tabIdCounter;
 
     const tab = {
@@ -1843,6 +2330,10 @@ function createTab(fileName, filePath, fileSize) {
         fileName: fileName,
         filePath: filePath,
         fileSize: fileSize,
+        fileType: meta.fileType || getFileExtension(fileName),
+        fileFormatLabel: meta.fileFormatLabel || inferFormatLabel(fileName),
+        fileStructure: meta.fileStructure || 'Tabular Records',
+        fileSignals: meta.fileSignals || [],
         table: null,
         rawData: [],
         columns: [],
@@ -1871,7 +2362,7 @@ function createTab(fileName, filePath, fileSize) {
 function renderTabs() {
     elements.tabsList.innerHTML = state.tabs.map(tab => `
         <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''}" data-tab-id="${tab.id}">
-            <i class="fa-solid fa-file-csv tab-item-icon" aria-hidden="true"></i>
+            <i class="fa-solid ${getFileTypeBadge('file', tab.fileType).icon} tab-item-icon" aria-hidden="true"></i>
             <span class="tab-item-name" title="${escapeHtml(tab.fileName)}">${escapeHtml(tab.fileName)}</span>
             <span class="tab-item-close" data-tab-id="${tab.id}" title="Close tab">
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
@@ -1904,6 +2395,8 @@ function switchToTab(tabId) {
     // Skip if already on this tab
     if (state.activeTabId === tabId) return;
 
+    state.loadGeneration++;
+
     // Save current tab state if exists
     if (state.activeTabId) {
         const currentTab = state.tabs.find(t => t.id === state.activeTabId);
@@ -1914,6 +2407,10 @@ function switchToTab(tabId) {
             currentTab.columnTypes = state.columnTypes;
             currentTab.columnUniqueValues = state.columnUniqueValues;
             currentTab.dateColumn = state.dateColumn;
+            currentTab.fileType = state.fileType;
+            currentTab.fileFormatLabel = state.fileFormatLabel;
+            currentTab.fileStructure = state.fileStructure;
+            currentTab.fileSignals = state.fileSignals;
             currentTab.filters = JSON.parse(JSON.stringify(state.filters));
             currentTab.currentSort = state.currentSort;
             currentTab.searchValue = elements.globalSearch.value;
@@ -1930,6 +2427,10 @@ function switchToTab(tabId) {
     state.dateColumn = tab.dateColumn;
     state.fileName = tab.fileName;
     state.fileSize = tab.fileSize;
+    state.fileType = tab.fileType;
+    state.fileFormatLabel = tab.fileFormatLabel;
+    state.fileStructure = tab.fileStructure;
+    state.fileSignals = tab.fileSignals || [];
     state.filters = tab.filters ? JSON.parse(JSON.stringify(tab.filters)) : { search: { value: '', caseSensitive: false }, dateRange: { from: null, to: null }, columns: {} };
     state.currentSort = tab.currentSort;
 
@@ -1997,10 +2498,108 @@ function updateFilePath(filePath) {
     }
 }
 
-// Modified handleFile to support tabs
+function finalizeLoadedData(records, fileName, fileSize, fullPath, meta = {}, filePath = null) {
+    const normalizedRecords = records
+        .map(row => (row && typeof row === 'object' && !Array.isArray(row) ? row : { value: row }))
+        .map(row => {
+            const entries = Object.entries(row).map(([key, value]) => [key, value ?? '']);
+            return entries.length > 0 ? Object.fromEntries(entries) : { value: '(empty record)' };
+        });
+
+    if (normalizedRecords.length === 0) {
+        hideLoading();
+        alert('No data found in file');
+        return;
+    }
+
+    const tab = createTab(fileName, fullPath, fileSize, {
+        fileType: meta.fileType || getFileExtension(fileName),
+        fileFormatLabel: meta.fileFormatLabel || inferFormatLabel(fileName, meta.fileStructure),
+        fileStructure: meta.fileStructure || 'Tabular Records',
+        fileSignals: meta.fileSignals || []
+    });
+
+    tab.rawData = normalizedRecords;
+    tab.fileType = meta.fileType || getFileExtension(fileName);
+    tab.fileFormatLabel = meta.fileFormatLabel || inferFormatLabel(fileName, meta.fileStructure);
+    tab.fileStructure = meta.fileStructure || 'Tabular Records';
+
+    state.rawData = normalizedRecords;
+    state.fileName = fileName;
+    state.fileSize = fileSize;
+    state.fileType = tab.fileType;
+    state.fileFormatLabel = tab.fileFormatLabel;
+    state.fileStructure = tab.fileStructure;
+
+    persistLastFile({
+        name: fileName,
+        path: filePath,
+        source: filePath ? 'server' : 'local'
+    });
+
+    updateProgress(100);
+    processData();
+}
+
+function parseDelimitedFile(file, fileName, fileSize, fullPath, filePath) {
+    showLoading('Parsing delimited timeline...');
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        worker: true,
+        delimitersToGuess: [',', '\t', '|', ';'],
+        complete: function (results) {
+            finalizeLoadedData(results.data || [], fileName, fileSize, fullPath, {
+                fileType: getFileExtension(fileName),
+                fileFormatLabel: inferFormatLabel(fileName),
+                fileStructure: getFileExtension(fileName) === 'tsv' ? 'Tabular Records (TSV)' : 'Tabular Records'
+            }, filePath);
+        },
+        error: function (error) {
+            hideLoading();
+            alert('Error parsing timeline file: ' + error.message);
+        }
+    });
+}
+
+async function parseJsonFile(file, fileName, fileSize, fullPath, filePath) {
+    const isJsonl = getFileExtension(fileName) === 'jsonl';
+    showLoading(isJsonl ? 'Parsing JSONL evidence stream...' : 'Normalizing JSON evidence...');
+
+    try {
+        const parsed = typeof Worker !== 'undefined'
+            ? await parseJsonTimelineInWorker(file)
+            : await file.text().then(text => {
+                const result = parseJsonTimeline(text);
+                return {
+                    records: result.records.map(record => flattenJsonRecord(record)),
+                    structure: result.structure,
+                    sourcePath: result.sourcePath,
+                    formatLabel: isJsonl ? 'JSONL' : inferFormatLabel(fileName, result.structure)
+                };
+            });
+
+        const formatLabel = parsed.formatLabel || (isJsonl ? 'JSONL' : 'JSON');
+
+        finalizeLoadedData(parsed.records, fileName, fileSize, fullPath, {
+            fileType: isJsonl ? 'jsonl' : 'json',
+            fileFormatLabel: formatLabel,
+            fileStructure: parsed.sourcePath && parsed.sourcePath !== '$'
+                ? `${parsed.structure} from ${parsed.sourcePath}`
+                : parsed.structure
+        }, filePath);
+    } catch (error) {
+        hideLoading();
+        alert('Error parsing ' + (isJsonl ? 'JSONL' : 'JSON') + ': ' + error.message);
+    }
+}
+
+// Modified handleFile to support tabs and JSON timelines
 function handleFileWithPath(file, filePath = null) {
-    if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.txt')) {
-        alert('Please select a CSV or TXT file');
+    if (!isSupportedFileName(file.name)) {
+        alert('Please select a CSV, TSV, TXT, JSON, or JSONL file');
         return;
     }
 
@@ -2010,34 +2609,12 @@ function handleFileWithPath(file, filePath = null) {
 
     state.loadStartTime = performance.now();
 
-    showLoading('Parsing CSV file...');
+    if (isJsonFileName(fileName)) {
+        parseJsonFile(file, fileName, fileSize, fullPath, filePath);
+        return;
+    }
 
-    Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        dynamicTyping: true,
-        complete: function (results) {
-            if (results.data && results.data.length > 0) {
-                // Create a new tab for this file
-                const tab = createTab(fileName, fullPath, fileSize);
-                tab.rawData = results.data;
-                state.rawData = results.data;
-                state.fileName = fileName;
-                state.fileSize = fileSize;
-                persistLastFile({
-                    name: fileName,
-                    path: filePath,
-                    source: filePath ? 'server' : 'local'
-                });
-            }
-            updateProgress(100);
-            processData();
-        },
-        error: function (error) {
-            hideLoading();
-            alert('Error parsing CSV: ' + error.message);
-        }
-    });
+    parseDelimitedFile(file, fileName, fileSize, fullPath, filePath);
 }
 
 // ============================================

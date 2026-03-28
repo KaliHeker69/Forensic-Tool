@@ -7,6 +7,7 @@
 // =============================================================================
 
 use chrono::{DateTime, NaiveDateTime, Timelike, Utc};
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 use crate::models::*;
@@ -106,7 +107,7 @@ pub fn run_correlation(
     build_correlation_chains(input, &findings, &mut chains);
 
     // Sort findings by severity (Critical first)
-    findings.sort_by(|a, b| b.severity.cmp(&a.severity));
+    findings.par_sort_unstable_by(|a, b| b.severity.cmp(&a.severity));
 
     (findings, chains)
 }
@@ -169,9 +170,16 @@ fn compute_volume_baseline(input: &NtfsInput) -> VolumeBaseline {
 
     let ratio = top_count as f64 / total_fn as f64;
 
-    // If >30% of FN timestamps share the same date and there are substantial entries,
-    // this is very likely an imaged/deployed volume.
-    let is_imaged = ratio > 0.30 && top_count > 100;
+    // Use a lower threshold for small volumes (from $Boot total sector count)
+    // to avoid under-detecting image/deployment artifacts on compact systems.
+    let (ratio_threshold, count_threshold) = match input.boot_info.as_ref().and_then(|b| b.total_sectors) {
+        Some(total) if total < 20_000_000 => (0.20, 20usize),
+        _ => (0.30, 100usize),
+    };
+
+    // If enough FN timestamps share the same date, this is very likely an
+    // imaged/deployed volume and SI<FN alone is lower confidence.
+    let is_imaged = ratio > ratio_threshold && top_count > count_threshold;
 
     if is_imaged {
         eprintln!(
@@ -272,6 +280,94 @@ fn is_system_or_os_path(path: &str) -> bool {
     false
 }
 
+/// Check for well-known Windows library metadata files that frequently show
+/// benign $SI<$FN divergence due to servicing/componentization and projection
+/// into public library folders.
+fn is_windows_library_metadata(path: &str, filename: &str) -> bool {
+    let upper_path = path.to_uppercase();
+    let lower_name = filename.to_lowercase();
+
+    if lower_name != "recordedtv.library-ms" && !lower_name.ends_with(".library-ms") {
+        return false;
+    }
+
+    upper_path.contains("\\USERS\\PUBLIC\\LIBRARIES\\")
+        || upper_path.contains("\\WINDOWS\\WINSXS\\")
+}
+
+fn si_fn_pair_diff_seconds(si_ts: &Option<String>, fn_ts: &Option<String>) -> Option<i64> {
+    let (Some(si_str), Some(fn_str)) = (si_ts.as_ref(), fn_ts.as_ref()) else {
+        return None;
+    };
+    let (Some(si), Some(fnv)) = (parse_timestamp(si_str), parse_timestamp(fn_str)) else {
+        return None;
+    };
+    Some((fnv - si).num_seconds())
+}
+
+fn count_si_fn_anomalous_fields(si: &StandardInfo, fn_attr: &FileNameAttr, min_diff_secs: i64) -> usize {
+    [
+        si_fn_pair_diff_seconds(&si.created, &fn_attr.created),
+        si_fn_pair_diff_seconds(&si.modified, &fn_attr.modified),
+        si_fn_pair_diff_seconds(&si.mft_modified, &fn_attr.mft_modified),
+        si_fn_pair_diff_seconds(&si.accessed, &fn_attr.accessed),
+    ]
+    .iter()
+    .filter(|d| d.map(|v| v > min_diff_secs).unwrap_or(false))
+    .count()
+}
+
+fn owner_sid_is_trusted(owner_sid: &str, trusted_patterns: &[String]) -> bool {
+    let owner_upper = owner_sid.to_uppercase();
+    trusted_patterns.iter().any(|pattern| {
+        let p = pattern.to_uppercase();
+        if let Some(prefix) = p.strip_suffix('*') {
+            owner_upper.starts_with(prefix)
+        } else {
+            owner_upper == p
+        }
+    })
+}
+
+fn should_suppress_timestomp_for_trusted_sds(
+    entry: &MftEntry,
+    sds_by_id: &HashMap<u32, &SdsEntry>,
+    trusted_owner_sids: &[String],
+    has_basic_info_change: bool,
+    mismatch_fields: usize,
+    is_executable: bool,
+) -> bool {
+    if has_basic_info_change || is_executable || mismatch_fields >= 4 {
+        return false;
+    }
+
+    let Some(sec_id) = entry.security_id else {
+        return false;
+    };
+    let Some(sds) = sds_by_id.get(&sec_id) else {
+        return false;
+    };
+    let Some(owner_sid) = sds.owner_sid.as_deref() else {
+        return false;
+    };
+
+    let trusted_owner = owner_sid_is_trusted(owner_sid, trusted_owner_sids);
+    if !trusted_owner {
+        return false;
+    }
+
+    let has_auto_inherited_dacl = sds
+        .control_flags
+        .iter()
+        .any(|f| f.eq_ignore_ascii_case("SeDaclAutoInherited"));
+    let has_access_allowed = sds
+        .unique_dacl_ace_types
+        .iter()
+        .any(|t| t.eq_ignore_ascii_case("AccessAllowed"));
+
+    has_auto_inherited_dacl || has_access_allowed
+}
+
 /// Check if the SI<->FN difference is explained by volume imaging:
 /// the FN Created is on the imaged date and SI Created is older.
 fn is_imaging_artifact(
@@ -320,6 +416,14 @@ fn detect_timestomping(
         }
     }
 
+    // Build a map of SecurityId -> SDS entry to leverage descriptor context
+    // for false-positive suppression.
+    let sds_by_id: HashMap<u32, &SdsEntry> = input
+        .sds_entries
+        .iter()
+        .map(|s| (s.id, s))
+        .collect();
+
     for entry in &input.mft_entries {
         let si = match &entry.standard_info {
             Some(si) => si,
@@ -348,9 +452,21 @@ fn detect_timestomping(
                 {
                     let min_diff = RuleEngine::get_param_i64(rule, "min_difference_seconds")
                         .unwrap_or(60);
+                    let min_anomalous_fields = RuleEngine::get_param_i64(rule, "min_anomalous_macb_fields")
+                        .unwrap_or(2)
+                        .max(1) as usize;
+                    let trusted_owner_sids = RuleEngine::get_param_string_array(rule, "trusted_owner_sids");
                     let diff = (fn_created - si_created).num_seconds();
 
                     if diff > min_diff {
+                        let mismatch_fields =
+                            count_si_fn_anomalous_fields(si, fn_attr, min_diff);
+                        let has_basic_info_change = basic_info_changes
+                            .get(&entry.entry_id)
+                            .map(|changes| !changes.is_empty())
+                            .unwrap_or(false);
+                        let is_executable = has_executable_extension(&fn_attr.name);
+
                         // ── False-positive suppression ──────────────────
                         // 1. Volume imaging: FN timestamp is on the volume
                         //    creation date → this is expected for imaged systems.
@@ -362,6 +478,33 @@ fn detect_timestomping(
                         //    WinSxS, DriverStore, etc. naturally have older SI
                         //    timestamps after OS upgrades, servicing, or deployment.
                         if is_system_or_os_path(&path) {
+                            continue;
+                        }
+
+                        // 2b. Windows library metadata files (.library-ms) are
+                        //     frequently materialized/updated by shell servicing
+                        //     and are noisy for SI<->FN checks.
+                        if is_windows_library_metadata(&path, &fn_attr.name) {
+                            continue;
+                        }
+
+                        // 2c. Require corroboration from either USN BASIC_INFO_CHANGE
+                        //     or multi-field SI/FN divergence; single-field deltas are
+                        //     often benign metadata drift on serviced systems.
+                        if !has_basic_info_change && mismatch_fields < min_anomalous_fields {
+                            continue;
+                        }
+
+                        // 2d. If SDS owner/control indicates a trusted inherited ACL and
+                        //     there is no USN corroboration, suppress to avoid noisy FPs.
+                        if should_suppress_timestomp_for_trusted_sds(
+                            entry,
+                            &sds_by_id,
+                            &trusted_owner_sids,
+                            has_basic_info_change,
+                            mismatch_fields,
+                            is_executable,
+                        ) {
                             continue;
                         }
 
@@ -381,6 +524,14 @@ fn detect_timestomping(
                             fn_created_str.clone(),
                         );
                         evidence.insert("difference_seconds".to_string(), diff.to_string());
+                        evidence.insert(
+                            "si_fn_anomalous_fields".to_string(),
+                            mismatch_fields.to_string(),
+                        );
+                        evidence.insert(
+                            "usn_basic_info_change_present".to_string(),
+                            has_basic_info_change.to_string(),
+                        );
 
                         findings.push(Finding {
                             id: format!("F-{:05}", counter),
@@ -945,6 +1096,69 @@ fn detect_suspicious_locations(
 // Alternate Data Stream Anomaly Detection (ADS-001 through ADS-004)
 // =============================================================================
 
+fn normalized_stream_name(stream_name: &str) -> &str {
+    stream_name.rsplit(':').next().unwrap_or(stream_name).trim()
+}
+
+fn is_ntfs_metafile_host(path: &str, host_filename: &str) -> bool {
+    let path_upper = path.replace('/', "\\").to_uppercase();
+    if path_upper.starts_with(".\\$") || path_upper.starts_with("\\$") {
+        return true;
+    }
+
+    let host_upper = host_filename.to_uppercase();
+    if host_upper.starts_with('$') {
+        return true;
+    }
+
+    false
+}
+
+fn is_known_benign_ads(
+    path: &str,
+    host_filename: &str,
+    stream_name: &str,
+    known_safe_streams: &[String],
+) -> bool {
+    if is_ntfs_metafile_host(path, host_filename) {
+        return true;
+    }
+
+    let stream_base = normalized_stream_name(stream_name);
+    if stream_base.is_empty() {
+        return true;
+    }
+
+    if stream_base.starts_with('$') {
+        return true;
+    }
+
+    let default_safe = [
+        "Zone.Identifier",
+        "SmartScreen",
+        "motw",
+        "WofCompressedData",
+        "encryptable",
+        "SummaryInformation",
+        "DocumentSummaryInformation",
+        "com.dropbox.attrs",
+        "com.dropbox.attributes",
+        "AfpInfo",
+        "AFP_AfpInfo",
+        "AFP_Resource",
+        "OECustomProperty",
+        "MsoDataStore",
+    ];
+
+    if default_safe.iter().any(|s| s.eq_ignore_ascii_case(stream_base)) {
+        return true;
+    }
+
+    known_safe_streams
+        .iter()
+        .any(|s| s.eq_ignore_ascii_case(stream_name) || s.eq_ignore_ascii_case(stream_base))
+}
+
 fn detect_ads_anomalies(
     input: &NtfsInput,
     rule_engine: &RuleEngine,
@@ -955,6 +1169,12 @@ fn detect_ads_anomalies(
     if ads_rules.is_empty() {
         return;
     }
+
+    let known_safe_streams = ads_rules
+        .iter()
+        .find(|r| r.id == "ADS-001")
+        .map(|r| RuleEngine::get_param_string_array(r, "known_safe_streams"))
+        .unwrap_or_default();
 
     for entry in &input.mft_entries {
         let filename = entry
@@ -972,22 +1192,19 @@ fn detect_ads_anomalies(
                 continue; // Skip default $DATA stream
             }
 
-            // Skip NTFS metafile ADS (e.g., $BadClus:$Bad, $Secure:$SDS)
-            let path_upper = path.to_uppercase();
-            if path_upper.starts_with(".$") || path_upper.starts_with(".\\") && path_upper.chars().nth(2) == Some('$') {
+            if is_known_benign_ads(&path, &filename, &stream.name, &known_safe_streams) {
                 continue;
             }
+
+            let stream_base = normalized_stream_name(&stream.name);
 
             // ADS-001: Non-standard ADS
             if let Some(rule) = ads_rules.iter().find(|r| r.id == "ADS-001") {
                 let known_safe = RuleEngine::get_param_string_array(rule, "known_safe_streams");
-                // Match against stream name - also check the suffix after ':' for
-                // MFTECmd format like "filename.dll:WofCompressedData"
-                let stream_base = stream.name.rsplit(':').next().unwrap_or(&stream.name);
-                if !known_safe.iter().any(|s| s.eq_ignore_ascii_case(&stream.name) || s.eq_ignore_ascii_case(stream_base)) {
+                if !is_known_benign_ads(&path, &filename, &stream.name, &known_safe) {
                     *counter += 1;
                     let mut evidence = HashMap::new();
-                    evidence.insert("stream_name".to_string(), stream.name.clone());
+                    evidence.insert("stream_name".to_string(), stream_base.to_string());
                     evidence.insert("host_file".to_string(), path.clone());
                     if let Some(size) = stream.size {
                         evidence.insert("stream_size".to_string(), size.to_string());
@@ -1002,9 +1219,9 @@ fn detect_ads_anomalies(
                         description: format!(
                             "Non-standard ADS '{}' found on file '{}'. This stream is not \
                              in the known safe list and may contain hidden data.",
-                            stream.name, path
+                            stream_base, path
                         ),
-                        affected_path: Some(format!("{}:{}", path, stream.name)),
+                        affected_path: Some(format!("{}:{}", path, stream_base)),
                         affected_entry_id: Some(entry.entry_id),
                         timestamp: entry
                             .standard_info
@@ -1021,8 +1238,7 @@ fn detect_ads_anomalies(
             // ADS-002: Large ADS (skip known benign stream types)
             if let Some(rule) = ads_rules.iter().find(|r| r.id == "ADS-002") {
                 let known_safe = RuleEngine::get_param_string_array(rule, "known_safe_streams");
-                let stream_base = stream.name.rsplit(':').next().unwrap_or(&stream.name);
-                let is_known_safe = known_safe.iter().any(|s| s.eq_ignore_ascii_case(&stream.name) || s.eq_ignore_ascii_case(stream_base));
+                let is_known_safe = is_known_benign_ads(&path, &filename, &stream.name, &known_safe);
                 let threshold =
                     RuleEngine::get_param_i64(rule, "size_threshold_bytes").unwrap_or(1048576)
                         as u64;
@@ -1030,7 +1246,7 @@ fn detect_ads_anomalies(
                     if size > threshold && !is_known_safe {
                         *counter += 1;
                         let mut evidence = HashMap::new();
-                        evidence.insert("stream_name".to_string(), stream.name.clone());
+                        evidence.insert("stream_name".to_string(), stream_base.to_string());
                         evidence.insert("stream_size".to_string(), size.to_string());
                         evidence.insert("threshold".to_string(), threshold.to_string());
 
@@ -1043,9 +1259,9 @@ fn detect_ads_anomalies(
                             description: format!(
                                 "LARGE ADS: Stream '{}' on '{}' is {} bytes (threshold: {}). \
                                  May contain hidden executable or data payload.",
-                                stream.name, path, size, threshold
+                                stream_base, path, size, threshold
                             ),
-                            affected_path: Some(format!("{}:{}", path, stream.name)),
+                            affected_path: Some(format!("{}:{}", path, stream_base)),
                             affected_entry_id: Some(entry.entry_id),
                             timestamp: None,
                             evidence,
@@ -1067,7 +1283,7 @@ fn detect_ads_anomalies(
                         if content_upper.starts_with(&sig.to_uppercase()) {
                             *counter += 1;
                             let mut evidence = HashMap::new();
-                            evidence.insert("stream_name".to_string(), stream.name.clone());
+                            evidence.insert("stream_name".to_string(), stream_base.to_string());
                             evidence
                                 .insert("matched_signature".to_string(), sig.clone());
                             evidence.insert(
@@ -1085,9 +1301,9 @@ fn detect_ads_anomalies(
                                     "EXECUTABLE IN ADS: Stream '{}:{}' contains content \
                                      matching executable signature '{}'. This is a strong \
                                      indicator of hidden malware.",
-                                    path, stream.name, sig
+                                    path, stream_base, sig
                                 ),
-                                affected_path: Some(format!("{}:{}", path, stream.name)),
+                                affected_path: Some(format!("{}:{}", path, stream_base)),
                                 affected_entry_id: Some(entry.entry_id),
                                 timestamp: None,
                                 evidence,
@@ -2122,14 +2338,19 @@ pub fn collect_ads_inventory(input: &NtfsInput) -> Vec<AdsInfo> {
             if stream.name.is_empty() {
                 continue;
             }
-            let known_safe = ["Zone.Identifier", "encryptable", "SummaryInformation"];
-            let is_suspicious = !known_safe.contains(&stream.name.as_str());
+            let path = entry
+                .full_path
+                .clone()
+                .unwrap_or_else(|| filename.clone());
+            let safe: Vec<String> = Vec::new();
+            let stream_base = normalized_stream_name(&stream.name).to_string();
+            let is_suspicious = !is_known_benign_ads(&path, &filename, &stream.name, &safe);
 
             ads_list.push(AdsInfo {
                 entry_id: entry.entry_id,
                 host_filename: filename.clone(),
                 host_path: entry.full_path.clone(),
-                stream_name: stream.name.clone(),
+                stream_name: stream_base.clone(),
                 stream_size: stream.size,
                 is_resident: stream.resident,
                 content_preview: stream.content.as_ref().map(|c| {

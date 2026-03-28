@@ -9,6 +9,20 @@ pub fn generate_html(report: &AnalysisReport) -> String {
     let info = report.count_severity(Severity::Info);
     let total = report.findings.len();
 
+    let pct_crit = if total > 0 { (critical as f64 / total as f64) * 100.0 } else { 0.0 };
+    let pct_high = if total > 0 { pct_crit + (high as f64 / total as f64) * 100.0 } else { 0.0 };
+    let pct_med = if total > 0 { pct_high + (medium as f64 / total as f64) * 100.0 } else { 0.0 };
+    let pct_low = if total > 0 { pct_med + (low as f64 / total as f64) * 100.0 } else { 0.0 };
+
+    let hive_breakdown: Vec<String> = report.hive_stats.iter()
+        .map(|s| format!("{}: <b>{}</b>", s.name, s.finding_count))
+        .collect();
+    let hive_breakdown_str = if hive_breakdown.is_empty() {
+        "No hive data available.".to_string()
+    } else {
+        hive_breakdown.join(" &middot; ")
+    };
+
     let high_and_above: Vec<&Finding> = report.findings.iter()
         .filter(|f| f.severity <= Severity::High)
         .collect();
@@ -143,6 +157,11 @@ pub fn generate_html(report: &AnalysisReport) -> String {
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
         th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }}
         th {{ background: var(--bg-tertiary); color: var(--accent-light); font-size: 12px; text-transform: uppercase; }}
+        th.sortable {{ cursor: pointer; user-select: none; position: relative; padding-right: 20px; transition: background 0.2s; }}
+        th.sortable:hover {{ background: #2a3136; }}
+        th.sortable::after {{ content: '\2195'; position: absolute; right: 6px; font-size: 12px; opacity: 0.3; top: 50%; transform: translateY(-50%); }}
+        th.sort-asc::after {{ content: '\2191'; opacity: 1; color: var(--accent-light); }}
+        th.sort-desc::after {{ content: '\2193'; opacity: 1; color: var(--accent-light); }}
         tr:hover {{ background: rgba(255,255,255,0.03); }}
         code {{
             background: var(--bg-primary); padding: 2px 6px; border-radius: 4px;
@@ -165,14 +184,39 @@ pub fn generate_html(report: &AnalysisReport) -> String {
             background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), var(--accent-light));
             box-shadow: 0 0 8px rgba(46, 160, 67, 0.4);
         }}
+        .dashboard-top {{
+            display: flex; gap: 24px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
+        }}
+        .donut-container {{
+            width: 130px; height: 130px; border-radius: 50%;
+            background: conic-gradient(
+                var(--alert-bg) 0% var(--pct-crit),
+                #fd8c00 var(--pct-crit) var(--pct-high),
+                var(--warning-bg) var(--pct-high) var(--pct-med),
+                var(--notice-bg) var(--pct-med) var(--pct-low),
+                #1f6feb var(--pct-low) 100%
+            );
+            position: relative; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }}
+        .donut-inner {{
+            width: 100px; height: 100px; background: var(--bg-primary);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }}
+        .donut-inner .total {{ font-size: 22px; font-weight: 700; line-height: 1; }}
+        .donut-inner .label {{ font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }}
         .summary-grid {{
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px; margin-bottom: 24px;
+            flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
         }}
         .summary-card {{
             background: var(--bg-secondary); border: 1px solid var(--border-color);
             border-radius: 8px; padding: 16px; text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
         }}
+        .summary-card:hover {{ transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }}
         .summary-card .number {{ font-size: 32px; font-weight: 700; }}
         .summary-card .label {{ font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }}
         .number.crit {{ color: var(--alert-bg); }}
@@ -203,14 +247,14 @@ pub fn generate_html(report: &AnalysisReport) -> String {
         <div class="header-content">
             <div class="logo">
                 <div class="logo-text">KALI<span>HEKER</span></div>
-                <div class="version">Registry Analyzer v1.0</div>
+                <div class="version">Registry Analyzer v1.1</div>
             </div>
             <div class="scan-info">
                 <div class="info-card"><h3>System Name</h3><p>{system_name}</p></div>
                 <div class="info-card"><h3>Export Date</h3><p>{export_date}</p></div>
                 <div class="info-card"><h3>Report Generated</h3><p>{report_date}</p></div>
                 <div class="info-card"><h3>Registry Stats</h3><p>{total_hives} Hives &middot; {total_keys} Keys &middot; {total_values} Values</p></div>
-                <div class="info-card"><h3>Total Findings</h3><p>Critical: {critical} | High: {high} | Medium: {medium} | Low: {low} | Info: {info}</p></div>
+                <div class="info-card"><h3>Hive Breakdown</h3><p>{hive_breakdown}</p></div>
             </div>
         </div>
     </header>
@@ -221,11 +265,7 @@ pub fn generate_html(report: &AnalysisReport) -> String {
         total_hives = report.total_hives,
         total_keys = report.total_keys,
         total_values = report.total_values,
-        critical = critical,
-        high = high,
-        medium = medium,
-        low = low,
-        info = info,
+        hive_breakdown = hive_breakdown_str,
     ));
 
     // ── Navigation / filters ──────────────────────────────
@@ -310,27 +350,24 @@ pub fn generate_html(report: &AnalysisReport) -> String {
         </div>
 "#);
 
-    // Stats bar
+    // Dashboard Top (Chart + Summary cards)
     html.push_str(&format!(r#"
-        <div class="stats-bar">
-            <div class="stat"><div class="stat-dot alert"></div> <span class="stat-label">Critical:</span> <span class="stat-value">{critical}</span></div>
-            <div class="stat"><div class="stat-dot" style="background:#fd8c00"></div> <span class="stat-label">High:</span> <span class="stat-value">{high}</span></div>
-            <div class="stat"><div class="stat-dot warning"></div> <span class="stat-label">Medium:</span> <span class="stat-value">{medium}</span></div>
-            <div class="stat"><div class="stat-dot notice"></div> <span class="stat-label">Low:</span> <span class="stat-value">{low}</span></div>
-            <div class="stat"><div class="stat-dot info-dot"></div> <span class="stat-label">Info:</span> <span class="stat-value">{info}</span></div>
+        <div class="dashboard-top" style="--pct-crit: {:.2}%; --pct-high: {:.2}%; --pct-med: {:.2}%; --pct-low: {:.2}%;">
+            <div class="donut-container">
+                <div class="donut-inner">
+                    <div class="total">{}</div>
+                    <div class="label">Total</div>
+                </div>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-card"><div class="number crit">{}</div><div class="label">Critical</div></div>
+                <div class="summary-card"><div class="number high-c">{}</div><div class="label">High</div></div>
+                <div class="summary-card"><div class="number med">{}</div><div class="label">Medium</div></div>
+                <div class="summary-card"><div class="number low-c">{}</div><div class="label">Low</div></div>
+                <div class="summary-card"><div class="number info-c">{}</div><div class="label">Info</div></div>
+            </div>
         </div>
-"#, critical = critical, high = high, medium = medium, low = low, info = info));
-
-    // Summary cards
-    html.push_str(&format!(r#"
-        <div class="summary-grid">
-            <div class="summary-card"><div class="number crit">{critical}</div><div class="label">Critical</div></div>
-            <div class="summary-card"><div class="number high-c">{high}</div><div class="label">High</div></div>
-            <div class="summary-card"><div class="number med">{medium}</div><div class="label">Medium</div></div>
-            <div class="summary-card"><div class="number low-c">{low}</div><div class="label">Low</div></div>
-            <div class="summary-card"><div class="number info-c">{info}</div><div class="label">Info</div></div>
-        </div>
-"#, critical = critical, high = high, medium = medium, low = low, info = info));
+"#, pct_crit, pct_high, pct_med, pct_low, total, critical, high, medium, low, info));
 
     // ── Critical & High finding cards ─────────────────────
     if !high_and_above.is_empty() {
@@ -416,10 +453,10 @@ pub fn generate_html(report: &AnalysisReport) -> String {
             <table>
                 <thead>
                     <tr>
-                        <th>Severity</th>
-                        <th>Title</th>
-                        <th>Category</th>
-                        <th>Description</th>
+                        <th class="sortable" onclick="sortTable(0, this)">Severity</th>
+                        <th class="sortable" onclick="sortTable(1, this)">Title</th>
+                        <th class="sortable" onclick="sortTable(2, this)">Category</th>
+                        <th class="sortable" onclick="sortTable(3, this)">Description</th>
                         <th>MITRE ATT&amp;CK</th>
                     </tr>
                 </thead>
@@ -515,7 +552,7 @@ pub fn generate_html(report: &AnalysisReport) -> String {
         document.querySelectorAll('.category-header').forEach(header => {
             header.addEventListener('click', function() {
                 let sibling = this.nextElementSibling;
-                while (sibling && !sibling.classList.contains('category-header')) {
+                while (sibling && !sibling.classList.contains('category-header') && !sibling.classList.contains('summary-table-container')) {
                     if (sibling.style.display === 'none') {
                         sibling.style.display = '';
                     } else {
@@ -525,6 +562,39 @@ pub fn generate_html(report: &AnalysisReport) -> String {
                 }
             });
         });
+
+        // Table sorting functionality
+        function sortTable(colIndex, thElement) {
+            const table = thElement.closest('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            const isAsc = thElement.classList.contains('sort-asc');
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            thElement.classList.add(isAsc ? 'sort-desc' : 'sort-asc');
+            const dir = isAsc ? -1 : 1;
+
+            rows.sort((a, b) => {
+                let cellA = a.cells[colIndex].textContent.trim().toLowerCase();
+                let cellB = b.cells[colIndex].textContent.trim().toLowerCase();
+
+                // Custom sorting for severity to sort logically, not alphabetically
+                if (colIndex === 0) {
+                    const sevOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3, 'info': 4 };
+                    const valA = sevOrder[cellA] ?? 99;
+                    const valB = sevOrder[cellB] ?? 99;
+                    return (valA - valB) * dir;
+                }
+
+                if (cellA < cellB) return -1 * dir;
+                if (cellA > cellB) return 1 * dir;
+                return 0;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
     </script>
 </body>
 </html>
@@ -562,6 +632,21 @@ fn render_finding_card(f: &Finding) -> String {
             card.push_str(&format!(
                 "                    <div class=\"evidence-line\"><span class=\"evidence-label\">[{}]</span> {}</div>\n",
                 e(&ev.label), e(&ev.value)
+            ));
+        }
+        card.push_str("                </div>\n");
+    }
+
+    // Key Values box
+    if !f.key_values.is_empty() {
+        card.push_str("                <div class=\"evidence-box\" style=\"margin-top: 8px; border-left: 3px solid #1f6feb;\">\n");
+        card.push_str("                    <div style=\"font-size: 11px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.5px;\">Associated Key Values</div>\n");
+        for kv in &f.key_values {
+            let name = if kv.name.is_empty() { "(Default)" } else { &kv.name };
+            let val_type = kv.value_type.as_deref().unwrap_or("UNKNOWN");
+            card.push_str(&format!(
+                "                    <div class=\"evidence-line\"><span class=\"evidence-label\">{} [{}]</span> {}</div>\n",
+                e(name), e(val_type), e(&truncate_str(&kv.data, 200))
             ));
         }
         card.push_str("                </div>\n");

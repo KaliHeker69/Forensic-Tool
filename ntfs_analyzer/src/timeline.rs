@@ -7,6 +7,7 @@
 // =============================================================================
 
 use chrono::{DateTime, Utc};
+use rayon::prelude::*;
 use std::collections::HashMap;
 
 use crate::correlation::parse_timestamp;
@@ -18,9 +19,28 @@ pub fn generate_timeline(
     date_start: Option<DateTime<Utc>>,
     date_end: Option<DateTime<Utc>>,
 ) -> Vec<TimelineEvent> {
-    let mut events: Vec<TimelineEvent> = Vec::new();
+    let (mft_events, usn_events) = rayon::join(
+        || build_mft_events(input, date_start, date_end),
+        || build_usn_events(input, date_start, date_end),
+    );
+    let i30_events = build_i30_events(input, date_start, date_end);
 
-    // 1. MFT entries — 8 timestamps per file (4 from $SI, 4 from $FN)
+    let mut events = Vec::with_capacity(mft_events.len() + usn_events.len() + i30_events.len());
+    events.extend(mft_events);
+    events.extend(usn_events);
+    events.extend(i30_events);
+
+    events.par_sort_unstable_by_key(|e| e.timestamp);
+    events
+}
+
+fn build_mft_events(
+    input: &NtfsInput,
+    date_start: Option<DateTime<Utc>>,
+    date_end: Option<DateTime<Utc>>,
+) -> Vec<TimelineEvent> {
+    let mut events = Vec::new();
+
     for entry in &input.mft_entries {
         let path = entry
             .full_path
@@ -34,7 +54,6 @@ pub fn generate_timeline(
             " [DELETED]"
         };
 
-        // $STANDARD_INFORMATION timestamps (user-visible, modifiable)
         if let Some(si) = &entry.standard_info {
             let si_timestamps = [
                 ("CREATED", &si.created),
@@ -49,8 +68,7 @@ pub fn generate_timeline(
                             continue;
                         }
                         let mut metadata = HashMap::new();
-                        metadata
-                            .insert("entry_id".to_string(), entry.entry_id.to_string());
+                        metadata.insert("entry_id".to_string(), entry.entry_id.to_string());
                         if !entry.flags.in_use {
                             metadata.insert("deleted".to_string(), "true".to_string());
                         }
@@ -73,7 +91,6 @@ pub fn generate_timeline(
             }
         }
 
-        // $FILE_NAME timestamps (kernel-managed, forensic ground truth)
         for fn_attr in &entry.file_names {
             let fn_timestamps = [
                 ("CREATED", &fn_attr.created),
@@ -88,12 +105,8 @@ pub fn generate_timeline(
                             continue;
                         }
                         let mut metadata = HashMap::new();
-                        metadata
-                            .insert("entry_id".to_string(), entry.entry_id.to_string());
-                        metadata.insert(
-                            "fn_name".to_string(),
-                            fn_attr.name.clone(),
-                        );
+                        metadata.insert("entry_id".to_string(), entry.entry_id.to_string());
+                        metadata.insert("fn_name".to_string(), fn_attr.name.clone());
                         if let Some(ns) = &fn_attr.namespace {
                             metadata.insert("namespace".to_string(), ns.clone());
                         }
@@ -106,10 +119,7 @@ pub fn generate_timeline(
                             entry_id: Some(entry.entry_id),
                             description: format!(
                                 "[$FN:{}] File {} (MFT#{})",
-                                fn_attr
-                                    .namespace
-                                    .as_deref()
-                                    .unwrap_or("WIN32"),
+                                fn_attr.namespace.as_deref().unwrap_or("WIN32"),
                                 event_type.to_lowercase(),
                                 entry.entry_id
                             ),
@@ -121,7 +131,16 @@ pub fn generate_timeline(
         }
     }
 
-    // 2. USN Journal records — each record is a change event
+    events
+}
+
+fn build_usn_events(
+    input: &NtfsInput,
+    date_start: Option<DateTime<Utc>>,
+    date_end: Option<DateTime<Utc>>,
+) -> Vec<TimelineEvent> {
+    let mut events = Vec::new();
+
     for usn in &input.usn_records {
         if let Some(ts) = parse_timestamp(&usn.timestamp) {
             if !in_range(ts, date_start, date_end) {
@@ -136,8 +155,7 @@ pub fn generate_timeline(
 
             let mut metadata = HashMap::new();
             metadata.insert("usn".to_string(), usn.usn.to_string());
-            metadata
-                .insert("mft_entry_id".to_string(), usn.mft_entry_id.to_string());
+            metadata.insert("mft_entry_id".to_string(), usn.mft_entry_id.to_string());
             metadata.insert(
                 "reason_flags".to_string(),
                 format!("0x{:08X}", usn.reason_flags),
@@ -163,13 +181,18 @@ pub fn generate_timeline(
         }
     }
 
-    // 3. I30 index entries (including slack space recoveries)
+    events
+}
+
+fn build_i30_events(
+    input: &NtfsInput,
+    date_start: Option<DateTime<Utc>>,
+    date_end: Option<DateTime<Utc>>,
+) -> Vec<TimelineEvent> {
+    let mut events = Vec::new();
+
     for i30 in &input.i30_entries {
-        let source = if i30.from_slack {
-            "I30_SLACK"
-        } else {
-            "I30"
-        };
+        let source = if i30.from_slack { "I30_SLACK" } else { "I30" };
         let state_tag = if i30.from_slack {
             " [RECOVERED FROM SLACK]"
         } else {
@@ -190,10 +213,7 @@ pub fn generate_timeline(
                         continue;
                     }
                     let mut metadata = HashMap::new();
-                    metadata.insert(
-                        "file_entry_id".to_string(),
-                        i30.file_entry_id.to_string(),
-                    );
+                    metadata.insert("file_entry_id".to_string(), i30.file_entry_id.to_string());
                     metadata.insert(
                         "parent_entry_id".to_string(),
                         i30.parent_entry_id.to_string(),
@@ -221,9 +241,6 @@ pub fn generate_timeline(
             }
         }
     }
-
-    // Sort chronologically
-    events.sort_by_key(|e| e.timestamp);
 
     events
 }

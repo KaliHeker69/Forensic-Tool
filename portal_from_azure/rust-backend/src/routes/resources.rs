@@ -34,6 +34,14 @@ fn resources_db() -> Vec<Resource> {
             status: "active".into(),
         },
         Resource {
+            id: "host-information".into(),
+            name: "Host Information".into(),
+            description: "Host identity, OS posture, hardware, network, and account context".into(),
+            category: "forensics".into(),
+            url: Some("/host-information".into()),
+            status: "active".into(),
+        },
+        Resource {
             id: "ntfs-data".into(),
             name: "NTFS Data".into(),
             description: "NTFS file system and metadata analysis".into(),

@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+
+{% block title %}Host Information - Resource Portal{% endblock %}
+
+{% block body_class %}dashboard-page host-information-page{% endblock %}
+
+{% block content %}
+<div class="host-page-shell">
+    <header class="host-page-topbar">
+        <div class="host-page-title">
+            <a href="/dashboard" class="host-page-back">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                <span>Back to Dashboard</span>
+            </a>
+            <div class="host-page-heading">
+                <span class="host-page-kicker">Registry, EVTX, WMI, and Filesystem Identity</span>
+                <h1>Host Information</h1>
+                <p>System identity, OS posture, hardware, network configuration, user accounts, and timeline anchors for the current case.</p>
+            </div>
+        </div>
+        <div class="host-page-actions">
+            <div class="investigator-chip" title="Signed in investigator">
+                <div class="avatar"><span>{{ avatar_letter }}</span></div>
+                <div class="investigator-meta">
+                    <span class="user-name">{% if user.full_name %}{{ user.full_name }}{% else %}{{ user.username }}{% endif %}</span>
+                    <span class="user-role">{% if user.is_admin %}Administrator{% else %}Investigator{% endif %}</span>
+                </div>
+            </div>
+            <a href="/tools/registry" class="host-page-pill">
+                <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                <span>Registry Viewer</span>
+            </a>
+            <span class="host-page-pill host-page-pill-muted">
+                <i class="fa-solid fa-database" aria-hidden="true"></i>
+                <span>{% if host_information_quickview.source %}{{ host_information_quickview.source }}{% else %}dashboard_quick_view.json{% endif %}</span>
+            </span>
+        </div>
+    </header>
+
+    <main class="host-page-main">
+        <section class="host-summary-grid">
+            <article class="host-summary-card">
+                <span class="host-summary-label">Hostname</span>
+                <strong class="host-summary-value">{% if host_information_quickview.hostname %}{{ host_information_quickview.hostname }}{% else %}n/a{% endif %}</strong>
+                <span class="host-summary-meta">{% if host_information_quickview.os_product_name %}{{ host_information_quickview.os_product_name }}{% else %}Registry host profile{% endif %}</span>
+            </article>
+            <article class="host-summary-card">
+                <span class="host-summary-label">OS Build</span>
+                <strong class="host-summary-value">{% if host_information_quickview.os_build %}{{ host_information_quickview.os_build }}{% else %}n/a{% endif %}</strong>
+                <span class="host-summary-meta">{% if host_information_quickview.os_display_version %}{{ host_information_quickview.os_display_version }}{% else %}CurrentVersion{% endif %}</span>
+            </article>
+            <article class="host-summary-card">
+                <span class="host-summary-label">Interfaces</span>
+                <strong class="host-summary-value">{{ host_information_quickview.network_interfaces | length }}</strong>
+                <span class="host-summary-meta">mapped network adapters</span>
+            </article>
+            <article class="host-summary-card">
+                <span class="host-summary-label">Users</span>
+                <strong class="host-summary-value">{{ host_information_quickview.user_accounts | length }}</strong>
+                <span class="host-summary-meta">profile and SAM accounts</span>
+            </article>
+            <article class="host-summary-card">
+                <span class="host-summary-label">Installed Software</span>
+                <strong class="host-summary-value">{{ host_information_quickview.installed_software_count }}</strong>
+                <span class="host-summary-meta">uninstall inventory entries</span>
+            </article>
+            <article class="host-summary-card">
+                <span class="host-summary-label">Timezone</span>
+                <strong class="host-summary-value">{% if host_information_quickview.time_zone %}{{ host_information_quickview.time_zone }}{% else %}n/a{% endif %}</strong>
+                <span class="host-summary-meta">timeline normalization anchor</span>
+            </article>
+        </section>
+
+        <article class="obs-panel endpoint-panel endpoint-panel-host host-page-panel">
+            <header class="panel-header host-panel-header">
+                <div>
+                    <h2><i class="fa-solid fa-fingerprint" aria-hidden="true"></i> Host Information</h2>
+                    <p>Registry-backed system identity, interface inventory, security posture, user profile state, and timeline context.</p>
+                </div>
+                <div class="host-panel-badges">
+                    {% if host_information_quickview.hostname %}
+                    <span class="host-panel-badge">{{ host_information_quickview.hostname }}</span>
+                    {% endif %}
+                    {% if host_information_quickview.installation_type %}
+                    <span class="host-panel-badge host-panel-badge-muted">{{ host_information_quickview.installation_type }}</span>
+                    {% endif %}
+                </div>
+            </header>
+
+            <div class="host-info-grid">
+                <section class="host-subpanel host-subpanel-identity">
+                    <div class="host-subpanel-head">
+                        <span>01_SYSTEM_IDENTITY</span>
+                        <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-field-grid">
+                        <div class="host-field">
+                            <label>Hostname</label>
+                            <strong>{% if host_information_quickview.hostname %}{{ host_information_quickview.hostname }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field">
+                            <label>Machine GUID</label>
+                            <strong>{% if host_information_quickview.machine_guid %}{{ host_information_quickview.machine_guid }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top">
+                            <label>Owner</label>
+                            <strong>{% if host_information_quickview.registered_owner %}{{ host_information_quickview.registered_owner }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top">
+                            <label>Organization</label>
+                            <strong>{% if host_information_quickview.registered_organization %}{{ host_information_quickview.registered_organization }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top host-field-span">
+                            <label>Product ID</label>
+                            <strong>{% if host_information_quickview.product_id %}{{ host_information_quickview.product_id }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top">
+                            <label>Timezone</label>
+                            <strong>{% if host_information_quickview.time_zone %}{{ host_information_quickview.time_zone }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top">
+                            <label>Control Set</label>
+                            <strong>{% if host_information_quickview.current_control_set %}{{ host_information_quickview.current_control_set }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                        <div class="host-field host-field-top">
+                            <label>Domain</label>
+                            <strong>{% if host_information_quickview.domain %}{{ host_information_quickview.domain }}{% else %}n/a{% endif %}</strong>
+                        </div>
+                    </div>
+                    <div class="host-note">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                        <p>{% if host_information_quickview.forensic_note %}{{ host_information_quickview.forensic_note }}{% else %}Identity fields were not populated from current registry sources.{% endif %}</p>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-timeline">
+                    <div class="host-subpanel-head">
+                        <span>02_TIMELINE_ANCHORS</span>
+                        <i class="fa-solid fa-timeline" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-timeline-list">
+                        {% for anchor in host_information_quickview.timeline_anchors %}
+                        <div class="host-anchor-item {% if anchor.accent == "primary" %}host-anchor-item-primary{% elif anchor.accent == "success" %}host-anchor-item-success{% endif %}">
+                            <div class="host-anchor-dot"></div>
+                            <div class="host-anchor-copy">
+                                <span>{{ anchor.label }}</span>
+                                <strong>{{ anchor.timestamp }}</strong>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if host_information_quickview.timeline_anchors | length == 0 %}
+                        <div class="host-anchor-item">
+                            <div class="host-anchor-dot"></div>
+                            <div class="host-anchor-copy">
+                                <span>No timeline anchors</span>
+                                <strong>Registry and parsed EVTX exports did not provide anchor timestamps.</strong>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-os">
+                    <div class="host-subpanel-head">
+                        <span>03_OS_EDITION_DETAILS</span>
+                        <i class="fa-solid fa-desktop" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>Product</span><strong>{% if host_information_quickview.os_product_name %}{{ host_information_quickview.os_product_name }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Build</span><strong>{% if host_information_quickview.os_build %}{{ host_information_quickview.os_build }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Version</span><strong>{% if host_information_quickview.os_display_version %}{{ host_information_quickview.os_display_version }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Install Date</span><strong>{% if host_information_quickview.install_date %}{{ host_information_quickview.install_date }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Last Shutdown</span><strong>{% if host_information_quickview.last_shutdown_time %}{{ host_information_quickview.last_shutdown_time }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>System Root</span><strong>{% if host_information_quickview.system_root %}{{ host_information_quickview.system_root }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Architecture</span><strong>{% if host_information_quickview.os_architecture %}{{ host_information_quickview.os_architecture }}{% else %}n/a{% endif %}</strong></div>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-hardware">
+                    <div class="host-subpanel-head">
+                        <span>04_HARDWARE_PROFILE</span>
+                        <i class="fa-solid fa-microchip" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>Active Profile</span><strong>{% if host_information_quickview.active_hardware_profile %}{{ host_information_quickview.active_hardware_profile }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Profiles Seen</span><strong>{{ host_information_quickview.hardware_profiles | length }}</strong></div>
+                        <div class="host-stack-row"><span>CPU Inventory</span><strong>{% if host_information_quickview.cpu_name %}{{ host_information_quickview.cpu_name }}{% else %}HARDWARE hive not available{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>BIOS Inventory</span><strong>{% if host_information_quickview.bios_vendor %}{{ host_information_quickview.bios_vendor }}{% if host_information_quickview.bios_version %}<small class="host-cell-sub">{{ host_information_quickview.bios_version }}</small>{% endif %}{% else %}HARDWARE hive not available{% endif %}</strong></div>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Profile ID</th>
+                                    <th>Friendly Name</th>
+                                    <th>GUID</th>
+                                    <th>Preference</th>
+                                    <th>Status</th>
+                                    <th>Last Seen</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for profile in host_information_quickview.hardware_profiles %}
+                                <tr>
+                                    <td>{{ profile.profile_id }}</td>
+                                    <td>{{ profile.friendly_name }}</td>
+                                    <td>{% if profile.profile_guid %}{{ profile.profile_guid }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ profile.preference_order }}</td>
+                                    <td>{{ profile.status }}</td>
+                                    <td>{% if profile.last_seen %}{{ profile.last_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ profile.source }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.hardware_profiles | length == 0 %}
+                                <tr>
+                                    <td colspan="7">No hardware-profile records were parsed from `SYSTEM\\CurrentControlSet\\Control\\IDConfigDB` or `SYSTEM\\CurrentControlSet\\Hardware Profiles`.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-security">
+                    <div class="host-subpanel-head">
+                        <span>05_SECURITY_POSTURE</span>
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>Firewall Domain</span><strong>{{ host_information_quickview.firewall_domain }}</strong></div>
+                        <div class="host-stack-row"><span>Firewall Public</span><strong>{{ host_information_quickview.firewall_public }}</strong></div>
+                        <div class="host-stack-row"><span>Firewall Standard</span><strong>{{ host_information_quickview.firewall_standard }}</strong></div>
+                        <div class="host-stack-row"><span>Defender</span><strong>{{ host_information_quickview.defender_status }}</strong></div>
+                        <div class="host-stack-row"><span>Tamper Protection</span><strong>{{ host_information_quickview.defender_tamper_protection }}</strong></div>
+                        <div class="host-stack-row"><span>UAC</span><strong>{{ host_information_quickview.uac_status }}</strong></div>
+                        <div class="host-stack-row"><span>UAC Level</span><strong>{{ host_information_quickview.uac_level }}</strong></div>
+                        <div class="host-stack-row"><span>Remote Desktop</span><strong>{{ host_information_quickview.remote_desktop_status }}{% if host_information_quickview.remote_desktop_port %} :{{ host_information_quickview.remote_desktop_port }}{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>NLA</span><strong>{{ host_information_quickview.remote_desktop_nla }}</strong></div>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-network">
+                    <div class="host-subpanel-head">
+                        <span>06_NETWORK_CONFIGURATION</span>
+                        <i class="fa-solid fa-network-wired" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-network-grid">
+                        <div class="host-network-list">
+                            {% for adapter in host_information_quickview.network_interfaces %}
+                            <div class="host-network-card">
+                                <div class="host-network-head">
+                                    <strong>{{ adapter.adapter }}</strong>
+                                    <span>{{ adapter.status }}</span>
+                                </div>
+                                <div class="host-network-meta">
+                                    <span>IP {{ adapter.ip_address }}</span>
+                                    <span>GW {{ adapter.gateway }}</span>
+                                    <span>DNS {{ adapter.dns }}</span>
+                                    <span>{{ adapter.dhcp }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if host_information_quickview.network_interfaces | length == 0 %}
+                            <div class="host-network-card host-network-card-empty">
+                                <strong>No active interfaces</strong>
+                                <span>Registry interface mappings were not found.</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="host-network-profile-list">
+                            {% for profile in host_information_quickview.network_profiles %}
+                            <div class="host-network-profile">
+                                <div class="host-network-profile-head">
+                                    <strong>{{ profile.profile_name }}</strong>
+                                    <span>{{ profile.category }}</span>
+                                </div>
+                                <div class="host-network-profile-meta">
+                                    <span>First {{ profile.first_connected }}</span>
+                                    <span>Last {{ profile.last_connected }}</span>
+                                </div>
+                                <div class="host-network-profile-meta">
+                                    <span>DNS {{ profile.dns_suffix }}</span>
+                                    <span>Gateway {{ profile.gateway_mac }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            {% if host_information_quickview.network_profiles | length == 0 %}
+                            <div class="host-network-profile host-network-profile-empty">
+                                <div class="host-network-profile-head">
+                                    <strong>No past network profiles</strong>
+                                    <span>registry unavailable</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-users">
+                    <div class="host-subpanel-head">
+                        <span>07_USER_ACCOUNT_REGISTRY</span>
+                        <i class="fa-solid fa-users" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>SID</th>
+                                    <th>Last Logon</th>
+                                    <th>Logons</th>
+                                    <th>Password Set</th>
+                                    <th>Flags</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for account in host_information_quickview.user_accounts %}
+                                <tr>
+                                    <td>{{ account.username }}{% if account.profile_path %}<small class="host-cell-sub">{{ account.profile_path }}</small>{% endif %}</td>
+                                    <td>{% if account.sid %}{{ account.sid }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if account.last_logon %}{{ account.last_logon }}{% else %}{{ account.last_activity }}{% endif %}</td>
+                                    <td>{{ account.logon_count }}{% if account.failed_logons > 0 %}<small class="host-cell-sub warning">failed {{ account.failed_logons }}</small>{% endif %}</td>
+                                    <td>{% if account.password_last_set %}{{ account.password_last_set }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if account.is_admin %}<span class="host-status-chip host-status-chip-live">Admin</span>{% endif %}<span class="host-cell-inline">{{ account.state }}</span></td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.user_accounts | length == 0 %}
+                                <tr>
+                                    <td colspan="6">No profile or SAM account metadata was available for the current case.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-software">
+                    <div class="host-subpanel-head">
+                        <span>08_INSTALLED_SOFTWARE</span>
+                        <i class="fa-solid fa-box-archive" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>Inventory</span><strong>{{ host_information_quickview.installed_software_count }} entries</strong></div>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Version</th>
+                                    <th>Publisher</th>
+                                    <th>Install Date</th>
+                                    <th>Arch</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for app in host_information_quickview.installed_software %}
+                                <tr>
+                                    <td>{{ app.name }}</td>
+                                    <td>{% if app.version %}{{ app.version }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if app.publisher %}{{ app.publisher }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if app.install_date %}{{ app.install_date }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ app.architecture }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.installed_software | length == 0 %}
+                                <tr>
+                                    <td colspan="5">No uninstall inventory was available from the SOFTWARE hive.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-storage">
+                    <div class="host-subpanel-head">
+                        <span>09_STORAGE_LANDSCAPE</span>
+                        <i class="fa-solid fa-hard-drive" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>BitLocker</span><strong>{{ host_information_quickview.bitlocker_status }}</strong></div>
+                        <div class="host-stack-row"><span>Shadow Copies</span><strong>{% if host_information_quickview.volume_shadow_copies_present %}Present{% else %}Not Observed{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>3rd Party Encryption</span><strong>{% if host_information_quickview.third_party_encryption | length > 0 %}{{ host_information_quickview.third_party_encryption | join(sep=", ") }}{% else %}None Detected{% endif %}</strong></div>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Drive</th>
+                                    <th>Volume GUID</th>
+                                    <th>Label</th>
+                                    <th>Serial</th>
+                                    <th>Layout</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for volume in host_information_quickview.storage_volumes %}
+                                <tr>
+                                    <td>{{ volume.drive_letter }}</td>
+                                    <td>{% if volume.volume_guid %}{{ volume.volume_guid }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if volume.volume_label %}{{ volume.volume_label }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if volume.serial_number %}{{ volume.serial_number }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if volume.partition_layout %}{{ volume.partition_layout }}{% else %}n/a{% endif %}<small class="host-cell-sub">{{ volume.bitlocker_status }} · {{ volume.shadow_copies }}</small></td>
+                                    <td>{{ volume.source }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.storage_volumes | length == 0 %}
+                                <tr>
+                                    <td colspan="6">No mounted-volume or boot-sector metadata was available for the current case.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>USB Core Evidence</th>
+                                    <th>Identifier</th>
+                                    <th>First Seen</th>
+                                    <th>Last Seen</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in host_information_quickview.usb_storage_devices %}
+                                <tr>
+                                    <td>{{ device.category }}</td>
+                                    <td>{{ device.name }}</td>
+                                    <td>{% if device.identifier %}{{ device.identifier }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if device.first_seen %}{{ device.first_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if device.last_seen %}{{ device.last_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ device.source }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.usb_storage_devices | length == 0 %}
+                                <tr>
+                                    <td colspan="6">No USB core evidence was parsed from `USBSTOR`, `USB`, `STORAGE`, `MountedDevices`, or `DeviceClasses`.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-devices">
+                    <div class="host-subpanel-head">
+                        <span>10_USB_USER_ATTRIBUTION</span>
+                        <i class="fa-solid fa-usb" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        {% for note in host_information_quickview.usb_supporting_evidence %}
+                        <div class="host-stack-row">
+                            <span>Supporting Signal</span>
+                            <strong>{{ note }}</strong>
+                        </div>
+                        {% endfor %}
+                        {% if host_information_quickview.usb_supporting_evidence | length == 0 %}
+                        <div class="host-stack-row">
+                            <span>Supporting Signal</span>
+                            <strong>No `Windows Portable Devices`, removable-storage policy, or USB service indicators were parsed.</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Artifact</th>
+                                    <th>Observed Item</th>
+                                    <th>Detail</th>
+                                    <th>First Seen</th>
+                                    <th>Last Seen</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in host_information_quickview.usb_user_attribution %}
+                                <tr>
+                                    <td>{% if row.username %}{{ row.username }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ row.artifact }}</td>
+                                    <td>{{ row.observed_item }}</td>
+                                    <td>{% if row.detail %}{{ row.detail }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if row.first_seen %}{{ row.first_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if row.last_seen %}{{ row.last_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ row.source }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.usb_user_attribution | length == 0 %}
+                                <tr>
+                                    <td colspan="7">No parsed `MountPoints2`, `UserAssist`, `RecentDocs`, or `Shellbags` USB-attribution records were available for this case.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-devices">
+                    <div class="host-subpanel-head">
+                        <span>11_CONNECTED_DEVICES</span>
+                        <i class="fa-solid fa-plug-circle-bolt" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-table-wrap">
+                        <table class="host-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Name</th>
+                                    <th>Identifier</th>
+                                    <th>First Seen</th>
+                                    <th>Last Seen</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for device in host_information_quickview.connected_devices %}
+                                <tr>
+                                    <td>{{ device.category }}</td>
+                                    <td>{{ device.name }}</td>
+                                    <td>{% if device.identifier %}{{ device.identifier }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if device.first_seen %}{{ device.first_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{% if device.last_seen %}{{ device.last_seen }}{% else %}n/a{% endif %}</td>
+                                    <td>{{ device.source }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if host_information_quickview.connected_devices | length == 0 %}
+                                <tr>
+                                    <td colspan="6">No connected-device inventory was available from the current registry exports.</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="host-subpanel host-subpanel-locale">
+                    <div class="host-subpanel-head">
+                        <span>12_LANGUAGE_AND_LOCALE</span>
+                        <i class="fa-solid fa-language" aria-hidden="true"></i>
+                    </div>
+                    <div class="host-stack-list">
+                        <div class="host-stack-row"><span>System Locale</span><strong>{% if host_information_quickview.system_locale %}{{ host_information_quickview.system_locale }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Keyboard Layouts</span><strong>{% if host_information_quickview.keyboard_layouts | length > 0 %}{{ host_information_quickview.keyboard_layouts | join(sep=", ") }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Country Code</span><strong>{% if host_information_quickview.country_code %}{{ host_information_quickview.country_code }}{% else %}n/a{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>User Locale Hints</span><strong>{% if host_information_quickview.user_locale_hints | length > 0 %}{{ host_information_quickview.user_locale_hints | join(sep=" | ") }}{% else %}No NTUSER locale data available{% endif %}</strong></div>
+                        <div class="host-stack-row"><span>Input Method Hints</span><strong>{% if host_information_quickview.input_method_hints | length > 0 %}{{ host_information_quickview.input_method_hints | join(sep=" | ") }}{% else %}No per-user input history available{% endif %}</strong></div>
+                    </div>
+                </section>
+            </div>
+        </article>
+    </main>
+</div>
+{% endblock %}

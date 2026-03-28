@@ -178,9 +178,25 @@ window.onTimelineRowClick = function (row) {
     let html = '<table class="detail-table">';
     for (const [key, val] of Object.entries(data)) {
         const isEmpty = val === null || val === undefined || String(val).trim() === '';
-        const displayVal = isEmpty
-            ? '<span class="empty-val">(hidden)</span>'
-            : escapeHtmlF(String(val));
+        const strVal = String(val);
+        const hexDecoded = isEmpty ? null : tryDecodeHex(strVal);
+
+        let displayVal;
+        if (isEmpty) {
+            displayVal = '<span class="empty-val">(hidden)</span>';
+        } else if (hexDecoded) {
+            // Show both hex and decoded with a toggle
+            const hexId = 'hex_' + Math.random().toString(36).substr(2, 9);
+            displayVal = `<div class="hex-decode-container">
+                <div class="hex-original">${escapeHtmlF(strVal.length > 80 ? strVal.substring(0, 80) + '…' : strVal)}</div>
+                <div class="hex-decoded-block" id="${hexId}">
+                    <span class="hex-decode-label"><i class="fa-solid fa-language"></i> Decoded</span>
+                    <pre class="hex-decoded-text">${escapeHtmlF(hexDecoded)}</pre>
+                </div>
+            </div>`;
+        } else {
+            displayVal = escapeHtmlF(strVal);
+        }
         const valClass = isEmpty ? 'field-value empty-val' : 'field-value';
         html += `<tr>
             <td class="field-name">${escapeHtmlF(key)}</td>
@@ -213,6 +229,58 @@ function escapeHtmlF(str) {
     const d = document.createElement('div');
     d.textContent = str;
     return d.innerHTML;
+}
+
+// ============================================
+// Hex Decoding for ADS / Forensic Data
+// ============================================
+
+/**
+ * Detect if a string is a hex-encoded value and attempt to decode it.
+ * Returns the decoded text if the input looks like a valid hex string
+ * and the result is mostly printable, or null otherwise.
+ */
+function tryDecodeHex(str) {
+    if (!str || typeof str !== 'string') return null;
+    const trimmed = str.trim();
+
+    // Must be even length, at least 8 hex chars, and only hex characters
+    if (trimmed.length < 8 || trimmed.length % 2 !== 0) return null;
+    if (!/^[0-9A-Fa-f]+$/.test(trimmed)) return null;
+
+    // Decode hex to bytes
+    const bytes = [];
+    for (let i = 0; i < trimmed.length; i += 2) {
+        bytes.push(parseInt(trimmed.substring(i, i + 2), 16));
+    }
+
+    // Try UTF-8 decoding first
+    let decoded;
+    try {
+        decoded = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
+    } catch (e) {
+        // Fall back to latin-1
+        decoded = bytes.map(b => String.fromCharCode(b)).join('');
+    }
+
+    // Check if the result is mostly printable (ASCII 0x20-0x7E, plus common controls like \r\n\t)
+    let printable = 0;
+    let total = 0;
+    for (let i = 0; i < decoded.length; i++) {
+        const code = decoded.charCodeAt(i);
+        total++;
+        if ((code >= 0x20 && code <= 0x7E) || code === 0x0A || code === 0x0D || code === 0x09) {
+            printable++;
+        }
+    }
+
+    // At least 70% printable to be considered valid text
+    if (total === 0 || (printable / total) < 0.7) return null;
+
+    // Clean up: replace null bytes and other unprintable chars with dots
+    decoded = decoded.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '·');
+
+    return decoded;
 }
 
 // ============================================
@@ -269,14 +337,28 @@ function updateStatsRibbon() {
         pills.forEach((pill, i) => {
             if (order[i]) pill.textContent = counts[order[i]].toLocaleString();
         });
+    } else {
+        const alertEl = document.getElementById('statAlerts');
+        if (alertEl) alertEl.textContent = '0';
+        document.querySelectorAll('.severity-pill').forEach(pill => {
+            pill.textContent = '0';
+        });
     }
 
     // Detected format
-    if (featureState.detectedFormat) {
-        const fmtEl = document.getElementById('detectedFormat');
-        const fmtName = document.getElementById('formatName');
-        if (fmtEl) fmtEl.style.display = 'flex';
-        if (fmtName) fmtName.textContent = featureState.detectedFormat.charAt(0).toUpperCase() + featureState.detectedFormat.slice(1);
+    const fmtEl = document.getElementById('detectedFormat');
+    const fmtName = document.getElementById('formatName');
+    const activeFormat = featureState.detectedFormat
+        ? featureState.detectedFormat.charAt(0).toUpperCase() + featureState.detectedFormat.slice(1)
+        : (s.fileFormatLabel || null);
+
+    if (fmtEl && fmtName) {
+        if (activeFormat) {
+            fmtEl.style.display = 'flex';
+            fmtName.textContent = activeFormat;
+        } else {
+            fmtEl.style.display = 'none';
+        }
     }
 }
 
@@ -1033,6 +1115,7 @@ window.onTimelineDataLoaded = function () {
         featureState.severityColumn = kape.severityCol;
         featureState.sourceColumn = kape.sourceCol;
     } else {
+        featureState.detectedFormat = null;
         featureState.severityColumn = detectSeverityColumn(s.columns);
         featureState.sourceColumn = detectSourceColumn(s.columns);
     }

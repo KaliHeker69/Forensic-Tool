@@ -33,6 +33,14 @@ pub struct NtfsInput {
     #[serde(default)]
     pub usn_records: Vec<UsnRecord>,
 
+    /// Parsed $Boot metadata
+    #[serde(default)]
+    pub boot_info: Option<BootInfo>,
+
+    /// Parsed $Secure:$SDS security descriptor records
+    #[serde(default)]
+    pub sds_entries: Vec<SdsEntry>,
+
     /// Parsed $I30 index entries (including slack space recoveries)
     #[serde(default)]
     pub i30_entries: Vec<I30Entry>,
@@ -40,6 +48,60 @@ pub struct NtfsInput {
     /// Parsed $Bitmap cluster allocation data
     #[serde(default)]
     pub bitmap_data: Option<BitmapData>,
+}
+
+/// Parsed $Boot metadata from MFTECmd CSV output.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BootInfo {
+    #[serde(default)]
+    pub entry_point: Option<String>,
+    #[serde(default)]
+    pub signature: Option<String>,
+    #[serde(default)]
+    pub bytes_per_sector: Option<u64>,
+    #[serde(default)]
+    pub sectors_per_cluster: Option<u64>,
+    #[serde(default)]
+    pub cluster_size: Option<u64>,
+    #[serde(default)]
+    pub total_sectors: Option<u64>,
+    #[serde(default)]
+    pub mft_cluster_block_number: Option<u64>,
+    #[serde(default)]
+    pub mft_mirr_cluster_block_number: Option<u64>,
+    #[serde(default)]
+    pub mft_entry_size: Option<u64>,
+    #[serde(default)]
+    pub index_entry_size: Option<u64>,
+    #[serde(default)]
+    pub volume_serial_number: Option<String>,
+    #[serde(default)]
+    pub source_file: Option<String>,
+}
+
+/// Parsed security descriptor row from $Secure:$SDS output.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SdsEntry {
+    #[serde(default)]
+    pub id: u32,
+    #[serde(default)]
+    pub hash: Option<String>,
+    #[serde(default)]
+    pub owner_sid: Option<String>,
+    #[serde(default)]
+    pub group_sid: Option<String>,
+    #[serde(default)]
+    pub control_flags: Vec<String>,
+    #[serde(default)]
+    pub sacl_ace_count: Option<u32>,
+    #[serde(default)]
+    pub unique_sacl_ace_types: Vec<String>,
+    #[serde(default)]
+    pub dacl_ace_count: Option<u32>,
+    #[serde(default)]
+    pub unique_dacl_ace_types: Vec<String>,
+    #[serde(default)]
+    pub source_file: Option<String>,
 }
 
 /// Case identification metadata

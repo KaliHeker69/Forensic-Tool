@@ -10,7 +10,10 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use clap::Parser as ClapParser;
-use nt_hive2::{CleanHive, Hive, HiveParseMode, KeyNode, KeyValue, RegistryValue};
+use nt_hive2::{
+    transactionlog::TransactionLog, BaseBlock, CleanHive, DirtyHive, Hive, HiveParseMode,
+    KeyNode, KeyValue, RegistryValue,
+};
 use serde::Serialize;
 
 use std::ffi::OsStr;
@@ -121,11 +124,12 @@ enum ValueData {
     },
     /// For multi-string types
     MultiString(Vec<String>),
-    /// For binary data — full hex + printable ASCII preview
+    /// For binary data — full hex + printable ASCII preview + optional decoded string
     Binary {
         hex: String,
         size: usize,
         ascii_preview: String,
+        decoded: Option<String>,
     },
     /// For types with no data (REG_NONE, unknown)
     Null,
@@ -218,8 +222,10 @@ fn parse_hive(path: &Path, max_depth: usize) -> Result<ParsedHive> {
         File::open(path).with_context(|| format!("cannot open '{}'", path.display()))?,
     );
 
-    let mut hive = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
+    let dirty_hive: Hive<BufReader<File>, DirtyHive> = Hive::new(file, HiveParseMode::NormalWithBaseBlock)
         .with_context(|| format!("'{}' does not appear to be a valid registry hive", path.display()))?;
+
+    let mut hive = apply_transaction_logs(path, dirty_hive);
 
     let root_node = hive
         .root_key_node()
@@ -239,6 +245,58 @@ fn parse_hive(path: &Path, max_depth: usize) -> Result<ParsedHive> {
         statistics: stats.finalize(),
         root: root_key,
     })
+}
+
+fn apply_transaction_logs(
+    path: &Path,
+    mut hive: Hive<BufReader<File>, DirtyHive>,
+) -> Hive<BufReader<File>, CleanHive> {
+    if let Some(base) = hive.base_block() {
+        if base.is_dirty() {
+            let primary = *base.primary_sequence_number();
+            let secondary = *base.secondary_sequence_number();
+
+            if primary == secondary + 1 {
+                let mut log_entries = std::collections::BTreeMap::new();
+                
+                // KAPE sometimes renames them in lower-case, check both
+                for ext in &["LOG1", "LOG2", "LOG", "log1", "log2", "log"] {
+                    let log_path = PathBuf::from(format!("{}.{}", path.display(), ext));
+                    if log_path.exists() {
+                        if let Ok(mut f) = File::open(&log_path) {
+                            if let Ok(tlog) = TransactionLog::try_from(&mut f) {
+                                for entry in tlog {
+                                    if *entry.sequence_number() > secondary {
+                                        log_entries.insert(*entry.sequence_number(), entry);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !log_entries.is_empty() {
+                    let mut count = 0;
+                    for (_, entry) in log_entries {
+                        let res = hive.apply_transaction_log(entry);
+                        if res != nt_hive2::transactionlog::ApplicationResult::Applied {
+                            break;
+                        }
+                        count += 1;
+                    }
+                    if count > 0 {
+                        println!("    [+] Applied {} transaction log entries to recover dirty hive.", count);
+                    }
+                }
+            } else {
+                eprintln!(
+                    "    [!] Dirty hive sequence numbers diff > 1 ({} vs {}). Cannot apply logs reliably.",
+                    primary, secondary
+                );
+            }
+        }
+    }
+    hive.treat_hive_as_clean()
 }
 
 // ─── Statistics collector ─────────────────────────────────────────────────────
@@ -432,13 +490,42 @@ fn format_registry_value(rv: &RegistryValue) -> ValueData {
             let hex = bytes.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" ");
             let ascii_preview: String = bytes
                 .iter()
-                .take(256)
                 .map(|&b| if b.is_ascii_graphic() || b == b' ' { b as char } else { '.' })
                 .collect();
+
+            let mut decoded = None;
+
+            // 1. Try decoding as UTF-16LE (very common for registry strings hidden in REG_BINARY)
+            if bytes.len() % 2 == 0 && bytes.len() >= 2 {
+                let u16_words: Vec<u16> = bytes
+                    .chunks_exact(2)
+                    .map(|c| u16::from_le_bytes([c[0], c[1]]))
+                    .take_while(|&c| c != 0) // Stop at null terminator
+                    .collect();
+
+                if let Ok(s) = String::from_utf16(&u16_words) {
+                    // Filter out random binary noise (mojibake) by requiring some alphanumeric contents
+                    if !s.is_empty() && s.chars().any(|c| c.is_alphanumeric()) {
+                        decoded = Some(s);
+                    }
+                }
+            }
+
+            // 2. Fallback: Try decoding as UTF-8
+            if decoded.is_none() && !bytes.is_empty() {
+                let end = bytes.iter().position(|&c| c == 0).unwrap_or(bytes.len());
+                if let Ok(s) = std::str::from_utf8(&bytes[..end]) {
+                    if !s.is_empty() && s.chars().any(|c| c.is_alphanumeric()) {
+                        decoded = Some(s.to_string());
+                    }
+                }
+            }
+
             ValueData::Binary {
                 size: bytes.len(),
                 hex,
                 ascii_preview,
+                decoded,
             }
         }
 
@@ -476,9 +563,11 @@ fn discover_hives(dir: &Path) -> Result<Vec<PathBuf>> {
             continue;
         }
 
-        // Must have no extension  (skips .LOG1, .LOG2, .sav, .bak, …)
-        if path.extension().is_some() {
-            continue;
+        // Accept files with NO extension OR with specific hive extensions (.hve, .dat)
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) {
+            if ext != "hve" && ext != "dat" {
+                continue; // Skip .LOG1, .LOG2, .sav, .bak, etc.
+            }
         }
 
         found.push(path);

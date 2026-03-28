@@ -86,6 +86,160 @@ struct LabelCount {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone)]
+struct HostTimelineAnchor {
+    label: String,
+    timestamp: String,
+    accent: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostNetworkInterface {
+    adapter: String,
+    ip_address: String,
+    gateway: String,
+    dns: String,
+    status: String,
+    dhcp: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostNetworkProfile {
+    profile_name: String,
+    category: String,
+    first_connected: String,
+    last_connected: String,
+    dns_suffix: String,
+    gateway_mac: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostStorageVolume {
+    drive_letter: String,
+    volume_guid: String,
+    volume_label: String,
+    serial_number: String,
+    partition_layout: String,
+    bitlocker_status: String,
+    shadow_copies: String,
+    source: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostHardwareProfile {
+    profile_id: String,
+    friendly_name: String,
+    profile_guid: String,
+    preference_order: String,
+    status: String,
+    last_seen: String,
+    source: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostConnectedDevice {
+    name: String,
+    identifier: String,
+    category: String,
+    first_seen: String,
+    last_seen: String,
+    source: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostUserAttribution {
+    username: String,
+    artifact: String,
+    observed_item: String,
+    detail: String,
+    first_seen: String,
+    last_seen: String,
+    source: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostInstalledSoftware {
+    name: String,
+    version: String,
+    publisher: String,
+    install_date: String,
+    architecture: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostUserAccount {
+    username: String,
+    sid: String,
+    last_activity: String,
+    last_logon: String,
+    logon_count: u64,
+    failed_logons: u64,
+    password_last_set: String,
+    profile_path: String,
+    state: String,
+    is_admin: bool,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
+struct HostInformationQuickView {
+    source: String,
+    hostname: String,
+    machine_guid: String,
+    registered_owner: String,
+    registered_organization: String,
+    product_id: String,
+    domain: String,
+    time_zone: String,
+    current_control_set: String,
+    os_product_name: String,
+    os_display_version: String,
+    os_build: String,
+    install_date: String,
+    last_shutdown_time: String,
+    system_root: String,
+    os_architecture: String,
+    installation_type: String,
+    cpu_name: String,
+    cpu_count: u64,
+    bios_vendor: String,
+    bios_version: String,
+    system_manufacturer: String,
+    system_model: String,
+    physical_memory_human: String,
+    firewall_domain: String,
+    firewall_public: String,
+    firewall_standard: String,
+    uac_status: String,
+    uac_level: String,
+    remote_desktop_status: String,
+    remote_desktop_port: String,
+    remote_desktop_nla: String,
+    defender_status: String,
+    defender_tamper_protection: String,
+    timeline_anchors: Vec<HostTimelineAnchor>,
+    active_hardware_profile: String,
+    hardware_profiles: Vec<HostHardwareProfile>,
+    network_interfaces: Vec<HostNetworkInterface>,
+    network_profiles: Vec<HostNetworkProfile>,
+    storage_volumes: Vec<HostStorageVolume>,
+    usb_storage_devices: Vec<HostConnectedDevice>,
+    usb_user_attribution: Vec<HostUserAttribution>,
+    usb_supporting_evidence: Vec<String>,
+    connected_devices: Vec<HostConnectedDevice>,
+    system_locale: String,
+    keyboard_layouts: Vec<String>,
+    country_code: String,
+    user_locale_hints: Vec<String>,
+    input_method_hints: Vec<String>,
+    bitlocker_status: String,
+    volume_shadow_copies_present: bool,
+    third_party_encryption: Vec<String>,
+    user_accounts: Vec<HostUserAccount>,
+    installed_software_count: u64,
+    installed_software: Vec<HostInstalledSoftware>,
+    forensic_note: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone)]
 struct NetworkConnectionRow {
     process: String,
     pid: u64,
@@ -215,8 +369,10 @@ struct ExecutionEvent {
 #[derive(Serialize, Deserialize, Default)]
 struct ExecutionQuickView {
     source: String,
-    powershell_events: u64,
-    recent_powershell: Vec<ExecutionEvent>,
+    #[serde(default, alias = "powershell_events")]
+    command_count: u64,
+    #[serde(default, alias = "recent_powershell")]
+    recent_commands: Vec<ExecutionEvent>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -330,8 +486,11 @@ struct ConnectionsEngineData {
 
 #[derive(Deserialize, Default)]
 struct DashboardQuickviewData {
+    #[allow(dead_code)]
     #[serde(default)]
     artifact_summary: ArtifactSummary,
+    #[serde(default)]
+    host_information_quickview: HostInformationQuickView,
     #[serde(default)]
     network_quickview: NetworkQuickView,
     #[serde(default)]
@@ -344,6 +503,7 @@ struct DashboardQuickviewData {
     execution_quickview: ExecutionQuickView,
     #[serde(default)]
     windows_event_quickview: WindowsEventQuickView,
+    #[allow(dead_code)]
     #[serde(default)]
     malicious_process_quickview: MaliciousProcessQuickView,
     #[serde(default)]
@@ -781,7 +941,7 @@ fn collect_malicious_process_quickview(
 
     let mut observed_executables: HashSet<String> = HashSet::new();
 
-    for event in &execution_quickview.recent_powershell {
+    for event in &execution_quickview.recent_commands {
         let process = normalize_process_name(&event.process);
         if process.ends_with(".exe") {
             observed_executables.insert(process);
@@ -882,7 +1042,7 @@ fn collect_malicious_process_quickview(
 
     let mut timeline = Vec::new();
 
-    for event in &execution_quickview.recent_powershell {
+    for event in &execution_quickview.recent_commands {
         let process = normalize_process_name(&event.process);
         let mut matched = suspicious_set.contains(&process);
         let mut matched_process = process.clone();
@@ -1726,7 +1886,7 @@ fn collect_super_timeline(
     }
 
     let mut execution_events = Vec::new();
-    for event in &execution_quickview.recent_powershell {
+    for event in &execution_quickview.recent_commands {
         let Some(parsed) = parse_event_timestamp(&event.timestamp) else {
             continue;
         };
@@ -1858,7 +2018,7 @@ fn collect_connections_engine(
         }
     }
 
-    for event in &execution_quickview.recent_powershell {
+    for event in &execution_quickview.recent_commands {
         let Some(process_id) = upsert_connection_node(
             &mut nodes_map,
             "process",
@@ -2588,13 +2748,6 @@ fn html_unescape(input: &str) -> String {
         .replace("&amp;", "&")
 }
 
-fn extract_between(text: &str, start: &str, end: &str) -> Option<String> {
-    let start_idx = text.find(start)? + start.len();
-    let rest = &text[start_idx..];
-    let end_idx = rest.find(end)?;
-    Some(rest[..end_idx].trim().to_string())
-}
-
 fn normalize_command(command: &str) -> String {
     command
         .replace("\\\\", "\\")
@@ -2606,89 +2759,247 @@ fn normalize_command(command: &str) -> String {
         .join(" ")
 }
 
-fn resolve_powershell_report() -> Option<PathBuf> {
-    let output_root = resolve_existing_path("output")?;
-
-    let mut reports: Vec<PathBuf> = fs::read_dir(&output_root)
-        .ok()?
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.is_dir()
-                && path
-                    .file_name()
-                    .and_then(|name| name.to_str())
-                    .map(|name| name.starts_with("live_ps_d3_"))
-                    .unwrap_or(false)
-        })
-        .map(|path| path.join("forensic_report.html"))
-        .filter(|path| path.exists())
-        .collect();
-
-    reports.sort_by(|a, b| {
-        b.parent()
-            .and_then(|p| p.file_name())
-            .and_then(|n| n.to_str())
-            .unwrap_or_default()
-            .cmp(
-                a.parent()
-                    .and_then(|p| p.file_name())
-                    .and_then(|n| n.to_str())
-                    .unwrap_or_default(),
-            )
-    });
-
-    reports.into_iter().next()
+fn execution_value_to_string(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) => {
+            let normalized = normalize_command(text);
+            (!normalized.is_empty()).then_some(normalized)
+        }
+        Value::Array(items) => {
+            let text = items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|text| !text.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let normalized = normalize_command(&text);
+            (!normalized.is_empty()).then_some(normalized)
+        }
+        Value::Object(map) => map
+            .get("data")
+            .and_then(execution_value_to_string)
+            .or_else(|| {
+                map.get("ascii_preview")
+                    .and_then(Value::as_str)
+                    .map(normalize_command)
+            })
+            .or_else(|| {
+                map.get("text")
+                    .and_then(Value::as_str)
+                    .map(normalize_command)
+            }),
+        _ => None,
+    }
 }
 
-fn fallback_powershell_from_memory() -> Vec<ExecutionEvent> {
+fn collect_runmru_commands(
+    key: &Value,
+    commands: &mut Vec<ExecutionEvent>,
+    seen: &mut HashSet<String>,
+) {
+    let Some(path) = key.get("path").and_then(Value::as_str) else {
+        return;
+    };
+    let path_lower = path.to_lowercase();
+    let name = key.get("name").and_then(Value::as_str).unwrap_or("");
+    let is_runmru = name.eq_ignore_ascii_case("runmru") || path_lower.contains("\\runmru");
+    if !is_runmru {
+        if let Some(subkeys) = key.get("subkeys").and_then(Value::as_array) {
+            for subkey in subkeys {
+                collect_runmru_commands(subkey, commands, seen);
+            }
+        }
+        return;
+    }
+
+    let timestamp = key
+        .get("last_write_time")
+        .and_then(Value::as_str)
+        .unwrap_or("Unknown")
+        .to_string();
+
+    let mut command_map: HashMap<String, String> = HashMap::new();
+    let mut mru_order: Vec<String> = Vec::new();
+
+    if let Some(values) = key.get("values").and_then(Value::as_array) {
+        for value in values {
+            let value_name = value
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .trim();
+            let value_name_lower = value_name.to_lowercase();
+            if value_name.is_empty() || value_name == "(Default)" || value_name_lower == "mrulistex"
+            {
+                continue;
+            }
+
+            if value_name_lower == "mrulist" {
+                if let Some(order) = value.get("data").and_then(Value::as_str) {
+                    mru_order = order
+                        .chars()
+                        .filter(|ch| !ch.is_whitespace())
+                        .map(|ch| ch.to_string())
+                        .collect();
+                }
+                continue;
+            }
+
+            if let Some(command) = value.get("data").and_then(execution_value_to_string) {
+                command_map.insert(value_name.to_string(), command);
+            }
+        }
+    }
+
+    let mut ordered_names = Vec::new();
+    if !mru_order.is_empty() {
+        for name in mru_order {
+            if command_map.contains_key(&name) {
+                ordered_names.push(name);
+            }
+        }
+    } else {
+        let mut names: Vec<_> = command_map.keys().cloned().collect();
+        names.sort();
+        names.reverse();
+        ordered_names = names;
+    }
+
+    for value_name in ordered_names {
+        let Some(command) = command_map.get(&value_name).cloned() else {
+            continue;
+        };
+        let key_id = format!(
+            "runmru|{}|{}",
+            timestamp.to_lowercase(),
+            command.to_lowercase()
+        );
+        if !seen.insert(key_id) {
+            continue;
+        }
+
+        commands.push(ExecutionEvent {
+            timestamp: timestamp.clone(),
+            process: "RunMRU".to_string(),
+            command,
+            pid: "n/a".to_string(),
+            source: path.to_string(),
+        });
+    }
+
+    if let Some(subkeys) = key.get("subkeys").and_then(Value::as_array) {
+        for subkey in subkeys {
+            collect_runmru_commands(subkey, commands, seen);
+        }
+    }
+}
+
+fn collect_console_history_commands(
+    path: &Path,
+    commands: &mut Vec<ExecutionEvent>,
+    seen: &mut HashSet<String>,
+) {
+    let Some(raw) = read_text_file(path) else {
+        return;
+    };
+
+    let timestamp = fs::metadata(path)
+        .and_then(|metadata| metadata.modified())
+        .ok()
+        .map(|modified| {
+            let dt: DateTime<Utc> = modified.into();
+            dt.format("%Y-%m-%dT%H:%M:%SZ").to_string()
+        })
+        .unwrap_or_else(|| "ConsoleHost history".to_string());
+
+    for line in raw.lines().rev() {
+        let command = normalize_command(line);
+        if command.is_empty() {
+            continue;
+        }
+
+        let key_id = format!("consolehost|{}", command.to_lowercase());
+        if !seen.insert(key_id) {
+            continue;
+        }
+
+        commands.push(ExecutionEvent {
+            timestamp: timestamp.clone(),
+            process: "ConsoleHost".to_string(),
+            command,
+            pid: "n/a".to_string(),
+            source: path.to_string_lossy().to_string(),
+        });
+
+        if commands.len() >= MAX_LIST_ITEMS * 4 {
+            break;
+        }
+    }
+}
+
+fn fallback_recent_commands_from_memory() -> Vec<ExecutionEvent> {
     let mut fallback = Vec::new();
-    let cmdline_path = match resolve_existing_path("memory_corelation/jsonl/cmdline.jsonl") {
+    let cmdscan_path = match resolve_existing_path("memory_corelation/jsonl/cmdscan.jsonl") {
         Some(path) => path,
         None => return fallback,
     };
 
-    let file = match fs::File::open(&cmdline_path) {
+    let file = match fs::File::open(&cmdscan_path) {
         Ok(file) => file,
         Err(_) => return fallback,
     };
 
-    let reader = BufReader::new(file);
-    for line in reader.lines().map_while(Result::ok) {
+    let mut seen = HashSet::new();
+    for line in BufReader::new(file).lines().map_while(Result::ok) {
         let record: Value = match serde_json::from_str(&line) {
             Ok(value) => value,
             Err(_) => continue,
         };
 
-        let process = record
-            .get("Process")
-            .and_then(Value::as_str)
-            .unwrap_or("unknown");
-        let args = record
-            .get("Args")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string();
-        let pid = value_to_u64(record.get("PID"));
+        let property = record.get("Property").and_then(Value::as_str).unwrap_or("");
+        if !property.contains("CommandBucket_Command_")
+            && property != "_COMMAND_HISTORY.CommandBucket"
+        {
+            continue;
+        }
 
-        let joined = format!("{} {}", process, args).to_lowercase();
-        if !joined.contains("powershell") {
+        let Some(command) = record
+            .get("Data")
+            .and_then(Value::as_str)
+            .map(normalize_command)
+        else {
+            continue;
+        };
+        if command.is_empty() {
+            continue;
+        }
+
+        let pid = value_to_u64(record.get("PID"));
+        let process = record
+            .get("Application")
+            .and_then(Value::as_str)
+            .or_else(|| record.get("Process").and_then(Value::as_str))
+            .unwrap_or("conhost.exe")
+            .to_string();
+        let key_id = format!("cmdscan|{}|{}", pid, command.to_lowercase());
+        if !seen.insert(key_id) {
             continue;
         }
 
         fallback.push(ExecutionEvent {
-            timestamp: "From memory cmdline".to_string(),
-            process: process.to_string(),
-            command: normalize_command(&args),
+            timestamp: "memory cmdscan".to_string(),
+            process,
+            command,
             pid: if pid > 0 {
                 pid.to_string()
             } else {
                 "n/a".to_string()
             },
-            source: "memory_corelation/jsonl/cmdline.jsonl".to_string(),
+            source: "memory_corelation/jsonl/cmdscan.jsonl".to_string(),
         });
 
-        if fallback.len() >= MAX_LIST_ITEMS {
+        if fallback.len() >= MAX_LIST_ITEMS * 4 {
             break;
         }
     }
@@ -2697,114 +3008,134 @@ fn fallback_powershell_from_memory() -> Vec<ExecutionEvent> {
 }
 
 fn collect_execution_quickview() -> ExecutionQuickView {
-    let mut view = ExecutionQuickView::default();
-
-    let report_path = match resolve_powershell_report() {
-        Some(path) => path,
-        None => {
-            view.recent_powershell = fallback_powershell_from_memory();
-            view.powershell_events = view.recent_powershell.len() as u64;
-            return view;
-        }
-    };
-
-    view.source = report_path.to_string_lossy().into_owned();
-
-    let html = match read_text_file(&report_path) {
-        Some(text) => text,
-        None => {
-            view.recent_powershell = fallback_powershell_from_memory();
-            view.powershell_events = view.recent_powershell.len() as u64;
-            return view;
-        }
-    };
-
+    let mut commands = Vec::new();
+    let mut sources = Vec::new();
     let mut seen = HashSet::new();
 
-    for line in html.lines() {
-        let normalized = line.trim_start_matches('\u{feff}');
-        if !normalized.to_lowercase().contains("powershell") || !normalized.contains("[Evidence]") {
-            continue;
+    let registry_path = resolve_existing_path("registry_parser/output/NTUSER.DAT.json")
+        .or_else(|| resolve_existing_path("registry_parser/output/ntuser.dat.json"))
+        .or_else(|| resolve_existing_path("registry_parser/output/combined.json"));
+    if let Some(path) = registry_path.as_ref() {
+        if let Some(raw) = read_text_file(path) {
+            if let Ok(json) = serde_json::from_str::<Value>(&raw) {
+                if let Some(root) = json.get("root") {
+                    collect_runmru_commands(root, &mut commands, &mut seen);
+                } else {
+                    collect_runmru_commands(&json, &mut commands, &mut seen);
+                }
+            }
         }
-
-        let timestamp = extract_between(normalized, "[Timestamp]</span>", "</div>")
-            .unwrap_or_else(|| "Unknown".to_string());
-        let process = extract_between(normalized, "[Process]</span>", "</div>")
-            .unwrap_or_else(|| "powershell.exe".to_string());
-        let evidence_encoded =
-            extract_between(normalized, "[Evidence]</span>", "</div>").unwrap_or_default();
-        let evidence_json = html_unescape(&evidence_encoded);
-
-        let evidence_value: Option<Value> = serde_json::from_str(&evidence_json).ok();
-        let command = evidence_value
-            .as_ref()
-            .and_then(|value| value.get("CommandLine"))
-            .and_then(Value::as_str)
-            .map(normalize_command)
-            .unwrap_or_else(|| normalize_command(&evidence_json));
-        let pid = evidence_value
-            .as_ref()
-            .and_then(|value| value.get("ProcessId"))
-            .map(|value| value_to_u64(Some(value)))
-            .filter(|value| *value > 0)
-            .map(|value| value.to_string())
-            .unwrap_or_else(|| "n/a".to_string());
-
-        let pow_hint = format!("{} {}", process, command).to_lowercase();
-        if !pow_hint.contains("powershell") {
-            continue;
-        }
-
-        let key = format!("{}|{}|{}", timestamp, process, command);
-        if !seen.insert(key) {
-            continue;
-        }
-
-        view.recent_powershell.push(ExecutionEvent {
-            timestamp,
-            process,
-            command,
-            pid,
-            source: "live_ps_d3".to_string(),
-        });
+        sources.push(path.to_string_lossy().to_string());
     }
 
-    if view.recent_powershell.is_empty() {
-        view.recent_powershell = fallback_powershell_from_memory();
+    let console_history_path = resolve_existing_path("ConsoleHost_history.txt")
+        .or_else(|| {
+            resolve_existing_path(
+                "AppData/Roaming/Microsoft/Windows/PowerShell/PSReadLine/ConsoleHost_history.txt",
+            )
+        })
+        .or_else(|| resolve_existing_path("PowerShell/ConsoleHost_history.txt"));
+    if let Some(path) = console_history_path.as_ref() {
+        collect_console_history_commands(path, &mut commands, &mut seen);
+        sources.push(path.to_string_lossy().to_string());
     }
 
-    view.recent_powershell.sort_by(|a, b| {
+    if commands.is_empty() {
+        commands = fallback_recent_commands_from_memory();
+        if !commands.is_empty() {
+            sources.push("memory_corelation/jsonl/cmdscan.jsonl".to_string());
+        }
+    }
+
+    commands.sort_by(|a, b| {
         let a_unknown = a.timestamp.to_lowercase().contains("unknown");
         let b_unknown = b.timestamp.to_lowercase().contains("unknown");
         a_unknown
             .cmp(&b_unknown)
-            .then_with(|| b.timestamp.cmp(&a.timestamp))
+            .then_with(|| {
+                parse_event_timestamp(&b.timestamp).cmp(&parse_event_timestamp(&a.timestamp))
+            })
+            .then_with(|| a.command.cmp(&b.command))
     });
-    view.recent_powershell.truncate(MAX_LIST_ITEMS);
-    view.powershell_events = view.recent_powershell.len() as u64;
+    commands.truncate(MAX_LIST_ITEMS);
 
-    view
+    ExecutionQuickView {
+        source: sources.join(" | "),
+        command_count: commands.len() as u64,
+        recent_commands: commands,
+    }
 }
 
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route("/dashboard", get(dashboard))
+    Router::new()
+        .route("/dashboard", get(dashboard))
+        .route("/host-information", get(host_information_page))
+}
+
+fn resolve_host_information_quickview() -> HostInformationQuickView {
+    let Some(seed) = load_dashboard_quickview_data() else {
+        return HostInformationQuickView::default();
+    };
+
+    if !seed.host_information_quickview.source.is_empty()
+        || !seed.host_information_quickview.hostname.is_empty()
+        || !seed.host_information_quickview.user_accounts.is_empty()
+    {
+        seed.host_information_quickview
+    } else {
+        HostInformationQuickView::default()
+    }
+}
+
+async fn host_information_page(
+    State(state): State<Arc<AppState>>,
+    AuthUser(user): AuthUser,
+) -> Html<String> {
+    let host_information_quickview = resolve_host_information_quickview();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert(
+        "user",
+        &serde_json::json!({
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_admin": user.is_admin,
+        }),
+    );
+    ctx.insert(
+        "avatar_letter",
+        &template_utils::avatar_letter(&user.username),
+    );
+    ctx.insert("inactivity_timeout", &INACTIVITY_TIMEOUT_MINUTES);
+    ctx.insert("host_information_quickview", &host_information_quickview);
+
+    template_utils::render(&state.templates, "host_information.html", &ctx)
 }
 
 async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser) -> Html<String> {
     let dashboard_seed = load_dashboard_quickview_data();
 
     let artifact_summary = collect_artifact_summary(Path::new(FETCHED_FILES_DIR));
+    let mut host_information_quickview = HostInformationQuickView::default();
     let mut network_quickview = collect_network_quickview();
     let mut memory_quickview = collect_memory_quickview();
     let mut ntfs_quickview = collect_ntfs_quickview();
     let mut browser_quickview = collect_browser_quickview();
-    let execution_quickview = collect_execution_quickview();
+    let mut execution_quickview = collect_execution_quickview();
     let mut windows_event_quickview = collect_windows_event_quickview();
     let mut srum_quickview = collect_srum_quickview();
     let mut super_timeline = SuperTimelineData::default();
     let mut connections_engine = ConnectionsEngineData::default();
 
     if let Some(seed) = dashboard_seed {
+        if !seed.host_information_quickview.source.is_empty()
+            || !seed.host_information_quickview.hostname.is_empty()
+            || !seed.host_information_quickview.user_accounts.is_empty()
+        {
+            host_information_quickview = seed.host_information_quickview;
+        }
+
         if !seed.network_quickview.source.is_empty()
             || seed.network_quickview.total_connections > 0
             || !seed.network_quickview.active_connections.is_empty()
@@ -2840,6 +3171,13 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
             || !seed.srum_quickview.critical_alerts.is_empty()
         {
             srum_quickview = seed.srum_quickview;
+        }
+
+        if !seed.execution_quickview.source.is_empty()
+            || seed.execution_quickview.command_count > 0
+            || !seed.execution_quickview.recent_commands.is_empty()
+        {
+            execution_quickview = seed.execution_quickview;
         }
 
         if !seed.super_timeline.events.is_empty() {
@@ -2890,22 +3228,16 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
     let report_routes = load_report_route_links();
 
     let resources = serde_json::json!([
-        {"id":"timeline","name":"Timeline Explorer","description":"View csv exported forensic outputs","icon":"fa-solid fa-chart-line","url":"/tools/timeline/","status":"active"},
+        {"id":"timeline","name":"Timeline Explorer","description":"View csv, json, and jsonl forensic outputs","icon":"fa-solid fa-chart-line","url":"/tools/timeline/","status":"active"},
         {"id":"registry","name":"Registry Viewer","description":"Windows Registry analysis and investigation","icon":"fa-solid fa-folder-open","url":"/tools/registry","status":"active"},
-        {"id":"ntfs","name":"NTFS Data","description":"NTFS file system and metadata analysis","icon":"fa-solid fa-hdd","url":report_url(&report_routes, "ntfs", "#ntfs-section"),"status":"active"},
+        {"id":"host-information","name":"Host Information","description":"Registry-backed host identity, interfaces, security posture, and user profiles","icon":"fa-solid fa-fingerprint","url":"/host-information","status":"active"},
         {"id":"memory","name":"Memory Analysis","description":"Volatile memory capture & analysis","icon":"fa-solid fa-brain","url":report_url(&report_routes, "memory", "#memory-section"),"status":"active"},
         {"id":"browser-forensics","name":"Browser Analysis","description":"Browser history, downloads, cookies & session analysis","icon":"fa-solid fa-globe","url":report_url(&report_routes, "browser-forensics", "#browser-section"),"status":"active"},
         {"id":"srum","name":"System Resource Utilization","description":"SRUM application activity, utilization totals, and critical alerts","icon":"fa-solid fa-gauge-high","url":report_url(&report_routes, "srum", "#srum-section"),"status":"active"},
         {"id":"windows-event","name":"Windows Event","description":"Windows Event Log viewer and analyzer","icon":"fa-solid fa-scroll","url":report_url(&report_routes, "windows-event", "/reports/windows-event"),"status":"active"},
-        {"id":"shimcache-amcache-report","name":"Shimcache Amcache Report","description":"Open the latest shimcache/amcache report","icon":"fa-solid fa-clipboard-check","url":report_url(&report_routes, "shimcache-amcache", "/reports/shimcache-amcache"),"status":"active"},
         {"id":"prefetch-report","name":"Prefetch Viewer","description":"Open the latest prefetch analysis report","icon":"fa-solid fa-list-check","url":report_url(&report_routes, "prefetch", "/reports/prefetch"),"status":"active"},
-        {"id":"timesketch","name":"Timesketch","description":"Collaborative forensic timeline analysis","icon":"fa-solid fa-clock","url":"/tools/timesketch/","status":"active"},
-        {"id":"ioc-scan","name":"IOC Scan","description":"Scan results for indicators of compromise","icon":"fa-solid fa-magnifying-glass","url":report_url(&report_routes, "ioc-scan", "/reports/ioc-scan"),"status":"active"},
-        {"id":"ioc-hash-scan","name":"IOC/Hash Scan","description":"Cross-check IOCs and file hashes against known indicators","icon":"fa-solid fa-fingerprint","url":"/reports/ioc-scan","status":"active"},
+        {"id":"timesketch","name":"Timesketch","description":"Collaborative forensic timeline analysis","icon":"fa-solid fa-clock","url":"/tools/timesketch/","status":"active"},        {"id":"ioc-hash-scan","name":"IOC/Hash Scan","description":"Cross-check IOCs and file hashes against known indicators","icon":"fa-solid fa-fingerprint","url":"/reports/ioc-scan","status":"active"},
         {"id":"network-forensics","name":"Network Forensics","description":"Investigate network artifacts, flows, and communication patterns","icon":"fa-solid fa-network-wired","url":report_url(&report_routes, "network-forensics", "#network-section"),"status":"active"},
-        {"id":"data-theft","name":"Data Theft","description":"Review exfiltration indicators and data theft investigation findings","icon":"fa-solid fa-file-export","url":"/reports/data-theft","status":"active"},
-        {"id":"fetched-files","name":"Fetched Files","description":"Browse and download files fetched from the share","icon":"fa-solid fa-file-arrow-down","url":"/fetched-files","status":"active"},
-        {"id":"pe-entropy","name":"PE Entropy","description":"Analyze selected PE files from fetched files using entropy scoring","icon":"fa-solid fa-file-shield","url":"/fetched-files?tool=pe-entropy","status":"active"},
         {"id":"iocs","name":"IOCs","description":"Indicators of Compromise tracker","icon":"fa-solid fa-bullseye","url":"/tools/iocs","status":"active","special":true},
         {"id":"server-terminal","name":"Server Terminal","description":"Interactive shell access to the analysis server","icon":"fa-solid fa-terminal","url":"/tools/terminal","status":"active"},
         {"id":"reports","name":"Reports","description":"Generate security reports","icon":"fa-solid fa-file-alt","url":"/tools/reporting","status":"active"},
@@ -2946,6 +3278,7 @@ async fn dashboard(State(state): State<Arc<AppState>>, AuthUser(user): AuthUser)
     ctx.insert("ioc_critical", &ioc_critical);
     ctx.insert("ioc_updated", &ioc_updated);
     ctx.insert("artifact_summary", &artifact_summary);
+    ctx.insert("host_information_quickview", &host_information_quickview);
     ctx.insert("network_quickview", &network_quickview);
     ctx.insert("memory_quickview", &memory_quickview);
     ctx.insert("ntfs_quickview", &ntfs_quickview);

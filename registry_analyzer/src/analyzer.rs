@@ -10,13 +10,18 @@ pub fn analyze(dump: &RegistryDump) -> AnalysisReport {
     let mut findings: Vec<Finding> = Vec::new();
     let mut total_keys: usize = 0;
     let mut total_values: usize = 0;
+    let mut hive_stats = Vec::new();
 
     for hive in &dump.hives {
         let hive_upper = hive.name.to_uppercase();
+        let mut hive_key_count = 0;
+        let hive_findings_start = findings.len();
+
         for key in &hive.keys {
             let (k, v) = count_key_tree(key);
             total_keys += k;
             total_values += v;
+            hive_key_count += k;
 
             // Dispatch to hive-specific analyzers
             match hive_upper.as_str() {
@@ -25,6 +30,7 @@ pub fn analyze(dump: &RegistryDump) -> AnalysisReport {
                 "NTUSER.DAT" | "NTUSER" => analyze_ntuser_key(key, &mut findings),
                 "SAM" => analyze_sam_key(key, &mut findings),
                 "SECURITY" => analyze_security_key(key, &mut findings),
+                "DEFAULT" => {} // universal checks applied below
                 _ => {}
             }
 
@@ -38,6 +44,13 @@ pub fn analyze(dump: &RegistryDump) -> AnalysisReport {
                 }
             }
         }
+        
+        let hive_findings_count = findings.len() - hive_findings_start;
+        hive_stats.push(HiveStat {
+            name: hive_upper.clone(),
+            key_count: hive_key_count,
+            finding_count: hive_findings_count,
+        });
     }
 
     // Deduplicate exact-match findings
@@ -55,6 +68,7 @@ pub fn analyze(dump: &RegistryDump) -> AnalysisReport {
         total_keys,
         total_values,
         total_hives: dump.hives.len(),
+        hive_stats,
         findings,
     }
 }
@@ -83,6 +97,7 @@ fn analyze_subkey_recursive(key: &RegistryKey, hive: &str, findings: &mut Vec<Fi
         "NTUSER.DAT" | "NTUSER" => analyze_ntuser_key(key, findings),
         "SAM" => analyze_sam_key(key, findings),
         "SECURITY" => analyze_security_key(key, findings),
+        "DEFAULT" => {} // universal checks applied below
         _ => {}
     }
     check_suspicious_value_data(key, hive, findings);
@@ -121,12 +136,85 @@ fn is_suspicious_path(data: &str) -> bool {
 fn is_suspicious_executable_name(data: &str) -> bool {
     let lower = data.to_lowercase();
     let names = [
-        "beacon.exe", "payload.exe", "shell.exe", "backdoor.exe",
+        // === C2 Frameworks ===
+        "beacon.exe", "cobaltstrike", "meterpreter", "empire",
+        "sliver", "havoc", "brute ratel", "bruteratel",
+        "nighthawk", "deimos", "covenant", "mythic",
+        "poshc2", "sharpc2", "merlin", "villain",
+
+        // === Credential Dumpers ===
         "mimikatz.exe", "lazagne.exe", "pwdump", "procdump",
-        "nc.exe", "ncat.exe", "netcat", "psexec",
-        "cobaltstrike", "meterpreter", "empire",
-        "bloodhound", "sharphound", "rubeus.exe",
+        "wce.exe", "fgdump.exe", "pwdump7.exe", "gsecdump",
+        "lsassy", "nanodump", "handlekatz", "dumpert",
+        "pypykatz", "crackmapexec", "cme.exe",
+        "safetykatz", "rubeus.exe", "kekeo.exe",
+
+        // === Lateral Movement ===
+        "psexec", "paexec", "remcom.exe", "csexec.exe",
+        "wmiexec", "dcomexec", "smbexec", "atexec",
+        "invoke-smbclient", "impacket",
+
+        // === Reverse Shells / RATs ===
+        "nc.exe", "ncat.exe", "netcat", "ncrack.exe",
+        "shell.exe", "backdoor.exe", "payload.exe",
+        "revshell.exe", "rat.exe", "agent.exe",
+        "darkcomet", "nanocore", "asyncrat",
+        "quasar.exe", "remcos.exe", "njrat",
+        "xworm", "dcrat", "venomrat", "warzone",
+
+        // === Reconnaissance / AD Enumeration ===
+        "bloodhound", "sharphound", "azurehound",
+        "adrecon", "powerview", "adidnsdump",
+        "ldapdomaindump", "windapsearch", "goddi",
+        "jackdaw", "seatbelt.exe", "winenum",
+        "scavenger.exe", "pingcastle",
+
+        // === Ransomware / Destructive ===
+        "locker.exe", "encrypt.exe", "crypt.exe",
+        "wiper.exe", "destroyer.exe", "killmbr.exe",
+        "notpetya", "wannacry", "lockbit",
+        "blackcat", "conti", "ryuk", "darkside",
+
+        // === Exploitation Frameworks ===
+        "metasploit", "msfvenom", "msfconsole",
+        "sqlmap.exe", "responder.exe", "bettercap",
+        "evilginx", "modlishka", "gophish",
+        "setoolkit", "social-engineer",
+
+        // === Masquerading (typosquatted system binaries) ===
         "svchost32.exe", "svch0st.exe", "csrss32.exe",
+        "lsaas.exe", "lsass32.exe", "iexplore32.exe",
+        "explorer32.exe", "taskmgr32.exe", "spoolsv32.exe",
+        "winlogon32.exe", "dllhost32.exe", "rundll32x.exe",
+        "services32.exe", "wininit32.exe", "smss32.exe",
+        "conhost32.exe", "fontdrvhost32.exe",
+
+        // === Dumping / Exfiltration Tools ===
+        "rclone.exe", "megasync.exe", "winscp.exe",
+        "filezilla.exe", "7za.exe", "rar.exe",
+        "winrar.exe", "robocopy.exe",   // flag in Run key context
+        "exfilkit", "dnscat", "dnstunnel",
+        "iodine.exe", "chisel.exe", "ligolo",
+        "frp.exe", "ngrok.exe", "serveo",
+
+        // === Rootkits / Kernel Implants ===
+        "bootkit", "mbr.exe", "vbr.exe", "rkill",
+        "hideproc", "driverload.exe", "kdriver.exe",
+        "turla", "azazel", "gmer.exe",             // gmer = rootkit scanner, suspicious in run keys
+
+        // === Packers / Loaders commonly seen in registry ===
+        "loader.exe", "dropper.exe", "stager.exe",
+        "injector.exe", "hollower.exe", "reflective",
+        "donutloader", "donut.exe", "pe2sh",
+        "srdi.exe", "sgn.exe", "themida",
+        "vmprotect", "enigmaprotector",
+
+        // === Post-Exploitation Utilities ===
+        "sharpup.exe", "watson.exe", "winpeas",
+        "linpeas", "beroot.exe", "powerup",
+        "privesccheck", "juicypotato", "rottenpotato",
+        "sweetpotato", "godpotato", "printspoofer",
+        "badpotato", "roguepotato", "genericpotato",
     ];
     names.iter().any(|n| lower.contains(n))
 }
@@ -222,7 +310,14 @@ fn is_suspicious_account_name(name: &str) -> bool {
 // ─────────────────────────────────────────────────────────────
 
 fn analyze_system_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
-    let path_lower = key.path.to_lowercase();
+    let mut path_lower = key.path.to_lowercase();
+    
+    // Normalize commonly encountered paths
+    if path_lower.contains("controlset001\\") {
+        path_lower = path_lower.replace("controlset001\\", "currentcontrolset\\");
+    } else if path_lower.contains("controlset002\\") {
+        path_lower = path_lower.replace("controlset002\\", "currentcontrolset\\");
+    }
 
     // ── Services ──
     if path_lower.contains("currentcontrolset\\services\\") && !path_lower.ends_with("\\services") {
@@ -243,6 +338,7 @@ fn analyze_system_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
     if path_lower.contains("control\\computername\\computername") {
         if let Some(v) = get_value(key, "ComputerName") {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Info,
                 title: "Computer Name".into(),
                 category: "System Information".into(),
@@ -260,6 +356,7 @@ fn analyze_system_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
         let bias = get_value(key, "Bias").map(|v| v.data.clone()).unwrap_or_default();
         if !tz.is_empty() {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Info,
                 title: "System Timezone".into(),
                 category: "System Information".into(),
@@ -278,6 +375,7 @@ fn analyze_system_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
     if path_lower.contains("control\\windows") {
         if let Some(v) = get_value(key, "ShutdownTime") {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Info,
                 title: "Last Shutdown Time".into(),
                 category: "System Information".into(),
@@ -294,6 +392,7 @@ fn analyze_system_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
         let device_count = key.values.len();
         if device_count > 0 {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Info,
                 title: "Mounted Devices".into(),
                 category: "Device History".into(),
@@ -344,6 +443,7 @@ fn analyze_service(key: &RegistryKey, findings: &mut Vec<Finding>) {
     // Critical: suspicious path + auto-start + SYSTEM account
     if is_suspicious_path(&image_path) && (start_type == "2" || start_type == "0") {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::Critical,
             title: format!("Suspicious Service: {}", service_name),
             category: "Persistence — Service".into(),
@@ -364,6 +464,7 @@ fn analyze_service(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
     if is_suspicious_executable_name(&image_path) {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::Critical,
             title: format!("Malicious Service: {}", service_name),
             category: "Persistence — Service".into(),
@@ -384,6 +485,7 @@ fn analyze_service(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
     if is_suspicious_path(&image_path) {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::High,
             title: format!("Service from Suspicious Path: {}", service_name),
             category: "Persistence — Service".into(),
@@ -418,6 +520,7 @@ fn analyze_usb_device(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Low,
         title: format!("USB Device: {}", if !friendly.is_empty() { &friendly } else { device_id }),
         category: "USB / External Device".into(),
@@ -444,6 +547,7 @@ fn analyze_bam_dam(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
             if is_suspicious_executable_name(&val.name) {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::Critical,
                     title: format!("Malicious Tool Executed: {}", exe_name),
                     category: "Program Execution — BAM/DAM".into(),
@@ -461,6 +565,7 @@ fn analyze_bam_dam(key: &RegistryKey, findings: &mut Vec<Finding>) {
                 });
             } else if is_suspicious_path(&val.name) {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::High,
                     title: format!("Execution from Suspicious Path: {}", exe_name),
                     category: "Program Execution — BAM/DAM".into(),
@@ -478,6 +583,7 @@ fn analyze_bam_dam(key: &RegistryKey, findings: &mut Vec<Finding>) {
                 });
             } else if let Some(lol) = find_lolbin(&val.name) {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::Medium,
                     title: format!("LOLBin Executed: {}", exe_name),
                     category: "Program Execution — BAM/DAM".into(),
@@ -492,6 +598,7 @@ fn analyze_bam_dam(key: &RegistryKey, findings: &mut Vec<Finding>) {
                 });
             } else {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::Info,
                     title: format!("Program Executed: {}", exe_name),
                     category: "Program Execution — BAM/DAM".into(),
@@ -581,6 +688,7 @@ fn analyze_autostart(key: &RegistryKey, hive: &str, findings: &mut Vec<Finding>)
         // Encoded PowerShell
         if has_encoded_command(&val.data) {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Critical,
                 title: format!("Encoded PowerShell Autostart: {}", val.name),
                 category: "Persistence — Run Key".into(),
@@ -599,6 +707,7 @@ fn analyze_autostart(key: &RegistryKey, hive: &str, findings: &mut Vec<Finding>)
         // Suspicious path
         if is_suspicious_path(&val.data) {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::High,
                 title: format!("Suspicious Autostart: {}", val.name),
                 category: "Persistence — Run Key".into(),
@@ -619,6 +728,7 @@ fn analyze_autostart(key: &RegistryKey, hive: &str, findings: &mut Vec<Finding>)
 
         if is_suspicious_executable_name(&val.data) {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Critical,
                 title: format!("Malicious Autostart: {}", val.name),
                 category: "Persistence — Run Key".into(),
@@ -639,6 +749,7 @@ fn analyze_autostart(key: &RegistryKey, hive: &str, findings: &mut Vec<Finding>)
 
         if has_bypass_flag(&val.data) {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::High,
                 title: format!("PowerShell Bypass Autostart: {}", val.name),
                 category: "Persistence — Run Key".into(),
@@ -656,6 +767,7 @@ fn analyze_autostart(key: &RegistryKey, hive: &str, findings: &mut Vec<Finding>)
 
         // Informational: normal autostart
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::Info,
             title: format!("Autostart Entry: {}", val.name),
             category: "Persistence — Run Key".into(),
@@ -681,6 +793,7 @@ fn analyze_winlogon(key: &RegistryKey, findings: &mut Vec<Finding>) {
                 Severity::High
             };
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity,
                 title: "Modified Winlogon Shell".into(),
                 category: "Persistence — Winlogon".into(),
@@ -711,6 +824,7 @@ fn analyze_winlogon(key: &RegistryKey, findings: &mut Vec<Finding>) {
             let has_extra = parts.len() > 1 || !parts.first().map(|p| p.to_lowercase().contains("userinit.exe")).unwrap_or(false);
             if has_extra {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::Critical,
                     title: "Modified Winlogon Userinit".into(),
                     category: "Persistence — Winlogon".into(),
@@ -746,6 +860,7 @@ fn analyze_ifeo(key: &RegistryKey, findings: &mut Vec<Finding>) {
         };
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("IFEO Hijack: {}", target_exe),
             category: "Persistence — IFEO".into(),
@@ -773,6 +888,7 @@ fn analyze_appinit_dlls(key: &RegistryKey, findings: &mut Vec<Finding>) {
         if !dlls.data.trim().is_empty() {
             let severity = if load_enabled { Severity::Critical } else { Severity::High };
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity,
                 title: "AppInit_DLLs Injection".into(),
                 category: "Persistence — DLL Injection".into(),
@@ -825,6 +941,7 @@ fn analyze_network_profile(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity,
         title: format!("Network Profile: {}", profile_name),
         category: "Network Artifact".into(),
@@ -864,6 +981,7 @@ fn analyze_os_info(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Info,
         title: "Operating System Information".into(),
         category: "System Information".into(),
@@ -889,6 +1007,7 @@ fn analyze_scheduled_task(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Medium,
         title: format!("Scheduled Task: {}", task_name),
         category: "Persistence — Scheduled Task".into(),
@@ -907,6 +1026,7 @@ fn analyze_bho(key: &RegistryKey, findings: &mut Vec<Finding>) {
         .unwrap_or_else(|| "Unknown BHO".into());
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Medium,
         title: format!("Browser Helper Object: {}", name),
         category: "Persistence — BHO".into(),
@@ -955,6 +1075,7 @@ fn analyze_installed_software(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity,
         title: format!("Installed: {}", display),
         category: if is_offensive { "Suspicious Software".into() } else { "Installed Software".into() },
@@ -1048,6 +1169,7 @@ fn analyze_run_mru(key: &RegistryKey, findings: &mut Vec<Finding>) {
         };
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("RunMRU Command: {}", truncate(cmd, 50)),
             category: "User Activity — Run Dialog".into(),
@@ -1078,6 +1200,7 @@ fn analyze_typed_paths(key: &RegistryKey, findings: &mut Vec<Finding>) {
         };
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("Typed Path: {}", truncate(path, 60)),
             category: "User Activity — Explorer".into(),
@@ -1116,6 +1239,7 @@ fn analyze_recent_docs(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
     if !sensitive.is_empty() {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::High,
             title: "Sensitive Files Accessed".into(),
             category: "User Activity — Recent Documents".into(),
@@ -1132,6 +1256,7 @@ fn analyze_recent_docs(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Info,
         title: format!("Recent Documents ({} files)", doc_names.len()),
         category: "User Activity — Recent Documents".into(),
@@ -1168,6 +1293,7 @@ fn analyze_user_assist(key: &RegistryKey, findings: &mut Vec<Finding>) {
         }
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("UserAssist: {}", exe_name),
             category: "User Activity — UserAssist".into(),
@@ -1200,6 +1326,7 @@ fn analyze_word_wheel(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
     if !sensitive_searches.is_empty() {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::High,
             title: "Sensitive Search Queries".into(),
             category: "User Activity — Search".into(),
@@ -1213,6 +1340,7 @@ fn analyze_word_wheel(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
     if !searches.is_empty() {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::Info,
             title: format!("Search Queries ({} total)", searches.len()),
             category: "User Activity — Search".into(),
@@ -1237,6 +1365,7 @@ fn analyze_typed_urls(key: &RegistryKey, findings: &mut Vec<Finding>) {
         };
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("Typed URL: {}", truncate(url, 60)),
             category: "Browser Activity — Typed URLs".into(),
@@ -1263,6 +1392,7 @@ fn analyze_mountpoint(key: &RegistryKey, findings: &mut Vec<Finding>) {
     }
 
     findings.push(Finding {
+            key_values: key.values.clone(),
         severity: Severity::Info,
         title: format!("MountPoint: {}", truncate(mount_id, 40)),
         category: "User Activity — Mounted Devices".into(),
@@ -1286,6 +1416,7 @@ fn analyze_mapped_drives(key: &RegistryKey, findings: &mut Vec<Finding>) {
         };
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("Mapped Drive: {}", truncate(unc, 50)),
             category: "Network — Mapped Drives".into(),
@@ -1308,19 +1439,18 @@ fn analyze_mapped_drives(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
 fn analyze_sam_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
     let path_lower = key.path.to_lowercase();
-    if path_lower.contains("domains\\account\\users\\") {
-        let username = get_value(key, "Username").map(|v| v.data.clone()).unwrap_or_default();
-        let rid = get_value(key, "RID").map(|v| v.data.clone()).unwrap_or_default();
-        let last_login = get_value(key, "LastLogin").map(|v| v.data.clone()).unwrap_or_default();
-        let flags = get_value(key, "AccountFlags").map(|v| v.data.clone()).unwrap_or_default();
-
-        if username.is_empty() {
+    
+    // In SAM hives, usernames are stored as keys under Domains\Account\Users\Names\<Username>
+    if path_lower.contains("domains\\account\\users\\names\\") && !path_lower.ends_with("names") {
+        let username = key.path.rsplit('\\').next().unwrap_or("Unknown").to_string();
+        
+        if username.is_empty() || username == "Unknown" {
             return;
         }
 
         let severity = if is_suspicious_account_name(&username) {
             Severity::Critical
-        } else if rid == "500" {
+        } else if username.to_lowercase() == "administrator" {
             Severity::Medium
         } else {
             Severity::Info
@@ -1328,23 +1458,21 @@ fn analyze_sam_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
         let mut evidence = vec![
             EvidenceLine { label: "Username".into(), value: username.clone() },
-            EvidenceLine { label: "RID".into(), value: rid.clone() },
+            EvidenceLine { label: "Key Path".into(), value: key.path.clone() },
         ];
-        if !last_login.is_empty() {
-            evidence.push(EvidenceLine { label: "LastLogin".into(), value: last_login });
-        }
-        if !flags.is_empty() {
-            evidence.push(EvidenceLine { label: "Flags".into(), value: flags });
+        if let Some(ref lwt) = key.last_write_time {
+            evidence.push(EvidenceLine { label: "Last Write".into(), value: lwt.clone() });
         }
 
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity,
             title: format!("User Account: {}", username),
             category: if severity == Severity::Critical { "Security — Suspicious Account".into() } else { "Security — User Account".into() },
             description: if severity == Severity::Critical {
                 format!("Account '{}' has a suspicious name indicating a potential backdoor account.", username)
-            } else if rid == "500" {
-                format!("Built-in Administrator account (RID 500). Verify if this account should be active.", )
+            } else if username.to_lowercase() == "administrator" {
+                format!("Built-in Administrator account. Verify if this account should be active.")
             } else {
                 format!("Local user account '{}'.", username)
             },
@@ -1372,6 +1500,7 @@ fn analyze_security_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
 
             if !disabled.is_empty() {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::High,
                     title: "Disabled Audit Policies".into(),
                     category: "Security — Audit Policy".into(),
@@ -1388,6 +1517,7 @@ fn analyze_security_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
                 });
             } else {
                 findings.push(Finding {
+            key_values: key.values.clone(),
                     severity: Severity::Info,
                     title: "Audit Policy Configuration".into(),
                     category: "Security — Audit Policy".into(),
@@ -1403,6 +1533,7 @@ fn analyze_security_key(key: &RegistryKey, findings: &mut Vec<Finding>) {
     // LSA Secrets reference
     if path_lower.contains("policy\\secrets") {
         findings.push(Finding {
+            key_values: key.values.clone(),
             severity: Severity::Medium,
             title: "LSA Secrets Present".into(),
             category: "Security — Credentials".into(),
@@ -1429,6 +1560,7 @@ fn check_suspicious_value_data(key: &RegistryKey, _hive: &str, findings: &mut Ve
         // Detect base64-encoded PowerShell that wasn't already caught
         if has_encoded_command(data) && !key.path.to_lowercase().contains("\\run") {
             findings.push(Finding {
+            key_values: key.values.clone(),
                 severity: Severity::Critical,
                 title: format!("Encoded PowerShell: {}", truncate(&val.name, 30)),
                 category: "Suspicious Command".into(),

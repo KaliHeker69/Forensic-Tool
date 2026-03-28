@@ -11,8 +11,9 @@
 ### Core Parsing
 - Parses any offline Windows registry hive file (binary `regf` format)
 - Full **recursive key/value tree traversal** with configurable depth limits
+- **Native Transaction Log Recovery** — automatically detects and applies `.LOG1`, `.LOG2`, and `.LOG` files to recover dirty hives
 - Supports all standard REG_* value types
-- **KAPE-aware directory scanning** — point it at a `config` folder and all base hives are auto-discovered
+- **KAPE-aware directory scanning** — auto-discovers base hives and applies their logs
 
 ### DFIR-Focused Output
 - **Per-hive statistics** — total keys, total values, max depth, deepest path, earliest/latest key timestamps
@@ -113,8 +114,8 @@ Options:
                                    (repeatable: --hive A --hive B)
 
   -d, --dir <DIR>                 Directory containing hive files (KAPE-aware).
-                                   Auto-discovers files with no extension;
-                                   skips .LOG1 / .LOG2 sidecars.
+                                   Auto-discovers .hve, .dat, and extensionless files.
+                                   .LOG1 / .LOG2 sidecars are automatically applied to dirty hives.
 
   -o, --output-dir <DIR>          Output directory for per-hive JSON files
                                    [default: json_output]
@@ -263,13 +264,15 @@ The `data` field is **typed** — its structure depends on the registry type:
 "data": {
   "hex": "01 00 04 80 48 00 00 00 58 00 00 00 ...",
   "size": 108,
-  "ascii_preview": "....H...X........S..."
+  "ascii_preview": "....H...X........S...",
+  "decoded": "SomeHiddenString"
 }
 ```
 
 - **`hex`**: Complete hex dump (no truncation)
 - **`size`**: Total byte count
-- **`ascii_preview`**: Printable ASCII representation (up to 256 bytes, non-printable as `.`)
+- **`ascii_preview`**: Printable ASCII representation (no truncation, non-printable as `.`)
+- **`decoded`**: Attempted UTF-16LE / UTF-8 string extraction (useful for finding hidden texts; `null` if no valid text is found)
 
 #### Null (`REG_NONE`, unknown)
 

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Timeline Explorer</title>
-    <meta name="description" content="Web-based DFIR timeline explorer for Windows Event Log analysis">
+    <meta name="description" content="Web-based DFIR timeline explorer for CSV, TSV, TXT, JSON, and JSONL forensic datasets">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
     <!-- Font Awesome -->
@@ -15,7 +15,7 @@
     <link href="https://unpkg.com/tabulator-tables@6.3.0/dist/css/tabulator_midnight.min.css" rel="stylesheet">
 
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/styles.css?v=4.0">
+    <link rel="stylesheet" href="css/styles.css?v=4.4">
 </head>
 
 <body>
@@ -87,14 +87,39 @@
         <!-- Upload Zone -->
         <div class="upload-zone" id="uploadZone">
             <div class="upload-content">
-                <div class="upload-icon"><i class="fa-solid fa-scroll" aria-hidden="true"></i></div>
-                <h2>Windows Event Log Timeline</h2>
-                <p>Drop a parsed CSV/TSV file here</p>
-                <p class="upload-hint">Supports Hayabusa, EvtxECmd, and custom CSV outputs • Drag & drop enabled</p>
+                <div class="upload-icon"><i class="fa-solid fa-wave-square" aria-hidden="true"></i></div>
+                <span class="upload-eyebrow">Forensic Data Workspace</span>
+                <h2>Load Timeline Evidence</h2>
+                <p>Open CSV, TSV, TXT, JSON, or JSONL timeline data from local storage or the server-side evidence tree.</p>
+                <div class="upload-format-badges">
+                    <span class="upload-format-badge csv"><i class="fa-solid fa-file-csv" aria-hidden="true"></i> CSV</span>
+                    <span class="upload-format-badge tsv"><i class="fa-solid fa-table-list" aria-hidden="true"></i> TSV</span>
+                    <span class="upload-format-badge txt"><i class="fa-solid fa-file-lines" aria-hidden="true"></i> TXT</span>
+                    <span class="upload-format-badge json"><i class="fa-solid fa-file-code" aria-hidden="true"></i> JSON</span>
+                    <span class="upload-format-badge json"><i class="fa-solid fa-file-code" aria-hidden="true"></i> JSONL</span>
+                </div>
+                <div class="upload-feature-grid">
+                    <div class="upload-feature-card">
+                        <span class="upload-feature-label">Parser</span>
+                        <strong>Flatten nested JSON</strong>
+                        <span>Supports arrays, wrapper objects, JSONL, and NDJSON evidence feeds.</span>
+                    </div>
+                    <div class="upload-feature-card">
+                        <span class="upload-feature-label">Explorer</span>
+                        <strong>Filter large evidence folders</strong>
+                        <span>Search and narrow folders, CSV sets, and JSON reports before loading.</span>
+                    </div>
+                    <div class="upload-feature-card">
+                        <span class="upload-feature-label">Analysis</span>
+                        <strong>Profile each dataset</strong>
+                        <span>Surface structure, field count, and timestamp coverage as soon as it opens.</span>
+                    </div>
+                </div>
+                <p class="upload-hint">Works with Hayabusa, EvtxECmd, custom CSV exports, JSON arrays, JSONL, and newline-delimited JSON</p>
                 <button class="btn btn-primary" id="openFileBrowserBtnAlt" style="margin-top: 16px;">
                     <i class="fa-solid fa-server" aria-hidden="true"></i> Browse Server Files
                 </button>
-                <input type="file" id="fileInput" accept=".csv,.tsv,.txt" hidden>
+                <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.json,.jsonl,application/json,application/x-ndjson,text/plain" hidden>
             </div>
         </div>
 
@@ -126,6 +151,18 @@
                     <button class="btn btn-sm" id="editPathBtn" title="Edit path">
                         <i class="fa-solid fa-pen" aria-hidden="true"></i>
                     </button>
+                </div>
+                <div class="file-browser-insights">
+                    <div class="file-browser-search">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="text" id="fileBrowserSearch" placeholder="Filter folders, CSV, JSON, JSONL, or filenames">
+                    </div>
+                    <div class="file-browser-type-filters" id="fileBrowserTypeFilters">
+                        <button class="type-filter-chip active" data-filter="all">All</button>
+                        <button class="type-filter-chip" data-filter="folder">Folders</button>
+                        <button class="type-filter-chip" data-filter="delimited">Delimited</button>
+                        <button class="type-filter-chip" data-filter="json">JSON / JSONL</button>
+                    </div>
                 </div>
                 <div class="file-browser-list" id="fileBrowserList">
                     <div class="loading-files">
@@ -162,7 +199,7 @@
                 <div class="stat-icon"><i class="fa-solid fa-list-ol" aria-hidden="true"></i></div>
                 <div class="stat-info">
                     <span class="stat-value" id="statTotalEvents">0</span>
-                    <span class="stat-label">Total Events</span>
+                    <span class="stat-label">Total Records</span>
                 </div>
             </div>
             <div class="stat-card">
@@ -202,7 +239,7 @@
         <div class="histogram-container" id="histogramContainer" style="display: none;">
             <div class="histogram-toolbar">
                 <span class="histogram-label"><i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Event
-                    Timeline</span>
+                    Density</span>
                 <div class="histogram-controls">
                     <button class="hist-granularity active" data-gran="hour">Hour</button>
                     <button class="hist-granularity" data-gran="day">Day</button>
@@ -328,6 +365,29 @@
                         <button class="btn btn-sm btn-ghost" id="toggleBookmarkedBtn" title="Show bookmarked rows only">
                             <i class="fa-regular fa-bookmark" aria-hidden="true"></i> Bookmarks
                         </button>
+                    </div>
+                </div>
+
+                <div class="dataset-overview" id="datasetOverview" style="display: none;">
+                    <div class="dataset-overview-card">
+                        <span class="dataset-overview-label">Format</span>
+                        <strong id="datasetFormat">-</strong>
+                    </div>
+                    <div class="dataset-overview-card">
+                        <span class="dataset-overview-label">Structure</span>
+                        <strong id="datasetStructure">-</strong>
+                    </div>
+                    <div class="dataset-overview-card">
+                        <span class="dataset-overview-label">Fields</span>
+                        <strong id="datasetFieldCount">0</strong>
+                    </div>
+                    <div class="dataset-overview-card">
+                        <span class="dataset-overview-label">Primary Time</span>
+                        <strong id="datasetDateField">-</strong>
+                    </div>
+                    <div class="dataset-overview-signals">
+                        <span class="dataset-overview-label">Field Signals</span>
+                        <div class="dataset-signal-list" id="datasetSignals"></div>
                     </div>
                 </div>
 
@@ -583,8 +643,8 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
-    <script src="js/app.js?v=4.0"></script>
-    <script src="js/features.js?v=4.0"></script>
+    <script src="js/app.js?v=4.4"></script>
+    <script src="js/features.js?v=4.4"></script>
 </body>
 
 </html>

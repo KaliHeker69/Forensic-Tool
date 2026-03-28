@@ -2,7 +2,7 @@
 // NTFS Forensic Analyzer - Main Entry Point
 // =============================================================================
 // A high-performance NTFS forensic analysis and correlation tool.
-// Accepts pre-parsed NTFS artifact data in JSON format, applies detection
+// Accepts pre-parsed NTFS artifact data in CSV format, applies detection
 // rules, generates timelines, and produces comprehensive forensic reports.
 // =============================================================================
 
@@ -17,6 +17,7 @@ use anyhow::{Context, Result};
 use chrono::{NaiveDate, TimeZone, Utc};
 use clap::{Parser, Subcommand};
 use colored::*;
+use rayon::ThreadPoolBuilder;
 use std::path::PathBuf;
 
 const BANNER: &str = r#"
@@ -26,7 +27,7 @@ const BANNER: &str = r#"
 | |\  | | | |  _|  ___) / ___ \| | | | (_| | | |_| |/ /  __/ |
 |_| \_| |_| |_|   |____/_/   \_\_| |_|\__,_|_|\__, /___\___|_|
                                                 |___/
-  NTFS Forensic Analysis & Correlation Engine
+  NTFS Forensic Analysis & Correlation Engine -- KaliHeker --
 "#;
 
 #[derive(Parser)]
@@ -40,11 +41,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Run full analysis on NTFS JSON data
+    /// Run full analysis on NTFS CSV data
     Analyze {
-        /// Path to input JSON file or directory containing split JSON files
+        /// Path to input CSV file or directory containing MFTECmd CSV artifacts
         #[arg(short, long)]
         input: PathBuf,
+
+        /// Worker threads to use (default: all logical CPUs)
+        #[arg(long)]
+        threads: Option<usize>,
 
         /// Path to detection rules TOML file (default: rules/default_rules.toml)
         #[arg(short, long)]
@@ -89,9 +94,13 @@ enum Commands {
 
     /// Generate timeline only from NTFS data
     Timeline {
-        /// Path to input JSON file
+        /// Path to input CSV file
         #[arg(short, long)]
         input: PathBuf,
+
+        /// Worker threads to use (default: all logical CPUs)
+        #[arg(long)]
+        threads: Option<usize>,
 
         /// Output file path
         #[arg(short, long, default_value = "timeline.csv")]
@@ -121,12 +130,36 @@ enum Commands {
         category: Option<String>,
     },
 
-    /// Validate input JSON structure
+    /// Validate input CSV structure
     Validate {
-        /// Path to input JSON file
+        /// Path to input file or directory
         #[arg(short, long)]
         input: PathBuf,
+
+        /// Worker threads to use (default: all logical CPUs)
+        #[arg(long)]
+        threads: Option<usize>,
     },
+}
+
+fn configure_thread_pool(threads: Option<usize>) -> Result<()> {
+    let max_cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1);
+
+    let workers = threads.unwrap_or(max_cpus).max(1);
+
+    ThreadPoolBuilder::new()
+        .num_threads(workers)
+        .build_global()
+        .map_err(|e| anyhow::anyhow!("Failed to initialize thread pool: {}", e))?;
+
+    eprintln!(
+        "[*] Thread pool initialized with {} worker thread(s) (max CPUs: {})",
+        workers, max_cpus
+    );
+
+    Ok(())
 }
 
 fn main() -> Result<()> {
@@ -135,6 +168,7 @@ fn main() -> Result<()> {
     match cli.command {
         Commands::Analyze {
             input,
+            threads,
             rules: rules_path,
             whitelist: whitelist_path,
             output,
@@ -149,6 +183,8 @@ fn main() -> Result<()> {
             if no_color {
                 colored::control::set_override(false);
             }
+
+            configure_thread_pool(threads)?;
 
             eprintln!("{}", BANNER.cyan());
             run_analysis(
@@ -167,18 +203,25 @@ fn main() -> Result<()> {
 
         Commands::Timeline {
             input,
+            threads,
             output,
             format,
             start_date,
             end_date,
-        } => run_timeline(&input, &output, &format, start_date, end_date),
+        } => {
+            configure_thread_pool(threads)?;
+            run_timeline(&input, &output, &format, start_date, end_date)
+        }
 
         Commands::ListRules {
             rules: rules_path,
             category,
         } => list_rules(rules_path.as_deref(), category.as_deref()),
 
-        Commands::Validate { input } => validate_input(&input),
+        Commands::Validate { input, threads } => {
+            configure_thread_pool(threads)?;
+            validate_input(&input)
+        }
     }
 }
 
@@ -214,11 +257,15 @@ fn run_analysis(
         parser::load_ntfs_input(input_path)?
     };
     eprintln!(
-        "  Loaded: {} MFT entries, {} USN records, {} I30 entries",
+        "  Loaded: {} MFT entries, {} USN records, {} I30 entries, {} SDS entries",
         input.mft_entries.len(),
         input.usn_records.len(),
-        input.i30_entries.len()
+        input.i30_entries.len(),
+        input.sds_entries.len()
     );
+    if input.boot_info.is_some() {
+        eprintln!("  Loaded: $Boot metadata");
+    }
     if input.bitmap_data.is_some() {
         eprintln!("  Loaded: $Bitmap cluster allocation data");
     }

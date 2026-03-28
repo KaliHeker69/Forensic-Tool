@@ -43,6 +43,18 @@ enabled = true
 # can occur from legitimate cross-volume moves.
 min_difference_seconds = 60
 
+# Require at least this many SI/FN MACB fields to show anomalous divergence
+# when there is no USN BASIC_INFO_CHANGE corroboration.
+min_anomalous_macb_fields = 2
+
+# Trusted owner SID patterns from $Secure:$SDS used for false-positive
+# suppression when no USN corroboration exists. Supports '*' suffix wildcard.
+trusted_owner_sids = [
+    "S-1-5-18",        # LOCAL_SYSTEM
+    "S-1-5-80-*",      # Service SIDs
+    "S-1-5-32-544",    # Administrators
+]
+
 [[rules]]
 id = "TS-002"
 name = "Zero Nanosecond Precision"
