@@ -33,8 +33,56 @@ impl DetectionRule for HiddenProcessCrossCheckRule {
     fn detect(&self, data: &ParsedData, _engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        // Need both sources to compare
+        let psxview_by_pid: HashMap<u32, &crate::models::process::PsXViewEntry> = data
+            .psxview_entries
+            .iter()
+            .map(|entry| (entry.pid, entry))
+            .collect();
+
+        // Fallback mode: if pslist/psscan are unavailable, still surface psxview-hidden entries.
         if data.pslist_processes.is_empty() || data.psscan_processes.is_empty() {
+            for entry in &data.psxview_entries {
+                if entry.pid == 0 || !entry.is_likely_hidden() {
+                    continue;
+                }
+
+                let process_name = if entry.process.trim().is_empty() {
+                    "unknown".to_string()
+                } else {
+                    entry.process.clone()
+                };
+                let hidden_votes = entry.hidden_votes();
+
+                let mut finding = create_finding(
+                    self,
+                    format!(
+                        "Potential hidden process (psxview): {} (PID {})",
+                        process_name, entry.pid
+                    ),
+                    format!(
+                        "Process '{}' (PID {}) appears hidden in psxview integrity checks. \
+                        Hidden votes: {} across process enumeration methods.",
+                        process_name, entry.pid, hidden_votes
+                    ),
+                    vec![Evidence {
+                        source_plugin: "psxview".to_string(),
+                        source_file: String::new(),
+                        line_number: None,
+                        data: format!(
+                            "PID:{} Name:{} pslist:{:?} psscan:{:?} hidden_votes:{}",
+                            entry.pid,
+                            process_name,
+                            entry.in_pslist,
+                            entry.in_psscan,
+                            hidden_votes
+                        ),
+                    }],
+                );
+                finding.related_pids = vec![entry.pid];
+                finding.confidence = (0.82 + (hidden_votes as f32 * 0.03)).min(0.95);
+                findings.push(finding);
+            }
+
             return findings;
         }
 
@@ -53,6 +101,28 @@ impl DetectionRule for HiddenProcessCrossCheckRule {
                     continue;
                 }
 
+                let mut source_plugin = "psscan vs pslist".to_string();
+                let mut confidence = 0.92;
+                let mut detail_suffix = String::new();
+
+                if let Some(psx) = psxview_by_pid.get(&proc.pid) {
+                    source_plugin.push_str(" + psxview");
+
+                    let hidden_votes = psx.hidden_votes();
+                    if psx.is_likely_hidden() {
+                        confidence = 0.97;
+                    } else if hidden_votes > 0 {
+                        confidence = 0.94;
+                    }
+
+                    detail_suffix = format!(
+                        " psxview hidden votes: {} (pslist:{:?}, psscan:{:?}).",
+                        hidden_votes,
+                        psx.in_pslist,
+                        psx.in_psscan
+                    );
+                }
+
                 let mut finding = create_finding(
                     self,
                     format!(
@@ -62,11 +132,11 @@ impl DetectionRule for HiddenProcessCrossCheckRule {
                     format!(
                         "Process '{}' (PID {}, PPID {}) was found by psscan (memory scanning) \
                         but is NOT in pslist (kernel linked list). This is the hallmark \
-                        of Direct Kernel Object Manipulation (DKOM) rootkit activity.",
-                        proc.name, proc.pid, proc.ppid
+                        of Direct Kernel Object Manipulation (DKOM) rootkit activity.{}",
+                        proc.name, proc.pid, proc.ppid, detail_suffix
                     ),
                     vec![Evidence {
-                        source_plugin: "psscan vs pslist".to_string(),
+                        source_plugin,
                         source_file: String::new(),
                         line_number: None,
                         data: format!(
@@ -76,7 +146,7 @@ impl DetectionRule for HiddenProcessCrossCheckRule {
                     }],
                 );
                 finding.related_pids = vec![proc.pid];
-                finding.confidence = 0.92;
+                finding.confidence = confidence;
                 findings.push(finding);
             }
         }

@@ -45,6 +45,40 @@ where
     }
 }
 
+/// Flexible deserializer that accepts booleans, numbers, and common string forms.
+/// Converts to Option<bool> so unknown values can be represented safely.
+pub fn deserialize_flexible_bool<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+    match val {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Bool(b)) => Ok(Some(b)),
+        Some(serde_json::Value::Number(n)) => {
+            if let Some(i) = n.as_i64() {
+                Ok(Some(i != 0))
+            } else if let Some(u) = n.as_u64() {
+                Ok(Some(u != 0))
+            } else if let Some(f) = n.as_f64() {
+                Ok(Some(f != 0.0))
+            } else {
+                Ok(None)
+            }
+        }
+        Some(serde_json::Value::String(s)) => {
+            let normalized = s.trim().to_ascii_lowercase();
+            match normalized.as_str() {
+                "true" | "t" | "yes" | "y" | "1" => Ok(Some(true)),
+                "false" | "f" | "no" | "n" | "0" => Ok(Some(false)),
+                "" | "n/a" | "-" => Ok(None),
+                _ => Ok(None),
+            }
+        }
+        Some(_) => Ok(None),
+    }
+}
+
 /// Custom deserializer that treats "N/A", "-", and empty strings as None
 pub fn deserialize_optional_datetime<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
 where
@@ -172,6 +206,108 @@ impl ProcessAssociated for ProcessInfo {
     fn process_name(&self) -> Option<&str> {
         Some(&self.name)
     }
+}
+
+/// psxview entry for cross-view process integrity checks.
+/// Each boolean indicates whether a process is visible from a given enumeration method.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PsXViewEntry {
+    /// Process ID
+    #[serde(alias = "PID", alias = "Pid")]
+    pub pid: u32,
+
+    /// Process name
+    #[serde(alias = "Name", alias = "Process", alias = "ImageFileName", default)]
+    pub process: String,
+
+    #[serde(alias = "pslist", alias = "PsList", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_pslist: Option<bool>,
+
+    #[serde(alias = "psscan", alias = "PsScan", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_psscan: Option<bool>,
+
+    #[serde(alias = "thrdproc", alias = "ThrdProc", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_thrdproc: Option<bool>,
+
+    #[serde(alias = "pspcid", alias = "PspCid", alias = "PspCidTable", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_pspcid: Option<bool>,
+
+    #[serde(alias = "csrss", alias = "Csrss", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_csrss: Option<bool>,
+
+    #[serde(alias = "session", alias = "Session", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_session: Option<bool>,
+
+    #[serde(alias = "deskthrd", alias = "DeskThrd", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_deskthrd: Option<bool>,
+}
+
+impl PsXViewEntry {
+    /// Number of views that reported this process as missing.
+    pub fn hidden_votes(&self) -> usize {
+        [
+            self.in_pslist,
+            self.in_psscan,
+            self.in_thrdproc,
+            self.in_pspcid,
+            self.in_csrss,
+            self.in_session,
+            self.in_deskthrd,
+        ]
+        .into_iter()
+        .filter(|v| matches!(v, Some(false)))
+        .count()
+    }
+
+    /// Strong DKOM signal:
+    /// - not visible in pslist but visible in psscan, or
+    /// - multiple independent views mark it missing.
+    pub fn is_likely_hidden(&self) -> bool {
+        if self.in_psscan == Some(true) && self.in_pslist == Some(false) {
+            return true;
+        }
+
+        (self.in_pslist == Some(false) && self.hidden_votes() >= 2) || self.hidden_votes() >= 3
+    }
+}
+
+/// Structured entry from windows.hollowprocesses output.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HollowProcessEntry {
+    /// Process ID
+    #[serde(alias = "PID", alias = "Pid")]
+    pub pid: u32,
+
+    /// Process name
+    #[serde(alias = "Process", alias = "Name", alias = "ImageFileName", default)]
+    pub process: String,
+
+    /// Optional parent process ID
+    #[serde(alias = "PPID", alias = "PPid", default)]
+    pub ppid: Option<u32>,
+
+    /// Suspicious region start/base
+    #[serde(
+        alias = "Start",
+        alias = "Address",
+        alias = "BaseAddress",
+        alias = "Base",
+        default,
+        deserialize_with = "deserialize_flexible_string"
+    )]
+    pub start: Option<String>,
+
+    /// Suspicious region end
+    #[serde(alias = "End", alias = "EndAddress", default, deserialize_with = "deserialize_flexible_string")]
+    pub end: Option<String>,
+
+    /// Memory protection details
+    #[serde(alias = "Protection", alias = "protect", default)]
+    pub protection: Option<String>,
+
+    /// Plugin-specific reason/details for the hollowing flag
+    #[serde(alias = "Details", alias = "Reason", alias = "Description", default)]
+    pub details: Option<String>,
 }
 
 /// Command line arguments from cmdline plugin

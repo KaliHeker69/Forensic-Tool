@@ -3200,6 +3200,119 @@ label {
     gap: 5px;
 }
 
+.dashboard-page .timeline-guide {
+    display: grid;
+    gap: 4px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-page .timeline-guide p {
+    margin: 0;
+    font-size: 0.65rem;
+    color: #9eb2c7;
+    letter-spacing: 0.03em;
+    line-height: 1.45;
+}
+
+.dashboard-page .timeline-guide strong {
+    color: #e7f3ff;
+}
+
+.dashboard-page .timeline-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.dashboard-page .timeline-search {
+    min-width: 280px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0 10px;
+    min-height: 34px;
+}
+
+.dashboard-page .timeline-search i {
+    color: #8bfb91;
+    font-size: 0.74rem;
+}
+
+.dashboard-page .timeline-search input {
+    width: 100%;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #e6effb;
+    font-size: 0.66rem;
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.dashboard-page .timeline-search input::placeholder {
+    color: #8c9caf;
+}
+
+.dashboard-page .timeline-select-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0 10px;
+}
+
+.dashboard-page .timeline-select-wrap span {
+    color: #92a6ba;
+    font-size: 0.58rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.dashboard-page .timeline-select-wrap select {
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #e6effb;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    min-width: 116px;
+    cursor: pointer;
+}
+
+.dashboard-page .timeline-select-wrap select option {
+    color: #e6effb;
+    background: #0b1118;
+}
+
+.dashboard-page .timeline-meta-strip {
+    margin-bottom: 8px;
+    min-height: 26px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    padding: 6px 9px;
+    color: #95a9be;
+    font-size: 0.59rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
 .dashboard-page .connections-toolbar {
     display: flex;
     align-items: center;
@@ -3376,6 +3489,104 @@ label {
 .dashboard-page .chart-host-donut { min-height: 280px; }
 .dashboard-page .chart-host-graph { min-height: 340px; }
 .dashboard-page .chart-host-artifacts { min-height: 240px; }
+
+.dashboard-page .timeline-table-wrap {
+    margin-top: 10px;
+    max-height: 280px;
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 13, 20, 0.72);
+}
+
+.dashboard-page .timeline-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+.dashboard-page .timeline-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(19, 25, 34, 0.96);
+    color: #cfdef1;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-weight: 700;
+    font-size: 0.56rem;
+    padding: 7px 8px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.dashboard-page .timeline-table tbody td {
+    padding: 7px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: #bacbe0;
+    font-size: 0.64rem;
+    line-height: 1.35;
+    vertical-align: top;
+}
+
+.dashboard-page .timeline-table tbody tr:hover {
+    background: rgba(46, 160, 67, 0.08);
+}
+
+.dashboard-page .timeline-lane-pill {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 2px 8px;
+    font-size: 0.57rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #dce8f8;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.dashboard-page .timeline-lane-pill.lane-ntfs {
+    border-color: rgba(139, 251, 145, 0.42);
+    background: rgba(46, 160, 67, 0.2);
+}
+
+.dashboard-page .timeline-lane-pill.lane-browser {
+    border-color: rgba(120, 184, 255, 0.42);
+    background: rgba(49, 116, 198, 0.2);
+}
+
+.dashboard-page .timeline-lane-pill.lane-prefetch {
+    border-color: rgba(246, 183, 60, 0.42);
+    background: rgba(193, 133, 20, 0.2);
+}
+
+.dashboard-page .timeline-lane-pill.lane-execution {
+    border-color: rgba(255, 115, 81, 0.42);
+    background: rgba(191, 71, 40, 0.24);
+}
+
+.dashboard-page .timeline-macb-cell {
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    letter-spacing: 0.12em;
+    color: #eff8ff;
+    font-weight: 700;
+}
+
+.dashboard-page .timeline-detail-cell {
+    max-width: 360px;
+    color: #9fb3ca;
+}
+
+.dashboard-page .timeline-table-empty {
+    text-align: center;
+    color: #8fa3b9;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 0.62rem;
+    padding: 14px 10px;
+}
 
 .dashboard-page .connections-focus-strip {
     display: flex;
@@ -4187,6 +4398,35 @@ body.evidence-modal-open {
 
     .dashboard-page .connections-meta {
         gap: 8px;
+    }
+
+    .dashboard-page .timeline-tools {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dashboard-page .timeline-search {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dashboard-page .timeline-select-wrap {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .dashboard-page .timeline-select-wrap select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .dashboard-page .timeline-reset-btn,
+    .dashboard-page #timelineResetBtn {
+        width: 100%;
+    }
+
+    .dashboard-page .timeline-table-wrap {
+        max-height: 230px;
     }
 
     .dashboard-page .chart-fullscreen-label {

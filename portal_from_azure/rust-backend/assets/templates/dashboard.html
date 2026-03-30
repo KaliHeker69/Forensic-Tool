@@ -555,13 +555,55 @@
                             <button class="chart-range-btn active" data-range="72">72H</button>
                         </div>
                     </header>
+                    <div class="timeline-guide" aria-live="polite">
+                        <p><strong>What this is:</strong> A merged evidence timeline where each point is one forensic event from a different source, aligned on a single UTC clock.</p>
+                        <p>MACB flags: <strong>M</strong> modified, <strong>A</strong> accessed, <strong>C</strong> MFT metadata changed, <strong>B</strong> created, <strong>E</strong> executed.</p>
+                    </div>
+                    <div class="timeline-tools" role="group" aria-label="Timeline filter controls">
+                        <label class="timeline-search" for="timelineSearchInput">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <input id="timelineSearchInput" type="search" placeholder="Filter by source, event, entity, detail, or MACB" autocomplete="off">
+                        </label>
+                        <label class="timeline-select-wrap" for="timelineSortSelect">
+                            <span>Sort</span>
+                            <select id="timelineSortSelect">
+                                <option value="desc" selected>Newest first</option>
+                                <option value="asc">Oldest first</option>
+                            </select>
+                        </label>
+                        <label class="timeline-select-wrap" for="timelineRowsSelect">
+                            <span>Rows</span>
+                            <select id="timelineRowsSelect">
+                                <option value="12" selected>12</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                        </label>
+                        <button id="timelineResetBtn" type="button" class="connection-reset-btn">Reset</button>
+                    </div>
                     <div id="timelineLegend" class="chart-legend" aria-live="polite"></div>
+                    <div id="timelineMeta" class="timeline-meta-strip" aria-live="polite"></div>
                     <div class="chart-frame">
                         <button type="button" class="chart-fullscreen-toggle" data-fullscreen-target="#timeline-panel" aria-label="Open Global MACB Timeline in pop-out evidence view">
                             <i class="fa-solid fa-expand" aria-hidden="true"></i>
                             <span class="chart-fullscreen-label">Pop Out</span>
                         </button>
                         <div id="macbTimelineChart" class="chart-host chart-host-timeline" aria-label="Global MACB timeline D3 chart"></div>
+                    </div>
+                    <div class="timeline-table-wrap" aria-label="Timeline event rows">
+                        <table class="timeline-table">
+                            <thead>
+                                <tr>
+                                    <th>Time (UTC)</th>
+                                    <th>Source</th>
+                                    <th>Event</th>
+                                    <th>Entity</th>
+                                    <th>MACB</th>
+                                    <th>Detail</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timelineTableBody"></tbody>
+                        </table>
                     </div>
                 </article>
 
@@ -898,6 +940,9 @@
             Prefetch: true,
             Execution: true,
         },
+        timelineSearch: '',
+        timelineRows: 12,
+        timelineSort: 'desc',
         connectionFocus: defaultConnectionFocus || '',
     };
     const popoutButtons = Array.from(document.querySelectorAll('.chart-fullscreen-toggle'));
@@ -1122,15 +1167,29 @@
     }
 
     function getFilteredTimelineEvents() {
-        const visibleEvents = parsedTimelineEvents.filter((event) => chartState.timelineSeriesVisible[event.lane] !== false);
-        if (visibleEvents.length === 0) {
+        const laneVisibleEvents = parsedTimelineEvents.filter((event) => chartState.timelineSeriesVisible[event.lane] !== false);
+        if (laneVisibleEvents.length === 0) {
             return [];
         }
 
-        const latestEpoch = d3.max(visibleEvents, (event) => event.epoch_seconds) || 0;
+        const latestEpoch = d3.max(laneVisibleEvents, (event) => event.epoch_seconds) || 0;
         const cutoff = latestEpoch - (chartState.timelineHours * 60 * 60);
-        const scoped = visibleEvents.filter((event) => event.epoch_seconds >= cutoff);
-        return scoped.length > 0 ? scoped : visibleEvents;
+        let scoped = laneVisibleEvents.filter((event) => event.epoch_seconds >= cutoff);
+        if (scoped.length === 0) {
+            scoped = laneVisibleEvents;
+        }
+
+        const query = chartState.timelineSearch.trim().toLowerCase();
+        if (!query) {
+            return scoped;
+        }
+
+        return scoped.filter((event) => {
+            const haystack = [event.lane, event.event_type, event.entity, event.detail, event.macb]
+                .map((value) => String(value || '').toLowerCase())
+                .join(' ');
+            return haystack.includes(query);
+        });
     }
 
     function timelineTickFormatter(domain) {
@@ -1155,6 +1214,99 @@
         tooltip.transition().duration(120).style('opacity', 0);
     }
 
+    function decodeMacbSignature(signature) {
+        const token = String(signature || '').toUpperCase();
+        if (!token) return 'No MACB flags present';
+
+        const lookup = {
+            M: 'Modified',
+            A: 'Accessed',
+            C: 'MFT metadata changed',
+            B: 'Created',
+            E: 'Executed',
+        };
+
+        const meanings = [];
+        token.split('').forEach((flag) => {
+            const meaning = lookup[flag];
+            if (meaning && !meanings.includes(meaning)) {
+                meanings.push(meaning);
+            }
+        });
+
+        return meanings.length > 0 ? meanings.join(', ') : 'Custom timeline marker';
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatTimelineTimestamp(value) {
+        if (!(value instanceof Date) || Number.isNaN(value.getTime())) {
+            return 'n/a';
+        }
+        return d3.utcFormat('%Y-%m-%d %H:%M:%S')(value);
+    }
+
+    function updateTimelineMeta(events, domainStart, domainEnd) {
+        const host = document.getElementById('timelineMeta');
+        if (!host) return;
+
+        if (!events.length) {
+            host.textContent = chartState.timelineSearch.trim()
+                ? 'No events match the current search and lane filters.'
+                : 'No timestamped events are available for the selected timeline window.';
+            return;
+        }
+
+        const start = domainStart || events[0].time;
+        const end = domainEnd || events[events.length - 1].time;
+        const lanes = timelineLaneOrder.filter((lane) => chartState.timelineSeriesVisible[lane]);
+        const shownRows = Math.min(events.length, chartState.timelineRows);
+        const sortLabel = chartState.timelineSort === 'desc' ? 'newest first' : 'oldest first';
+
+        host.textContent = `${events.length} events | ${formatTimelineTimestamp(start)} to ${formatTimelineTimestamp(end)} UTC | lanes: ${lanes.join(', ')} | table: ${shownRows} rows (${sortLabel})`;
+    }
+
+    function renderTimelineEventTable(events) {
+        const body = document.getElementById('timelineTableBody');
+        if (!body) return;
+
+        if (!events.length) {
+            body.innerHTML = '<tr><td colspan="6" class="timeline-table-empty">No timeline rows match the current filters.</td></tr>';
+            return;
+        }
+
+        const sorted = [...events].sort((a, b) => {
+            if (chartState.timelineSort === 'asc') {
+                return a.epoch_seconds - b.epoch_seconds;
+            }
+            return b.epoch_seconds - a.epoch_seconds;
+        });
+
+        const rows = sorted.slice(0, chartState.timelineRows).map((event) => {
+            const laneClass = `lane-${String(event.lane || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+            const macbToken = event.macb || 'N/A';
+            return `
+                <tr>
+                    <td>${escapeHtml(formatTimelineTimestamp(event.time))}</td>
+                    <td><span class="timeline-lane-pill ${laneClass}">${escapeHtml(event.lane || 'Unknown')}</span></td>
+                    <td>${escapeHtml(event.event_type || 'n/a')}</td>
+                    <td>${escapeHtml(event.entity || 'n/a')}</td>
+                    <td class="timeline-macb-cell" title="${escapeHtml(decodeMacbSignature(macbToken))}">${escapeHtml(macbToken)}</td>
+                    <td class="timeline-detail-cell">${escapeHtml(event.detail || 'n/a')}</td>
+                </tr>
+            `;
+        });
+
+        body.innerHTML = rows.join('');
+    }
+
     function drawTimelineChart() {
         const host = document.getElementById('macbTimelineChart');
         if (!host) return;
@@ -1167,6 +1319,8 @@
             empty.textContent = 'No timestamped forensic events are available for the selected window.';
             host.appendChild(empty);
             d3.select('#timelineLegend').html('');
+            updateTimelineMeta([], null, null);
+            renderTimelineEventTable([]);
             return;
         }
 
@@ -1190,6 +1344,9 @@
             domainStart = new Date(domainStart.getTime() - (60 * 60 * 1000));
             domainEnd = new Date(domainEnd.getTime() + (60 * 60 * 1000));
         }
+
+        updateTimelineMeta(events, domainStart, domainEnd);
+        renderTimelineEventTable(events);
 
         const baseX = d3.scaleTime()
             .domain([domainStart, domainEnd])
@@ -1301,11 +1458,12 @@
                 .style('cursor', 'pointer')
                 .on('mouseenter', (event, point) => {
                     showTooltip(event, `
-                        <div class="d3-tip-title">${point.lane} · ${point.event_type}</div>
-                        <div class="d3-tip-row"><span>Time</span><strong>${d3.timeFormat('%d %b %Y %H:%M:%S')(point.time)}</strong></div>
-                        <div class="d3-tip-row"><span>Entity</span><strong>${point.entity}</strong></div>
-                        <div class="d3-tip-row"><span>MACB</span><strong>${point.macb || 'N/A'}</strong></div>
-                        <div class="d3-tip-row"><span>Detail</span><strong>${point.detail}</strong></div>
+                        <div class="d3-tip-title">${escapeHtml(`${point.lane} · ${point.event_type}`)}</div>
+                        <div class="d3-tip-row"><span>Time</span><strong>${escapeHtml(d3.timeFormat('%d %b %Y %H:%M:%S')(point.time))}</strong></div>
+                        <div class="d3-tip-row"><span>Entity</span><strong>${escapeHtml(point.entity || 'N/A')}</strong></div>
+                        <div class="d3-tip-row"><span>MACB</span><strong>${escapeHtml(point.macb || 'N/A')}</strong></div>
+                        <div class="d3-tip-row"><span>Meaning</span><strong>${escapeHtml(decodeMacbSignature(point.macb))}</strong></div>
+                        <div class="d3-tip-row"><span>Detail</span><strong>${escapeHtml(point.detail || 'N/A')}</strong></div>
                     `);
                 })
                 .on('mousemove', (event) => {
@@ -1348,7 +1506,7 @@
 
         legend.append('span')
             .attr('class', 'legend-note')
-            .text('MACB = Modified / Accessed / MFT Changed / Created');
+            .text('MACB: M modified, A accessed, C MFT changed, B created, E executed');
     }
 
     function drawIocMixChart() {
@@ -2070,6 +2228,53 @@
             drawTimelineChart();
         });
     });
+
+    const timelineSearchInput = document.getElementById('timelineSearchInput');
+    if (timelineSearchInput) {
+        timelineSearchInput.addEventListener('input', () => {
+            chartState.timelineSearch = timelineSearchInput.value || '';
+            drawTimelineChart();
+        });
+    }
+
+    const timelineSortSelect = document.getElementById('timelineSortSelect');
+    if (timelineSortSelect) {
+        timelineSortSelect.addEventListener('change', () => {
+            chartState.timelineSort = timelineSortSelect.value === 'asc' ? 'asc' : 'desc';
+            drawTimelineChart();
+        });
+    }
+
+    const timelineRowsSelect = document.getElementById('timelineRowsSelect');
+    if (timelineRowsSelect) {
+        timelineRowsSelect.addEventListener('change', () => {
+            const value = Number(timelineRowsSelect.value);
+            chartState.timelineRows = Number.isFinite(value) && value > 0 ? value : 12;
+            drawTimelineChart();
+        });
+    }
+
+    const timelineResetBtn = document.getElementById('timelineResetBtn');
+    if (timelineResetBtn) {
+        timelineResetBtn.addEventListener('click', () => {
+            chartState.timelineHours = 72;
+            chartState.timelineSearch = '';
+            chartState.timelineRows = 12;
+            chartState.timelineSort = 'desc';
+            Object.keys(chartState.timelineSeriesVisible).forEach((lane) => {
+                chartState.timelineSeriesVisible[lane] = true;
+            });
+
+            document.querySelectorAll('.chart-range-btn').forEach((btn) => {
+                btn.classList.toggle('active', Number(btn.dataset.range) === 72);
+            });
+            if (timelineSearchInput) timelineSearchInput.value = '';
+            if (timelineSortSelect) timelineSortSelect.value = 'desc';
+            if (timelineRowsSelect) timelineRowsSelect.value = '12';
+
+            drawTimelineChart();
+        });
+    }
 
     const connectionsSearchInput = document.getElementById('connectionsSearchInput');
     if (connectionsSearchInput) {

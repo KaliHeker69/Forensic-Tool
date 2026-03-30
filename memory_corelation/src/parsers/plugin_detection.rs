@@ -11,6 +11,8 @@ pub enum PluginType {
     PsList,
     PsTree,
     PsScan,
+    PsXView,
+    HollowProcesses,
     CmdLine,
     DllList,
     LdrModules,
@@ -40,6 +42,7 @@ pub enum PluginType {
     VadInfo,
     VadWalk,
     YaraScan,
+    VadYaraScan,
 
     // Services & Drivers
     SvcScan,
@@ -83,6 +86,8 @@ impl PluginType {
             PluginType::PsList => "pslist",
             PluginType::PsTree => "pstree",
             PluginType::PsScan => "psscan",
+            PluginType::PsXView => "psxview",
+            PluginType::HollowProcesses => "hollowprocesses",
             PluginType::CmdLine => "cmdline",
             PluginType::DllList => "dlllist",
             PluginType::LdrModules => "ldrmodules",
@@ -102,6 +107,7 @@ impl PluginType {
             PluginType::VadInfo => "vadinfo",
             PluginType::VadWalk => "vadwalk",
             PluginType::YaraScan => "yarascan",
+            PluginType::VadYaraScan => "vadyarascan",
             PluginType::SvcScan => "svcscan",
             PluginType::DriverScan => "driverscan",
             PluginType::Modules => "modules",
@@ -129,6 +135,8 @@ impl PluginType {
             PluginType::PsList
             | PluginType::PsTree
             | PluginType::PsScan
+            | PluginType::PsXView
+            | PluginType::HollowProcesses
             | PluginType::CmdLine
             | PluginType::DllList
             | PluginType::LdrModules
@@ -149,7 +157,8 @@ impl PluginType {
             PluginType::Malfind
             | PluginType::VadInfo
             | PluginType::VadWalk
-            | PluginType::YaraScan => "malware",
+            | PluginType::YaraScan
+            | PluginType::VadYaraScan => "malware",
 
             PluginType::SvcScan
             | PluginType::DriverScan
@@ -197,6 +206,10 @@ pub fn detect_plugin_type(path: &Path) -> Result<PluginType> {
         s if s.contains("pslist") => PluginType::PsList,
         s if s.contains("pstree") => PluginType::PsTree,
         s if s.contains("psscan") => PluginType::PsScan,
+        s if s.contains("psxview") => PluginType::PsXView,
+        s if s.contains("hollowprocess") || s.contains("hollow_process") => {
+            PluginType::HollowProcesses
+        }
         s if s.contains("cmdline") && !s.contains("cmdscan") => PluginType::CmdLine,
         s if s.contains("dlllist") => PluginType::DllList,
         s if s.contains("ldrmodule") => PluginType::LdrModules,
@@ -226,6 +239,9 @@ pub fn detect_plugin_type(path: &Path) -> Result<PluginType> {
         s if s.contains("malfind") => PluginType::Malfind,
         s if s.contains("vadinfo") || s.contains("vad_info") => PluginType::VadInfo,
         s if s.contains("vadwalk") => PluginType::VadWalk,
+        s if s.contains("vadyarascan") || (s.contains("vad") && s.contains("yara")) => {
+            PluginType::VadYaraScan
+        }
         s if s.contains("yarascan") || s.contains("yara") => PluginType::YaraScan,
 
         // Services & Drivers
@@ -295,5 +311,23 @@ mod tests {
     fn test_detect_json_format() {
         let path = Path::new("/data/volatility/pslist.json");
         assert_eq!(detect_plugin_type(path).unwrap(), PluginType::PsList);
+    }
+
+    #[test]
+    fn test_detect_psxview() {
+        let path = Path::new("/data/volatility/windows.psxview.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::PsXView);
+    }
+
+    #[test]
+    fn test_detect_hollowprocesses() {
+        let path = Path::new("/data/volatility/hollowprocesses_output.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::HollowProcesses);
+    }
+
+    #[test]
+    fn test_detect_vadyarascan() {
+        let path = Path::new("/data/volatility/windows.vadyarascan.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::VadYaraScan);
     }
 }

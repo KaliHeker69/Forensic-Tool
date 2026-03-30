@@ -15,10 +15,10 @@ use crate::models::{
     browser::{BrowserHistory, DownloadHistory},
     certificates::CertificateInfo,
     files::{DumpedFile, FileObject, HandleInfo},
-    malware::{MalfindResult, VadInfo, YaraScanResult},
+    malware::{MalfindResult, VadInfo, VadYaraScanResult, YaraScanResult},
     mft::MftEntry,
     network::NetworkConnection,
-    process::{CommandLine, DllInfo, EnvironmentVar, ProcessInfo},
+    process::{CommandLine, DllInfo, EnvironmentVar, HollowProcessEntry, ProcessInfo, PsXViewEntry},
     registry::{RegistryHive, RegistryKey, UserAssist},
     security::{PrivilegeInfo, SidInfo},
     services::{CallbackInfo, DriverInfo, ServiceInfo, SsdtEntry},
@@ -32,6 +32,8 @@ pub struct ParsedData {
     pub processes: Vec<ProcessInfo>,           // Merged (backward compat)
     pub pslist_processes: Vec<ProcessInfo>,    // From pslist only
     pub psscan_processes: Vec<ProcessInfo>,    // From psscan only
+    pub psxview_entries: Vec<PsXViewEntry>,    // From psxview
+    pub hollow_processes: Vec<HollowProcessEntry>, // From hollowprocesses
     pub cmdlines: Vec<CommandLine>,
     pub dlls: Vec<DllInfo>,
     pub envars: Vec<EnvironmentVar>,
@@ -56,6 +58,7 @@ pub struct ParsedData {
     pub malfind: Vec<MalfindResult>,
     pub vads: Vec<VadInfo>,
     pub yara_matches: Vec<YaraScanResult>,
+    pub vad_yara_matches: Vec<VadYaraScanResult>,
 
     // Registry plugins
     pub hives: Vec<RegistryHive>,
@@ -111,6 +114,8 @@ impl ParsedData {
             + self.cmdlines.len()
             + self.dlls.len()
             + self.envars.len()
+            + self.psxview_entries.len()
+            + self.hollow_processes.len()
             + self.threads.len()
             + self.connections.len()
             + self.files.len()
@@ -122,6 +127,7 @@ impl ParsedData {
             + self.malfind.len()
             + self.vads.len()
             + self.yara_matches.len()
+            + self.vad_yara_matches.len()
             + self.hives.len()
             + self.registry_keys.len()
             + self.userassist.len()
@@ -162,6 +168,15 @@ impl ParsedData {
         }
         if !self.malfind.is_empty() {
             parts.push(format!("{} malfind results", self.malfind.len()));
+        }
+        if !self.vad_yara_matches.is_empty() {
+            parts.push(format!("{} vadyarascan matches", self.vad_yara_matches.len()));
+        }
+        if !self.hollow_processes.is_empty() {
+            parts.push(format!("{} hollowprocesses hits", self.hollow_processes.len()));
+        }
+        if !self.psxview_entries.is_empty() {
+            parts.push(format!("{} psxview entries", self.psxview_entries.len()));
         }
         if !self.registry_keys.is_empty() {
             parts.push(format!("{} registry keys", self.registry_keys.len()));
@@ -254,6 +269,13 @@ fn parse_file(path: &Path, data: &mut ParsedData) -> Result<()> {
             }
             data.processes.extend(procs);
         }
+        (PluginType::PsXView, "jsonl") => {
+            data.psxview_entries.extend(JsonlParser::parse::<PsXViewEntry>(path)?);
+        }
+        (PluginType::HollowProcesses, "jsonl") => {
+            data.hollow_processes
+                .extend(JsonlParser::parse::<HollowProcessEntry>(path)?);
+        }
         (PluginType::CmdLine, "jsonl") => {
             data.cmdlines.extend(JsonlParser::parse::<CommandLine>(path)?);
         }
@@ -297,6 +319,12 @@ fn parse_file(path: &Path, data: &mut ParsedData) -> Result<()> {
         }
         (PluginType::YaraScan, "jsonl") => {
             data.yara_matches.extend(JsonlParser::parse::<YaraScanResult>(path)?);
+        }
+        (PluginType::VadYaraScan, "jsonl") => {
+            let parsed = JsonlParser::parse::<VadYaraScanResult>(path)?;
+            data.yara_matches
+                .extend(parsed.iter().map(VadYaraScanResult::as_generic_yara));
+            data.vad_yara_matches.extend(parsed);
         }
 
         // Registry plugins (JSONL)
@@ -394,6 +422,14 @@ fn parse_json_file(path: &Path, plugin_type: PluginType, data: &mut ParsedData) 
         PluginType::PsList | PluginType::PsTree | PluginType::PsScan => {
             data.processes.extend(JsonParser::parse::<ProcessInfo>(path)?);
         }
+        PluginType::PsXView => {
+            data.psxview_entries
+                .extend(JsonParser::parse::<PsXViewEntry>(path)?);
+        }
+        PluginType::HollowProcesses => {
+            data.hollow_processes
+                .extend(JsonParser::parse::<HollowProcessEntry>(path)?);
+        }
         PluginType::CmdLine => {
             data.cmdlines.extend(JsonParser::parse::<CommandLine>(path)?);
         }
@@ -417,6 +453,18 @@ fn parse_json_file(path: &Path, plugin_type: PluginType, data: &mut ParsedData) 
         }
         PluginType::Malfind => {
             data.malfind.extend(JsonParser::parse::<MalfindResult>(path)?);
+        }
+        PluginType::VadInfo => {
+            data.vads.extend(JsonParser::parse::<VadInfo>(path)?);
+        }
+        PluginType::YaraScan => {
+            data.yara_matches.extend(JsonParser::parse::<YaraScanResult>(path)?);
+        }
+        PluginType::VadYaraScan => {
+            let parsed = JsonParser::parse::<VadYaraScanResult>(path)?;
+            data.yara_matches
+                .extend(parsed.iter().map(VadYaraScanResult::as_generic_yara));
+            data.vad_yara_matches.extend(parsed);
         }
         PluginType::SvcScan => {
             data.services.extend(JsonParser::parse::<ServiceInfo>(path)?);
