@@ -28,7 +28,7 @@ impl DetectionRule for UnsignedSystemProcessRule {
         Some("T1036") // Masquerading
     }
 
-    fn detect(&self, data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
+    fn detect(&self, _data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
         let nodes = engine.build_process_nodes();
 

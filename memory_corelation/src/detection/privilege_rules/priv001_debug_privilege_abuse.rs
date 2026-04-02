@@ -1,7 +1,7 @@
 //! PRIV001 – DebugPrivilegeAbuseRule
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::security::{is_expected_system_process, PrivilegeInfo, PrivilegeSummary};
+use crate::models::security::{is_expected_system_process, PrivilegeInfo};
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
 use std::collections::HashMap;

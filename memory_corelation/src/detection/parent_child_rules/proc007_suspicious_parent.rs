@@ -1,7 +1,6 @@
 //! PROC007 – SuspiciousParentRule
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::process::ProcessNode;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
 
@@ -30,7 +29,7 @@ impl DetectionRule for SuspiciousParentRule {
         Some("T1055") // Process Injection
     }
 
-    fn detect(&self, data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
+    fn detect(&self, _data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
         let process_nodes = engine.build_process_nodes();
 

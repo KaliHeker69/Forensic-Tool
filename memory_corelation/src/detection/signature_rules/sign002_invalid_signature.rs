@@ -28,7 +28,7 @@ impl DetectionRule for InvalidSignatureRule {
         Some("T1553.002") // Subvert Trust Controls: Code Signing
     }
 
-    fn detect(&self, data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
+    fn detect(&self, _data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
         let nodes = engine.build_process_nodes();
 

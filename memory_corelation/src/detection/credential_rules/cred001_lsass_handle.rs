@@ -45,7 +45,7 @@ impl DetectionRule for LsassHandleRule {
         }
         
         // Build PID to process name map
-        let pid_map: HashMap<u32, &str> = data.processes
+        let _pid_map: HashMap<u32, &str> = data.processes
             .iter()
             .map(|p| (p.pid, p.name.as_str()))
             .collect();

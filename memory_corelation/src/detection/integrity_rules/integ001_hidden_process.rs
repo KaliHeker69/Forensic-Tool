@@ -42,7 +42,7 @@ impl DetectionRule for HiddenProcessRule {
         // - Processes with no parent in the tree = potentially hidden
         
         let all_pids: HashSet<u32> = data.processes.iter().map(|p| p.pid).collect();
-        let parent_pids: HashSet<u32> = data.processes.iter().map(|p| p.ppid).collect();
+        let _parent_pids: HashSet<u32> = data.processes.iter().map(|p| p.ppid).collect();
         
         for proc in &data.processes {
             // Check for remnant processes (have exit time but were found by psscan)

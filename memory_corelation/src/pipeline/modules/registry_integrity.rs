@@ -8,9 +8,6 @@ use crate::pipeline::context::AnalysisContext;
 use crate::pipeline::modules::PipelineModule;
 use crate::{Evidence, Finding, Severity};
 
-/// Weight constants
-const WEIGHT_HIDDEN_HIVE: i32 = 35;
-
 pub struct RegistryIntegrityModule;
 
 impl PipelineModule for RegistryIntegrityModule {

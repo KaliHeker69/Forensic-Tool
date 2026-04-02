@@ -28,7 +28,7 @@ impl DetectionRule for BrowserNetworkCorrelationRule {
         Some("T1189") // Drive-by Compromise
     }
 
-    fn detect(&self, data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
+    fn detect(&self, _data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         // Get browser-network correlations

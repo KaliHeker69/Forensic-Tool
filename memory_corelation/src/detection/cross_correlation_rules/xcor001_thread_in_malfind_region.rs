@@ -1,6 +1,6 @@
 //! XCOR001 – ThreadInMalfindRegionRule
 use super::xcor006_dll_injection_handle_correlation::parse_hex_addr;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
 use crate::parsers::ParsedData;

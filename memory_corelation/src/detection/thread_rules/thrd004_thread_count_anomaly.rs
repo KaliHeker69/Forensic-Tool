@@ -4,7 +4,7 @@ use crate::detection::{create_finding, DetectionRule};
 use crate::models::threads::ThreadSummary;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Rule for detecting high thread count anomalies
 pub struct ThreadCountAnomalyRule;

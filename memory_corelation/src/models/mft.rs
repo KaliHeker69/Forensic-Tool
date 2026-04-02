@@ -166,7 +166,7 @@ impl MftEntry {
                 .filter_map(|ext| lower.rfind(ext).map(|pos| (pos, *ext)))
                 .max_by_key(|(pos, _)| *pos);
 
-            if let Some((pos, ext)) = ext_pos {
+            if let Some((_pos, ext)) = ext_pos {
                 // Verify the file actually ends with this extension
                 // (avoid matching ".exe" in the middle of "executable_info.txt")
                 if !lower.ends_with(ext) {

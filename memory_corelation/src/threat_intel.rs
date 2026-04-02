@@ -9,7 +9,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Threat intelligence lookup result
@@ -50,6 +49,7 @@ struct AbuseIpDbResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 #[serde(rename_all = "camelCase")]
 struct AbuseIpDbData {
     ip_address: String,
@@ -74,6 +74,7 @@ struct VirusTotalIpData {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct VirusTotalIpAttributes {
     last_analysis_stats: Option<VirusTotalStats>,
     last_analysis_date: Option<i64>,
@@ -91,12 +92,14 @@ struct VirusTotalStats {
 
 /// urlscan.io search API response
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct UrlscanSearchResponse {
     results: Vec<UrlscanSearchResult>,
     total: u32,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct UrlscanSearchResult {
     #[serde(rename = "_id")]
     id: String,
@@ -106,6 +109,7 @@ struct UrlscanSearchResult {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct UrlscanTask {
     url: String,
     domain: Option<String>,
@@ -118,6 +122,7 @@ struct UrlscanVerdicts {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct UrlscanVerdict {
     score: i32,
     malicious: bool,

@@ -1,5 +1,5 @@
 //! XCOR003 – NetworkPrivilegeCorrelationRule
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
 use crate::parsers::ParsedData;

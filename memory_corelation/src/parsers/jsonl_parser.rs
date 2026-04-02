@@ -146,6 +146,7 @@ mod tests {
         writeln!(file, r#"{{"PID": 4, "ImageFileName": "System", "PPID": 0}}"#).unwrap();
         writeln!(file, r#"{{"PID": 108, "ImageFileName": "smss.exe", "PPID": 4}}"#).unwrap();
 
+        #[allow(dead_code)]
         #[derive(Debug, serde::Deserialize)]
         struct TestProcess {
             #[serde(alias = "PID")]
@@ -172,6 +173,7 @@ mod tests {
         writeln!(file, r#"{{"PID": 108, "Name": "smss.exe"}}"#).unwrap();
         writeln!(file).unwrap(); // Trailing empty line
 
+        #[allow(dead_code)]
         #[derive(Debug, serde::Deserialize)]
         struct TestProcess {
             #[serde(alias = "PID")]
@@ -191,6 +193,7 @@ mod tests {
         writeln!(file, "this is not valid json").unwrap();
         writeln!(file, r#"{{"PID": 108, "Name": "smss.exe"}}"#).unwrap();
 
+        #[allow(dead_code)]
         #[derive(Debug, serde::Deserialize)]
         struct TestProcess {
             #[serde(alias = "PID")]

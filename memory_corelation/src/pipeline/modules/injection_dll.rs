@@ -208,7 +208,7 @@ impl PipelineModule for InjectionDllModule {
             
             // Check 2: Any process - DLL from suspicious path?
             for dll in &dlls {
-                let path_lower = dll.path.to_lowercase();
+                let _path_lower = dll.path.to_lowercase();
                 
                 // Use blacklist config
                 let is_suspicious = self.blacklist.is_suspicious(&dll.path);

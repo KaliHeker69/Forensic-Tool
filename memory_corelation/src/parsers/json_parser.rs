@@ -169,6 +169,7 @@ mod tests {
         )
         .unwrap();
 
+        #[allow(dead_code)]
         #[derive(Debug, serde::Deserialize)]
         struct TestProcess {
             #[serde(alias = "PID")]
@@ -197,6 +198,7 @@ mod tests {
         )
         .unwrap();
 
+        #[allow(dead_code)]
         #[derive(Debug, serde::Deserialize)]
         struct TestProcess {
             #[serde(alias = "PID")]

@@ -1,5 +1,4 @@
 //! CRED005 – CachedCredentialArtifactRule
-use std::collections::{HashMap, HashSet};
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
 use crate::parsers::ParsedData;

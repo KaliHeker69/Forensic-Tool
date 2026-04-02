@@ -6,7 +6,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::parsers::ParsedData;
-use crate::{Evidence, Finding, Severity};
+use crate::{Finding, Severity};
 
 /// Weight-based evidence for a PID
 #[derive(Debug, Clone, Default)]

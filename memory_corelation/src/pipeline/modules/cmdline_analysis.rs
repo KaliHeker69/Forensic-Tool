@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use crate::pipeline::context::AnalysisContext;
 use crate::pipeline::modules::PipelineModule;
-use crate::{Evidence, Finding, Severity};
+use crate::{Finding, Severity};
 
 // Weight constants
 const WEIGHT_MISSING_CMDLINE: i32 = 20;

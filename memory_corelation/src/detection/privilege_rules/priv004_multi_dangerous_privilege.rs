@@ -2,10 +2,9 @@
 use super::priv005_impersonate_privilege_abuse::build_privilege_summaries;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::security::{is_expected_system_process, PrivilegeInfo, PrivilegeSummary};
+use crate::models::security::is_expected_system_process;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
-use std::collections::HashMap;
 
 /// Rule for detecting multiple dangerous privileges in a single process
 pub struct MultiDangerousPrivilegeRule;

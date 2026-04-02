@@ -1,10 +1,9 @@
 //! THRD003 – SystemProcessThreadAnomalyRule
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::threads::ThreadSummary;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Rule for detecting threads in system processes that shouldn't have user-mode threads
 pub struct SystemProcessThreadAnomalyRule;

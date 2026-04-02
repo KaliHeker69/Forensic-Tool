@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::security::{is_expected_system_process, SidInfo};
+use crate::models::security::SidInfo;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
 

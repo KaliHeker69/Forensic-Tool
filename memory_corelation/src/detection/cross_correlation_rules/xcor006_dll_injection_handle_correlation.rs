@@ -172,7 +172,7 @@ impl DetectionRule for DllInjectionHandleCorrelationRule {
             let proc_lower = proc_name.to_lowercase();
 
             // Check if this injector itself has malfind hits (any kind for self)
-            let self_malfind = all_malfind_pids.get(injector_pid).copied().unwrap_or(0);
+            let _self_malfind = all_malfind_pids.get(injector_pid).copied().unwrap_or(0);
             // But only count MZ-header malfind for self too (JIT self-injection is noise)
             let self_mz_malfind = malfind_pids_with_mz.get(injector_pid).map(|(_, c)| *c).unwrap_or(0);
 

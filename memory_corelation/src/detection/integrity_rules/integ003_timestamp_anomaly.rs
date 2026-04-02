@@ -1,5 +1,4 @@
 //! INTEG003 – TimestampAnomalyRule
-use std::collections::HashSet;
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
 use crate::parsers::ParsedData;

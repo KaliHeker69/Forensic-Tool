@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, Utc};
 
-use crate::models::{EventType, TimelineEvent, Timestamped};
+use crate::models::{EventType, TimelineEvent};
 use crate::parsers::ParsedData;
 
 /// Builds a unified timeline from all parsed data
@@ -100,7 +100,7 @@ impl<'a> TimelineBuilder<'a> {
     fn add_network_events(&self, events: &mut Vec<TimelineEvent>) {
         for conn in &self.data.connections {
             if let Some(ts) = conn.created {
-                let is_external = conn.is_external();
+                let _is_external = conn.is_external();
                 let event_type = if conn.is_listening() {
                     EventType::NetworkListen
                 } else {

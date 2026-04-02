@@ -18,10 +18,13 @@ use crate::models::{
     malware::{MalfindResult, VadInfo, VadYaraScanResult, YaraScanResult},
     mft::MftEntry,
     network::NetworkConnection,
-    process::{CommandLine, DllInfo, EnvironmentVar, HollowProcessEntry, ProcessInfo, PsXViewEntry},
+    process::{
+        CommandLine, DllInfo, EnvironmentVar, HollowProcessEntry, LdrModuleInfo, ProcessInfo,
+        PsXViewEntry,
+    },
     registry::{RegistryHive, RegistryKey, UserAssist},
     security::{PrivilegeInfo, SidInfo},
-    services::{CallbackInfo, DriverInfo, ServiceInfo, SsdtEntry},
+    services::{AtomEntry, CallbackInfo, DriverInfo, DriverIrpEntry, IdtEntry, ServiceInfo, SsdtEntry},
     threads::ThreadInfo,
 };
 
@@ -36,6 +39,7 @@ pub struct ParsedData {
     pub hollow_processes: Vec<HollowProcessEntry>, // From hollowprocesses
     pub cmdlines: Vec<CommandLine>,
     pub dlls: Vec<DllInfo>,
+    pub ldrmodules: Vec<LdrModuleInfo>,
     pub envars: Vec<EnvironmentVar>,
 
     // Thread plugins
@@ -71,6 +75,9 @@ pub struct ParsedData {
     pub drivers: Vec<DriverInfo>,
     pub callbacks: Vec<CallbackInfo>,
     pub ssdt: Vec<SsdtEntry>,
+    pub driver_irps: Vec<DriverIrpEntry>,
+    pub idt_entries: Vec<IdtEntry>,
+    pub atoms: Vec<AtomEntry>,
 
     // Security plugins
     pub privileges: Vec<PrivilegeInfo>,
@@ -113,6 +120,7 @@ impl ParsedData {
         self.processes.len()
             + self.cmdlines.len()
             + self.dlls.len()
+            + self.ldrmodules.len()
             + self.envars.len()
             + self.psxview_entries.len()
             + self.hollow_processes.len()
@@ -135,6 +143,9 @@ impl ParsedData {
             + self.drivers.len()
             + self.callbacks.len()
             + self.ssdt.len()
+            + self.driver_irps.len()
+            + self.idt_entries.len()
+            + self.atoms.len()
             + self.privileges.len()
             + self.sids.len()
             + self.certificates.len()
@@ -153,6 +164,9 @@ impl ParsedData {
         }
         if !self.cmdlines.is_empty() {
             parts.push(format!("{} cmdlines", self.cmdlines.len()));
+        }
+        if !self.ldrmodules.is_empty() {
+            parts.push(format!("{} ldrmodules", self.ldrmodules.len()));
         }
         if !self.connections.is_empty() {
             parts.push(format!("{} connections", self.connections.len()));
@@ -183,6 +197,15 @@ impl ParsedData {
         }
         if !self.services.is_empty() {
             parts.push(format!("{} services", self.services.len()));
+        }
+        if !self.driver_irps.is_empty() {
+            parts.push(format!("{} driverirp entries", self.driver_irps.len()));
+        }
+        if !self.idt_entries.is_empty() {
+            parts.push(format!("{} idt entries", self.idt_entries.len()));
+        }
+        if !self.atoms.is_empty() {
+            parts.push(format!("{} atom entries", self.atoms.len()));
         }
         if !self.scheduled_task_records.is_empty() {
             parts.push(format!("{} scheduled tasks", self.scheduled_task_records.len()));
@@ -351,9 +374,19 @@ fn parse_file(path: &Path, data: &mut ParsedData) -> Result<()> {
         (PluginType::Ssdt, "jsonl") => {
             data.ssdt.extend(JsonlParser::parse::<SsdtEntry>(path)?);
         }
+        (PluginType::DriverIrp, "jsonl") => {
+            data.driver_irps
+                .extend(JsonlParser::parse::<DriverIrpEntry>(path)?);
+        }
+        (PluginType::Idt, "jsonl") => {
+            data.idt_entries.extend(JsonlParser::parse::<IdtEntry>(path)?);
+        }
+        (PluginType::Atoms, "jsonl") => {
+            data.atoms.extend(JsonlParser::parse::<AtomEntry>(path)?);
+        }
         (PluginType::LdrModules, "jsonl") => {
-            // LdrModules outputs DLL-like data
-            data.dlls.extend(JsonlParser::parse::<DllInfo>(path)?);
+            data.ldrmodules
+                .extend(JsonlParser::parse::<LdrModuleInfo>(path)?);
         }
 
         // Thread plugins (JSONL)
@@ -436,6 +469,10 @@ fn parse_json_file(path: &Path, plugin_type: PluginType, data: &mut ParsedData) 
         PluginType::DllList => {
             data.dlls.extend(JsonParser::parse::<DllInfo>(path)?);
         }
+        PluginType::LdrModules => {
+            data.ldrmodules
+                .extend(JsonParser::parse::<LdrModuleInfo>(path)?);
+        }
         PluginType::NetScan | PluginType::NetStat => {
             data.connections.extend(JsonParser::parse::<NetworkConnection>(path)?);
         }
@@ -468,6 +505,25 @@ fn parse_json_file(path: &Path, plugin_type: PluginType, data: &mut ParsedData) 
         }
         PluginType::SvcScan => {
             data.services.extend(JsonParser::parse::<ServiceInfo>(path)?);
+        }
+        PluginType::DriverScan | PluginType::Modules | PluginType::ModScan => {
+            data.drivers.extend(JsonParser::parse::<DriverInfo>(path)?);
+        }
+        PluginType::Callbacks => {
+            data.callbacks.extend(JsonParser::parse::<CallbackInfo>(path)?);
+        }
+        PluginType::Ssdt => {
+            data.ssdt.extend(JsonParser::parse::<SsdtEntry>(path)?);
+        }
+        PluginType::DriverIrp => {
+            data.driver_irps
+                .extend(JsonParser::parse::<DriverIrpEntry>(path)?);
+        }
+        PluginType::Idt => {
+            data.idt_entries.extend(JsonParser::parse::<IdtEntry>(path)?);
+        }
+        PluginType::Atoms => {
+            data.atoms.extend(JsonParser::parse::<AtomEntry>(path)?);
         }
         _ => {}
     }

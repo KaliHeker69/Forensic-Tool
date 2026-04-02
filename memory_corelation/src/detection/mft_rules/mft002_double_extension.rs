@@ -1,7 +1,6 @@
 //! MFT002 – DoubleExtensionRule
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::mft::MftEntry;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
 

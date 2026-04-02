@@ -79,6 +79,35 @@ where
     }
 }
 
+/// Flexible deserializer for addresses/integers represented as number or string.
+pub fn deserialize_flexible_u64_required<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let val: serde_json::Value = serde_json::Value::deserialize(deserializer)?;
+    match val {
+        serde_json::Value::Number(n) => n
+            .as_u64()
+            .ok_or_else(|| serde::de::Error::custom("invalid numeric value for u64")),
+        serde_json::Value::String(s) => {
+            let trimmed = s.trim();
+            if trimmed.is_empty() || trimmed == "N/A" || trimmed == "-" {
+                return Ok(0);
+            }
+            let hex_trimmed = trimmed.trim_start_matches("0x").trim_start_matches("0X");
+            u64::from_str_radix(hex_trimmed, 16)
+                .or_else(|_| trimmed.parse::<u64>())
+                .map_err(serde::de::Error::custom)
+        }
+        serde_json::Value::Bool(b) => Ok(u64::from(b)),
+        serde_json::Value::Null => Ok(0),
+        other => Err(serde::de::Error::custom(format!(
+            "unsupported value for u64: {}",
+            other
+        ))),
+    }
+}
+
 /// Custom deserializer that treats "N/A", "-", and empty strings as None
 pub fn deserialize_optional_datetime<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
 where
@@ -728,6 +757,65 @@ impl ProcessAssociated for DllInfo {
     }
 }
 
+/// Module visibility details from windows.ldrmodules.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LdrModuleInfo {
+    #[serde(alias = "PID", alias = "Pid")]
+    pub pid: u32,
+
+    #[serde(alias = "Process", alias = "Name", alias = "ImageFileName")]
+    pub process: String,
+
+    #[serde(alias = "Base", alias = "base", deserialize_with = "deserialize_flexible_u64_required")]
+    pub base: u64,
+
+    #[serde(alias = "InLoad", alias = "inload", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_load: Option<bool>,
+
+    #[serde(alias = "InInit", alias = "ininit", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_init: Option<bool>,
+
+    #[serde(alias = "InMem", alias = "inmem", default, deserialize_with = "deserialize_flexible_bool")]
+    pub in_mem: Option<bool>,
+
+    #[serde(alias = "MappedPath", alias = "Path", alias = "mapped_path", default)]
+    pub mapped_path: Option<String>,
+}
+
+impl LdrModuleInfo {
+    pub fn is_hidden_from_peb(&self) -> bool {
+        self.in_load == Some(false) && self.in_init == Some(false) && self.in_mem == Some(false)
+    }
+
+    pub fn is_unlinked(&self) -> bool {
+        (self.in_load == Some(true) || self.in_init == Some(true)) && self.in_mem == Some(false)
+    }
+
+    pub fn mapped_path_or_empty(&self) -> &str {
+        self.mapped_path.as_deref().unwrap_or("")
+    }
+
+    pub fn has_suspicious_path(&self) -> bool {
+        let path = self.mapped_path_or_empty().to_ascii_lowercase();
+        if path.is_empty() {
+            return true;
+        }
+        ["\\temp\\", "\\tmp\\", "\\appdata\\", "\\public\\", "\\users\\"]
+            .iter()
+            .any(|p| path.contains(p))
+    }
+}
+
+impl ProcessAssociated for LdrModuleInfo {
+    fn pid(&self) -> Option<u32> {
+        Some(self.pid)
+    }
+
+    fn process_name(&self) -> Option<&str> {
+        Some(&self.process)
+    }
+}
+
 /// Environment variables from envars plugin
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnvironmentVar {
@@ -740,7 +828,7 @@ pub struct EnvironmentVar {
     pub process: String,
 
     /// Variable name
-    #[serde(alias = "Variable", alias = "Name")]
+    #[serde(alias = "Variable")]
     pub variable: String,
 
     /// Variable value

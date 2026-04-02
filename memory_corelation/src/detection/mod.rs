@@ -87,6 +87,7 @@ impl DetectionEngine {
         engine.add_rule(Box::new(injection_rules::ProcessInjectionCmdlineRule));
         engine.add_rule(Box::new(injection_rules::VadInjectionRule));
         engine.add_rule(Box::new(injection_rules::MalfindStringExtractionRule));
+        engine.add_rule(Box::new(injection_rules::LdrModulesHiddenModuleRule));
 
         // Persistence rules
         engine.add_rule(Box::new(persistence_rules::RegistryPersistenceRule));
@@ -104,6 +105,9 @@ impl DetectionEngine {
         engine.add_rule(Box::new(integrity_rules::TimestampAnomalyRule));
         engine.add_rule(Box::new(integrity_rules::SuspiciousKernelModulePathRule));
         engine.add_rule(Box::new(integrity_rules::SystemInfoAnomalyRule));
+        engine.add_rule(Box::new(integrity_rules::IdtHookAnomalyRule));
+        engine.add_rule(Box::new(integrity_rules::DriverIrpHookAnomalyRule));
+        engine.add_rule(Box::new(integrity_rules::SuspiciousAtomPatternRule));
 
         // Credential access rules
         engine.add_rule(Box::new(credential_rules::LsassHandleRule));
@@ -118,6 +122,7 @@ impl DetectionEngine {
         engine.add_rule(Box::new(chain_rules::ProcessHollowingChainRule));
         engine.add_rule(Box::new(chain_rules::ReconChainRule));
         engine.add_rule(Box::new(chain_rules::PersistenceChainRule));
+        engine.add_rule(Box::new(chain_rules::KernelRootkitChainRule));
 
         // Thread detection rules
         engine.add_rule(Box::new(thread_rules::OrphanedThreadRule));
@@ -387,6 +392,7 @@ fn mitre_mapping_for_rule(rule_id: &str) -> Option<&'static str> {
         "INJ004" => Some("T1055"),           // Process Injection via cmdline
         "INJ005" => Some("T1055.004"),       // Asynchronous Procedure Call (VAD injection)
         "INJ006" => Some("T1055"),           // Malfind string extraction
+        "INJ007" => Some("T1055.001"),       // Hidden module from loader lists (ldrmodules)
 
         // Persistence rules
         "PERS001" => Some("T1547.001"),      // Registry Run Keys
@@ -404,6 +410,9 @@ fn mitre_mapping_for_rule(rule_id: &str) -> Option<&'static str> {
         "INTEG003" => Some("T1070.006"),     // Timestomp
         "INTEG004" | "MOD1" => Some("T1014"),// Rootkit (suspicious kernel module)
         "INTEG005" => Some("T1082"),         // System Information Discovery
+        "INTEG006" => Some("T1014"),         // IDT hook anomaly
+        "INTEG007" => Some("T1014"),         // IRP hook anomaly
+        "INTEG008" => Some("T1055"),         // Suspicious atom patterns
 
         // Credential rules
         "CRED001" | "HNDL001" => Some("T1003.001"), // LSASS Memory
@@ -418,6 +427,7 @@ fn mitre_mapping_for_rule(rule_id: &str) -> Option<&'static str> {
         "CHAIN001" => Some("T1055.012"),     // Process Hollowing Chain
         "CHAIN002" => Some("T1082,T1057"),   // Reconnaissance Chain
         "CHAIN003" => Some("T1547,T1543"),   // Persistence Chain
+        "CHAIN004" => Some("T1014,T1543.003"), // Kernel rootkit chain
 
         // Thread rules
         "THRD001" => Some("T1055"),          // Orphaned thread → injection indicator

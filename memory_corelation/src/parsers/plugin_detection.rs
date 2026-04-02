@@ -51,6 +51,9 @@ pub enum PluginType {
     ModScan,
     Callbacks,
     Ssdt,
+    DriverIrp,
+    Idt,
+    Atoms,
 
     // Security plugins
     Privileges,
@@ -114,6 +117,9 @@ impl PluginType {
             PluginType::ModScan => "modscan",
             PluginType::Callbacks => "callbacks",
             PluginType::Ssdt => "ssdt",
+            PluginType::DriverIrp => "driverirp",
+            PluginType::Idt => "idt",
+            PluginType::Atoms => "atoms",
             PluginType::Privileges => "privileges",
             PluginType::GetSids => "getsids",
             PluginType::Certificates => "certificates",
@@ -165,7 +171,11 @@ impl PluginType {
             | PluginType::Modules
             | PluginType::ModScan
             | PluginType::Callbacks
-            | PluginType::Ssdt => "services",
+            | PluginType::Ssdt
+            | PluginType::DriverIrp
+            | PluginType::Idt => "services",
+
+            PluginType::Atoms => "security",
 
             PluginType::Privileges | PluginType::GetSids | PluginType::Certificates => "security",
 
@@ -246,6 +256,9 @@ pub fn detect_plugin_type(path: &Path) -> Result<PluginType> {
 
         // Services & Drivers
         s if s.contains("svcscan") || s.contains("services") => PluginType::SvcScan,
+        s if s.contains("driverirp") || s.contains("driver_irp") => PluginType::DriverIrp,
+        s if s == "idt" || s.contains(".idt") || s.contains("_idt") => PluginType::Idt,
+        s if s == "atoms" || s.contains("atom") => PluginType::Atoms,
         s if s.contains("driverscan") || s.contains("driver") => PluginType::DriverScan,
         s if s.contains("modscan") => PluginType::ModScan,
         s if s.contains("modules") && !s.contains("ldr") => PluginType::Modules,
@@ -317,6 +330,24 @@ mod tests {
     fn test_detect_psxview() {
         let path = Path::new("/data/volatility/windows.psxview.jsonl");
         assert_eq!(detect_plugin_type(path).unwrap(), PluginType::PsXView);
+    }
+
+    #[test]
+    fn test_detect_driverirp() {
+        let path = Path::new("/data/volatility/driverirp.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::DriverIrp);
+    }
+
+    #[test]
+    fn test_detect_idt() {
+        let path = Path::new("/data/volatility/idt.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::Idt);
+    }
+
+    #[test]
+    fn test_detect_atoms() {
+        let path = Path::new("/data/volatility/atoms.jsonl");
+        assert_eq!(detect_plugin_type(path).unwrap(), PluginType::Atoms);
     }
 
     #[test]

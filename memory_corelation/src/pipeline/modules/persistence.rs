@@ -7,14 +7,12 @@ use std::collections::HashMap;
 
 use crate::pipeline::context::AnalysisContext;
 use crate::pipeline::modules::PipelineModule;
-use crate::{Evidence, Finding, Severity};
+use crate::{Finding, Severity};
 
 // Weight constants
 const WEIGHT_GHOST_SERVICE: i32 = 25;
 const WEIGHT_SERVICE_HIJACKED: i32 = 25;
 const WEIGHT_SERVICE_PID_MISSING: i32 = 15;
-const WEIGHT_DORMANT_SERVICE: i32 = 10;
-const WEIGHT_SUSPICIOUS_PATH: i32 = 15;
 
 /// Suspicious binary path patterns
 const SUSPICIOUS_PATHS: &[&str] = &[

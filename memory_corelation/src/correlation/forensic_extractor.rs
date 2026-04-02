@@ -750,11 +750,33 @@ fn extract_quick_dlls(data: &ParsedData) -> Vec<QuickDll> {
         if seen.insert(key) {
             dlls.push(QuickDll {
                 pid: d.pid,
-                process: d.name.clone(),
+                process: d.process.clone(),
                 dll_path: d.path.clone(),
                 reason: reason.to_string(),
             });
         }
     }
+
+    for m in &data.ldrmodules {
+        let reason = if m.is_hidden_from_peb() {
+            "hidden from all PEB lists"
+        } else if m.is_unlinked() {
+            "partially unlinked from PEB"
+        } else {
+            continue;
+        };
+
+        let path = m.mapped_path.as_deref().unwrap_or("(empty)").to_string();
+        let key = format!("{}:{}:{}", m.pid, m.base, path);
+        if seen.insert(key) {
+            dlls.push(QuickDll {
+                pid: m.pid,
+                process: m.process.clone(),
+                dll_path: path,
+                reason: reason.to_string(),
+            });
+        }
+    }
+
     dlls
 }

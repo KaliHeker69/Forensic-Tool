@@ -1,7 +1,6 @@
 //! PROC008 – LsassParentRule
 use crate::correlation::CorrelationEngine;
 use crate::detection::{create_finding, DetectionRule};
-use crate::models::process::ProcessNode;
 use crate::parsers::ParsedData;
 use crate::{Evidence, Finding, Severity};
 

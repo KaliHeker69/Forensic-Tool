@@ -337,3 +337,136 @@ impl SsdtEntry {
             .unwrap_or(false)
     }
 }
+
+/// Driver IRP dispatch entry from driverirp plugin
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriverIrpEntry {
+    /// Driver object offset
+    #[serde(alias = "Offset", alias = "offset", default, deserialize_with = "deserialize_flexible_string")]
+    pub offset: Option<String>,
+
+    /// Driver name
+    #[serde(alias = "Driver Name", alias = "DriverName", alias = "Driver", alias = "Name")]
+    pub driver_name: String,
+
+    /// Major IRP function name
+    #[serde(alias = "IRP", alias = "MajorFunction", alias = "Type")]
+    pub irp: String,
+
+    /// Handler address
+    #[serde(
+        alias = "Address",
+        alias = "address",
+        alias = "Function",
+        deserialize_with = "deserialize_flexible_string_required"
+    )]
+    pub address: String,
+
+    /// Resolved owning module for the handler
+    #[serde(alias = "Module", alias = "Owner", alias = "module", default)]
+    pub module: Option<String>,
+
+    /// Resolved symbol name (if available)
+    #[serde(alias = "Symbol", alias = "symbol", default)]
+    pub symbol: Option<String>,
+}
+
+impl DriverIrpEntry {
+    /// Heuristic for suspicious IRP handler ownership.
+    pub fn is_suspicious_handler_owner(&self) -> bool {
+        let module = self.module.as_deref().unwrap_or("").to_ascii_lowercase();
+        if module.is_empty() || module.contains("unknown") {
+            return true;
+        }
+
+        // Userland owners or writable-path indicators should never own kernel IRP dispatch.
+        module.contains(".exe")
+            || module.contains("\\users\\")
+            || module.contains("\\temp\\")
+            || module.contains("\\appdata\\")
+    }
+}
+
+/// Interrupt Descriptor Table entry from idt plugin
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IdtEntry {
+    /// Vector/index
+    #[serde(alias = "Index", alias = "Vector", alias = "Entry", default, deserialize_with = "deserialize_flexible_string")]
+    pub index: Option<String>,
+
+    /// Handler address
+    #[serde(
+        alias = "Address",
+        alias = "Handler",
+        alias = "Offset",
+        deserialize_with = "deserialize_flexible_string_required"
+    )]
+    pub address: String,
+
+    /// Resolved module owning the handler
+    #[serde(alias = "Module", alias = "Owner", alias = "module", default)]
+    pub module: Option<String>,
+
+    /// Resolved symbol (if available)
+    #[serde(alias = "Symbol", alias = "Name", alias = "symbol", default)]
+    pub symbol: Option<String>,
+}
+
+impl IdtEntry {
+    /// IDT entries should resolve into core kernel modules.
+    pub fn is_suspicious_owner(&self) -> bool {
+        let module = self.module.as_deref().unwrap_or("").to_ascii_lowercase();
+        if module.is_empty() || module.contains("unknown") {
+            return true;
+        }
+
+        !(module.contains("ntoskrnl")
+            || module.contains("hal")
+            || module.contains("win32k")
+            || module.contains("ci.dll"))
+    }
+}
+
+/// Atom entry from atoms plugin
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AtomEntry {
+    /// Atom or name field
+    #[serde(alias = "Atom", alias = "Name", alias = "AtomName", alias = "atom")]
+    pub atom: String,
+
+    /// Optional process context if provided by plugin variant
+    #[serde(alias = "PID", alias = "Pid", default)]
+    pub pid: Option<u32>,
+
+    /// Optional process/image name if provided
+    #[serde(alias = "Process", alias = "ImageFileName", alias = "Owner", default)]
+    pub process: Option<String>,
+
+    /// Additional metadata fields exposed by plugin variants
+    #[serde(alias = "ReferenceCount", alias = "RefCount", default, deserialize_with = "deserialize_flexible_string")]
+    pub ref_count: Option<String>,
+}
+
+impl AtomEntry {
+    pub fn is_suspicious_name(&self) -> bool {
+        let v = self.atom.trim().to_ascii_lowercase();
+        if v.is_empty() {
+            return false;
+        }
+
+        // Common IOC-style atom naming patterns used by message-hook injectors.
+        let ioc_keywords = ["cobalt", "meterpreter", "shellcode", "hook", "inject", "payload"];
+        if ioc_keywords.iter().any(|k| v.contains(k)) {
+            return true;
+        }
+
+        // High-entropy blob-like atoms are unusual in normal desktop usage.
+        let long_hex_like = v.len() >= 20 && v.chars().all(|c| c.is_ascii_hexdigit());
+        let long_b64_like = v.len() >= 24
+            && v
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=');
+
+        long_hex_like || long_b64_like
+    }
+}

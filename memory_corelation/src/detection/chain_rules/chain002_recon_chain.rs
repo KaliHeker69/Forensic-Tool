@@ -30,7 +30,7 @@ impl DetectionRule for ReconChainRule {
         Some("T1082") // System Information Discovery
     }
 
-    fn detect(&self, data: &ParsedData, engine: &CorrelationEngine) -> Vec<Finding> {
+    fn detect(&self, data: &ParsedData, _engine: &CorrelationEngine) -> Vec<Finding> {
         let mut findings = Vec::new();
         
         // Recon commands
