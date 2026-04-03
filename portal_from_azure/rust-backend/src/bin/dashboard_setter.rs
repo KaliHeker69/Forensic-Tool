@@ -5431,45 +5431,207 @@ fn build_windows_event_quickview(roots: &[PathBuf]) -> Value {
     default_windows_event_quickview(path.to_string_lossy().to_string())
 }
 
-fn parse_args() -> (Option<PathBuf>, Option<PathBuf>) {
-    let mut output = None;
-    let mut root = None;
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum DashboardSetterCommand {
+    Generate,
+    Summary,
+}
+
+struct DashboardSetterCli {
+    command: DashboardSetterCommand,
+    root_override: Option<PathBuf>,
+    output_override: Option<PathBuf>,
+    config_override: Option<PathBuf>,
+    print_summary: bool,
+    quiet: bool,
+}
+
+fn print_usage() {
+    println!(
+        "Usage:
+  dashboard_setter generate [--root PATH] [--output PATH] [--config PATH] [--summary] [--quiet]
+  dashboard_setter summary  [--output PATH]
+
+Commands:
+  generate    Build portal_from_azure/rust-backend/data/dashboard_quick_view.json
+  summary     Read an existing quick-view JSON file and print a source summary
+
+Options:
+  --root PATH      Workspace root override used for resolving module outputs
+  --output PATH    Quick-view JSON output path
+  --config PATH    Override portal_from_azure/json_files_path.json
+  --summary        Print a post-generation summary
+  --quiet          Suppress the final success line for generate
+  -h, --help       Show this help
+
+Environment:
+  DASHBOARD_QUICK_VIEW_OUTPUT  Default output path override
+  JSON_FILES_PATH_CONFIG       Default input-path config override
+  FORENSICS_WORKSPACE_ROOT     Additional workspace root to search"
+    );
+}
+
+fn parse_args() -> DashboardSetterCli {
+    let mut command = DashboardSetterCommand::Generate;
+    let mut output_override = None;
+    let mut root_override = None;
+    let mut config_override = None;
+    let mut print_summary = false;
+    let mut quiet = false;
     let mut args = env::args().skip(1);
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
+            "generate" => command = DashboardSetterCommand::Generate,
+            "summary" => command = DashboardSetterCommand::Summary,
             "--output" => {
                 if let Some(value) = args.next() {
-                    output = Some(PathBuf::from(value));
+                    output_override = Some(PathBuf::from(value));
                 }
             }
             "--root" => {
                 if let Some(value) = args.next() {
-                    root = Some(PathBuf::from(value));
+                    root_override = Some(PathBuf::from(value));
                 }
             }
+            "--config" => {
+                if let Some(value) = args.next() {
+                    config_override = Some(PathBuf::from(value));
+                }
+            }
+            "--summary" => print_summary = true,
+            "--quiet" => quiet = true,
             "--help" | "-h" => {
-                println!("Usage: dashboard_setter [--root PATH] [--output PATH]");
+                print_usage();
                 std::process::exit(0);
             }
-            _ => {}
+            unknown => {
+                eprintln!("Unknown argument: {unknown}");
+                print_usage();
+                std::process::exit(1);
+            }
         }
     }
 
-    (root, output)
+    DashboardSetterCli {
+        command,
+        root_override,
+        output_override,
+        config_override,
+        print_summary,
+        quiet,
+    }
 }
 
-fn main() {
-    let (root_override, output_override) = parse_args();
-    let workspace_roots = workspace_roots(root_override);
-
-    let output_path = output_override
+fn output_path_from_cli(cli: &DashboardSetterCli) -> PathBuf {
+    cli.output_override
+        .clone()
         .or_else(|| {
             env::var("DASHBOARD_QUICK_VIEW_OUTPUT")
                 .ok()
                 .map(PathBuf::from)
         })
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT));
+        .unwrap_or_else(|| PathBuf::from(DEFAULT_OUTPUT))
+}
+
+fn summary_value<'a>(payload: &'a Value, key: &str) -> &'a Value {
+    payload.get(key).unwrap_or(&Value::Null)
+}
+
+fn summary_source(payload: &Value, key: &str) -> String {
+    summary_value(payload, key)
+        .get("source")
+        .and_then(Value::as_str)
+        .unwrap_or("not set")
+        .to_string()
+}
+
+fn print_payload_summary(payload: &Value) {
+    let metadata = payload.get("analysis_metadata").and_then(Value::as_object);
+    println!("Dashboard Quick View Summary");
+    println!(
+        "  Generated At: {}",
+        metadata
+            .and_then(|map| map.get("generated_at"))
+            .and_then(Value::as_str)
+            .unwrap_or("unknown")
+    );
+    println!(
+        "  Output Path: {}",
+        metadata
+            .and_then(|map| map.get("output_path"))
+            .and_then(Value::as_str)
+            .unwrap_or("unknown")
+    );
+    println!(
+        "  Config Path: {}",
+        metadata
+            .and_then(|map| map.get("config_path"))
+            .and_then(Value::as_str)
+            .unwrap_or("default resolution")
+    );
+    println!(
+        "  Workspace Roots: {}",
+        metadata
+            .and_then(|map| map.get("workspace_roots"))
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| "unknown".to_string())
+    );
+    println!("  Sections:");
+    for (label, key) in [
+        ("Host Information", "host_information_quickview"),
+        ("Network", "network_quickview"),
+        ("Memory", "memory_quickview"),
+        ("Browser", "browser_quickview"),
+        ("Execution", "execution_quickview"),
+        ("Windows Event", "windows_event_quickview"),
+        ("NTFS", "ntfs_quickview"),
+        ("SRUM", "srum_quickview"),
+        ("Super Timeline", "super_timeline"),
+        ("Connections Engine", "connections_engine"),
+    ] {
+        println!("    - {label}: {}", summary_source(payload, key));
+    }
+}
+
+fn print_summary_from_path(output_path: &Path) {
+    let Some(payload) = read_json(output_path) else {
+        eprintln!(
+            "Failed to read dashboard quick-view payload from {}",
+            output_path.display()
+        );
+        std::process::exit(1);
+    };
+    print_payload_summary(&payload);
+}
+
+fn main() {
+    let cli = parse_args();
+    let output_path = output_path_from_cli(&cli);
+
+    if cli.command == DashboardSetterCommand::Summary {
+        print_summary_from_path(&output_path);
+        return;
+    }
+
+    if let Some(config_override) = cli.config_override.as_ref() {
+        // Safe here because this happens before any worker threads or library initialization
+        // that reads the process environment.
+        unsafe {
+            env::set_var(JSON_FILES_PATH_CONFIG_ENV, config_override);
+        }
+    }
+
+    let workspace_roots = workspace_roots(cli.root_override.clone());
+    let resolved_config_path = resolve_json_path_config_file(&workspace_roots);
 
     let network_quickview = build_network_quickview(&workspace_roots);
     let memory_quickview = build_memory_quickview(&workspace_roots);
@@ -5488,7 +5650,27 @@ fn main() {
             "generated_by": "dashboard_setter",
             "generated_at": generated_at,
             "output_path": output_path.to_string_lossy().to_string(),
+            "config_path": resolved_config_path
+                .as_ref()
+                .map(|path| path.to_string_lossy().to_string())
+                .unwrap_or_default(),
+            "workspace_roots": workspace_roots
+                .iter()
+                .map(|path| path.to_string_lossy().to_string())
+                .collect::<Vec<_>>(),
             "modules_processed": ["host-information", "network", "memory", "ntfs", "browser", "execution", "windows-event", "srum", "prefetch", "super_timeline", "connections_engine"],
+            "module_sources": {
+                "host_information": host_information_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "network": network_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "memory": memory_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "ntfs": ntfs_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "browser": browser_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "execution": execution_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "windows_event": windows_event_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "srum": srum_quickview.get("source").cloned().unwrap_or(Value::Null),
+                "super_timeline": super_timeline.get("source").cloned().unwrap_or(Value::Null),
+                "connections_engine": connections_engine.get("source").cloned().unwrap_or(Value::Null),
+            },
         },
         "host_information_quickview": host_information_quickview,
         "network_quickview": network_quickview,
@@ -5510,5 +5692,11 @@ fn main() {
         std::process::exit(1);
     }
 
-    println!("Wrote dashboard payload to {}", output_path.display());
+    if !cli.quiet {
+        println!("Wrote dashboard payload to {}", output_path.display());
+    }
+
+    if cli.print_summary {
+        print_payload_summary(&payload);
+    }
 }
